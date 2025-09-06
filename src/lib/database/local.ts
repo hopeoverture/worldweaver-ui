@@ -134,8 +134,13 @@ export class LocalDatabaseService {
            updated_at = NOW()
        WHERE id = $1 
        RETURNING *`,
-      [worldId, name, description, is_public, is_archived, cover_image, JSON.stringify(settings)]
+      [worldId, name, description, is_public, is_archived, cover_image, settings ? JSON.stringify(settings) : null]
     )
+    
+    if (result.rows.length === 0) {
+      throw new Error(`World with id ${worldId} not found`);
+    }
+    
     return result.rows[0]
   }
 

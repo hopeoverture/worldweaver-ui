@@ -8,10 +8,10 @@ import * as seed from '@/lib/mockData';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const worldId = params.id;
+    const { id: worldId } = await params;
 
     if (USE_DATABASE) {
       const { worldService } = await import('@/lib/services/worldService');
@@ -43,10 +43,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const worldId = params.id;
+    const { id: worldId } = await params;
     const body = await request.json();
     const userId = body.userId || '550e8400-e29b-41d4-a716-446655440000';
 
@@ -82,10 +82,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const worldId = params.id;
+    const { id: worldId } = await params;
 
     if (USE_DATABASE) {
       const { worldService } = await import('@/lib/services/worldService');
