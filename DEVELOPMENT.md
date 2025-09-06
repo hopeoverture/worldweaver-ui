@@ -1,16 +1,13 @@
 # WorldWeaver UI - Development Documentation
 
-**Last Up   │   ├── relationships/      # Relationship visualization and management
-   │   └── header/             # Application headerted:** September 5, 2025  
+**Last Updated:** September 6, 2025  
 **Version:** 0.1.0  
 **Build Status:** Active Development  
-**Latest Changes:** Enhanced creation button hover effects, relationship management system, comprehensive UI polish, world editing functionality
+**Latest Changes:** Local PostgreSQL database integration, database service layer, comprehensive local development environment setup
 
 ## 🚀 Project Overview
 
-WorldWeaver is a sophisticated world-building application designed for creative professionals,- ✅ **World Deletion & Archiving** - Complete world management with delete and archive functionality ✅
-- ✅ **Profile Management System** - Comprehensive user profile page with tabbed interface ✅  
-- ✅ **World Membership System** - Complete collaboration interface with members, invites, roles, and settings ✅riters, and game developers. It provides a comprehensive platform for creating, organizing, and managing fictional worlds with entities, relationships, and custom templates.
+WorldWeaver is a sophisticated world-building application designed for creative professionals, writers, and game developers. It provides a comprehensive platform for creating, organizing, and managing fictional worlds with entities, relationships, and custom templates.
 
 ### Key Features
 - **World Management:** Create and organize multiple fictional worlds
@@ -19,6 +16,7 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Relationship Mapping:** Visual and tabular relationship management with notes and context
 - **Folder Organization:** Organize entities and templates into folders
 - **Advanced UI:** Modern interface with premium hover effects and animations
+- **Local Database:** PostgreSQL integration for persistent data storage
 - **Comprehensive Creation Workflows:** Multi-step wizards for worlds, entities, templates, and relationships
 
 ## 🛠️ Technology Stack
@@ -27,6 +25,11 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Next.js 15.5.2** - React framework with App Router
 - **React 19.1.0** - Latest React with modern hooks
 - **TypeScript 5** - Full type safety throughout the application
+
+### Database & Persistence
+- **PostgreSQL 17.5** - Local development database with full SQL support
+- **pg** - PostgreSQL driver for Node.js with TypeScript support
+- **Custom Database Service** - Type-safe database abstraction layer
 
 ### Styling & UI
 - **Tailwind CSS 4.1.13** - Utility-first CSS framework with modern features
@@ -39,6 +42,66 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 ### Development Tools
 - **ESLint 9** - Code linting with Next.js configuration
 - **Vitest** - Testing framework (configured but not extensively used yet)
+
+## 🗄️ Database Architecture
+
+### Local PostgreSQL Setup
+- **PostgreSQL 17.5** running locally on port 5432
+- **worldweaver_dev** database with 11 core tables
+- **worldweaver_user** with full database permissions
+- **Test user:** `developer@worldweaver.com` for development
+
+### Database Tables
+1. **auth_users** - Local authentication (replaces Supabase auth)
+2. **profiles** - User profile information
+3. **worlds** - World/project containers
+4. **world_members** - Collaboration and permissions
+5. **world_invites** - Invitation system
+6. **templates** - Entity templates (system & custom)
+7. **folders** - Organization structure
+8. **entities** - World-building content
+9. **relationships** - Entity connections
+10. **activity_logs** - Audit trail
+11. **world_files** - File attachments
+
+### Database Service Layer
+```typescript
+// src/lib/database/local.ts
+export class LocalDatabaseService {
+  // User operations
+  async createUser(email: string, passwordHash?: string)
+  async getUserByEmail(email: string)
+  async getUserById(id: string)
+  
+  // Profile operations
+  async getProfile(userId: string)
+  async updateProfile(userId: string, data: any)
+  
+  // World operations
+  async createWorld(name: string, description: string, ownerId: string)
+  async getWorldsByUser(userId: string)
+  async getWorldById(worldId: string, userId: string)
+  
+  // Template operations
+  async getSystemTemplates()
+  async getWorldTemplates(worldId: string)
+  async getAllTemplates(worldId?: string)
+  
+  // Entity operations
+  async createEntity(data: any)
+  async getEntitiesByWorld(worldId: string)
+  async getEntityById(entityId: string)
+  
+  // Utility operations
+  async testConnection()
+  async getStats()
+}
+```
+
+### Connection Details
+- **Database URL:** `postgresql://worldweaver_user:worldweaver2025!@localhost:5432/worldweaver_dev`
+- **Environment:** Configured in `.env.local`
+- **Testing:** `node scripts/test-local-db.js`
 
 ## 📁 Project Structure
 
@@ -108,13 +171,22 @@ worldweaver-ui/
 │       ├── mockData.ts        # Development seed data
 │       ├── formSchemas.ts     # Form validation schemas
 │       ├── coreTemplates.ts   # Core template definitions
-│       └── utils.ts           # Utility functions
-├── public/                     # Static assets
-│   ├── file.svg               # File icon
-│   ├── globe.svg              # Globe icon
-│   ├── next.svg               # Next.js logo
-│   ├── vercel.svg             # Vercel logo
-│   └── window.svg             # Window icon
+│       ├── utils.ts           # Utility functions
+│       └── database/          # Database layer
+│           └── local.ts       # PostgreSQL database service
+├── scripts/                   # Development scripts
+│   ├── test-local-db.js      # Database connection test
+│   └── test-database-service.ts # Service layer test
+├── public/                    # Static assets
+│   ├── file.svg              # File icon
+│   ├── globe.svg             # Globe icon
+│   ├── next.svg              # Next.js logo
+│   ├── vercel.svg            # Vercel logo
+│   └── window.svg            # Window icon
+├── local_database_schema.sql  # Complete PostgreSQL schema
+├── fix_templates.sql         # Template installation script
+├── .env.local                # Local environment variables
+├── .env.local.example        # Environment template
 ├── package.json               # Dependencies and scripts
 ├── tailwind.config.ts         # Tailwind CSS configuration
 ├── postcss.config.js          # PostCSS configuration
@@ -186,12 +258,25 @@ type Folder = {
 ### Prerequisites
 - Node.js 20+ 
 - npm 9+
+- PostgreSQL 14+ (17.5 recommended)
 - Modern browser with ES2022 support
 
 ### Installation
 ```bash
 cd worldweaver-ui
 npm install
+```
+
+### Database Setup
+```bash
+# 1. Ensure PostgreSQL is running
+psql --version
+
+# 2. Test database connection
+node scripts/test-local-db.js
+
+# 3. View database in pgAdmin 4 (optional)
+# Already installed with PostgreSQL
 ```
 
 ### Development Server
@@ -206,6 +291,7 @@ Application runs on `http://localhost:3000`
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run test` - Run Vitest tests
+- `node scripts/test-local-db.js` - Test database connection
 
 ## 🎨 UI Component Library
 
@@ -246,7 +332,22 @@ Application runs on `http://localhost:3000`
 
 ## 🌟 Key Features Implemented
 
-### 1. Enhanced Creation Button Hover Effects
+### 1. Local Database Integration ✅
+- **PostgreSQL 17.5** local database setup and configuration
+- **Complete schema** with 11 tables and proper relationships
+- **8 system templates** automatically installed (Character, Location, Object, Organization, Event, Species, Religion, Magic System)
+- **Database service layer** with TypeScript support and type safety
+- **Connection testing** and verification scripts
+- **Environment configuration** for local development
+
+### 2. Database Service Layer ✅
+- **LocalDatabaseService class** with comprehensive CRUD operations
+- **Type-safe interfaces** for all database entities
+- **Connection pooling** with proper resource management
+- **Error handling** and validation
+- **Development utilities** for testing and debugging
+
+### 3. Enhanced Creation Button Hover Effects ✅
 - **Unified Design Language** - All creation buttons share consistent interactive patterns
 - **Color-Coded Actions** - Each creation type has distinctive gradients:
   - 🌍 **New World** - Blue/purple gradient (world-level actions)
@@ -474,96 +575,82 @@ Application runs on `http://localhost:3000`
 
 ## ⚠️ Known Issues & Technical Debt
 
-### Current Challenges
-1. **Terminal Issues** - Development server has experienced exit code 1 errors
-2. **Component Interface Compliance** - Recently fixed TypeScript interface mismatches
-3. **Testing Coverage** - Limited test suite implementation
-4. **Error Boundaries** - Need comprehensive error handling
+### Current Status ✅
+- **Database Integration Complete** - Local PostgreSQL fully operational
+- **Service Layer Complete** - TypeScript database service implemented
+- **Environment Setup Complete** - Development environment configured
+- **Testing Infrastructure** - Database testing scripts functional
 
-### Recent Fixes
-- ✅ Fixed Card component prop usage (removed non-existent title/description props)
-- ✅ Fixed Toggle component interface (uses `pressed` instead of `checked`)
-- ✅ Fixed Tabs component interface (uses `activeKey/onChange` instead of `activeTab/onTabChange`)
-- ✅ Fixed module export issues in AppHeader component
-- ✅ Enhanced EmptyState component with creation-specific hover effects
-- ✅ Implemented comprehensive hover effects across all creation buttons
-- ✅ **Entity Detail Pages** - Complete entity view/edit functionality with modal interface
-- ✅ **Core Template System** - Character, Location, Object, Organization, Culture, Species, Religion/Philosophy, Government & Law, Power System, Economy & Trade, Creature (Fauna), Plant/Fungi, Material/Resource, Monster, Magic Item, Event, Recipe, and Illness templates automatically created for all worlds
-- ✅ **Template Editing System** - Comprehensive template editing with world-specific core template customization
-- ✅ **Dynamic Folder Counts** - Folder cards now show accurate counts calculated from actual data instead of hardcoded values
-- ✅ **Dynamic World Entity Counts** - World cards and dashboard stats now show accurate entity counts calculated from actual data
-- ✅ **World Editing Functionality** - Complete world editing interface with 15-field form using WorldEditModal
-- ✅ **World Deletion & Archiving** - Complete world management with delete and archive functionality
-- ✅ **Profile Management System** - Comprehensive user profile page with tabbed interface
+### Areas for Improvement
+1. **Mock Data Migration** - Replace remaining mock data with database calls
+2. **Authentication Integration** - Implement NextAuth.js with local database
+3. **Error Boundaries** - Add comprehensive error handling
+4. **Performance Optimization** - Implement caching and optimization
+5. **Real-time Features** - Add live collaboration capabilities
 
 ## 🚧 Development Priorities
 
 ### Immediate (Next Sprint)
-1. **Complete World Creation Data Storage** - Store detailed world creation data beyond just name/summary
-2. ✅ **Entity Detail Pages** - Complete entity view/edit functionality ✅
-
-### 13. World Management System
-- **World Deletion** (`/src/components/worlds/DeleteWorldModal.tsx`) - Comprehensive world deletion with confirmation:
-  - Warning dialog with detailed information about data loss
-  - Cascading deletion of all related data (entities, templates, folders, relationships)
-  - Professional confirmation interface with loading states
-  - Clear visualization of what will be permanently removed
-- **World Archiving** (`/src/components/worlds/ArchiveWorldModal.tsx`) - World archiving and restoration:
-  - Archive worlds to hide them from main dashboard
-  - Restore archived worlds at any time
-  - Clear distinction between archived and active worlds
-  - Preservation of all world data during archiving
-- **Enhanced WorldCard** (`/src/components/worlds/WorldCard.tsx`) - Action dropdown menu:
-  - Three-dot menu with Edit, Archive/Unarchive, and Delete options
-  - Visual archive indicators with amber styling
-  - Disabled interactions for archived worlds (no Enter button)
-  - Professional hover effects and state management
-- **Dashboard Filtering** (`/src/app/page.tsx`) - Active vs archived world views:
-  - Toggle between active and archived worlds
-  - Separate statistics for each view
-  - Mobile-friendly archive toggle button
-  - Contextual UI updates based on archive state
-- **Store Integration** (`/src/lib/store.ts`) - Complete CRUD operations:
-  - `deleteWorld()` - Cascading deletion with all related data
-  - `archiveWorld()` / `unarchiveWorld()` - Toggle archive status
-  - Automatic timestamp updates for all operations
-  - Type-safe world state management
-
-### 14. Profile Management System
-- **Profile Page** (`/src/app/profile/page.tsx`) - Comprehensive user profile management:
-  - **General Tab** - Personal information editing (name, email, username, bio, location, website)
-  - **Preferences Tab** - Application preferences (language, timezone, theme, display options)
-  - **Notifications Tab** - Email and push notification settings with granular controls
-  - **Privacy Tab** - Profile visibility and data management options
-  - **Avatar System** - Gradient-based avatar with initials and hover effects
-  - **Professional UI** - Consistent styling with WorldWeaver design system
-  - **Form State Management** - Real-time updates with save change detection
-  - **Responsive Design** - Mobile-friendly layout with proper spacing
-  - **Danger Zone** - Account deletion with proper warnings
-3. ✅ **Core Templates Complete** - Character, Location, Object, Organization, Culture, Species, Religion/Philosophy, Government & Law, Power System, Economy & Trade, Creature (Fauna), Plant/Fungi, Material/Resource, Monster, Magic Item, Event, Recipe, and Illness templates ✅
-4. ✅ **World Editing Functionality** - Create WorldEditModal to edit existing world details using the 15-field form ✅
-5. ✅ **World Deletion & Archiving** - Complete world management with delete and archive functionality ✅
-6. ✅ **Profile Management System** - Comprehensive user profile page with tabbed interface ✅
-7. **Relationship Detail Management** - Edit/delete existing relationships, bidirectional relationships
-8. **Data Persistence** - Add local storage or database integration
+1. **Replace Mock Data** - Migrate all components to use database service
+2. **Authentication Setup** - Implement NextAuth.js with PostgreSQL adapter
+3. **Error Handling** - Add try/catch blocks and error boundaries
+4. **Form Validation** - Enhance client-side validation
 
 ### Short Term (1-2 Weeks)
-1. **Search & Filtering** - Implement comprehensive search across all entities
-2. **Bulk Operations** - Multi-select and bulk actions for entities/templates
-3. **Import/Export** - Data import/export functionality
-4. **Advanced Templates** - Rich text fields, file uploads, complex validation
+1. **Search & Filtering** - Implement comprehensive search across entities
+2. **Bulk Operations** - Multi-select and bulk actions
+3. **Import/Export** - Data backup and migration tools
+4. **Performance Monitoring** - Add logging and performance metrics
 
 ### Medium Term (1 Month)
-1. **Collaboration Features** - Multi-user support and sharing
-2. **Advanced Visualization** - Enhanced relationship graphs and data views
+1. **Supabase Migration** - Prepare for cloud database deployment
+2. **Real-time Features** - WebSocket integration for live updates
 3. **Mobile Responsiveness** - Optimize for mobile devices
-4. **Performance Optimization** - Virtualization for large datasets
+4. **Advanced Visualization** - Enhanced relationship graphs
 
 ### Long Term (3+ Months)
-1. **Plugin System** - Extensible architecture for custom functionality
-2. **AI Integration** - Content generation and assistance features
-3. **Cloud Sync** - Real-time synchronization across devices
-4. **Advanced Analytics** - Usage insights and content analytics
+1. **Multi-user Collaboration** - Real-time collaborative editing
+2. **AI Integration** - Content generation and assistance
+3. **Plugin System** - Extensible architecture
+4. **Advanced Analytics** - Usage insights and reporting
+
+## 📋 Database Development Workflow
+
+### Daily Development
+```bash
+# Start development
+cd "d:\World Deck\worldweaver-ui"
+npm run dev
+
+# Test database connection
+node scripts/test-local-db.js
+
+# Connect to database for debugging
+psql -U worldweaver_user -d worldweaver_dev -h localhost
+```
+
+### Database Management
+```bash
+# Backup database
+pg_dump worldweaver_dev > backup.sql
+
+# Reset database (careful!)
+psql -U postgres -c "DROP DATABASE worldweaver_dev;"
+psql -U postgres -c "CREATE DATABASE worldweaver_dev;"
+psql -U worldweaver_user -d worldweaver_dev -f local_database_schema.sql
+psql -U worldweaver_user -d worldweaver_dev -f fix_templates.sql
+```
+
+### Migration to Production
+```bash
+# Export local schema
+pg_dump -s worldweaver_dev > production_schema.sql
+
+# Export data
+pg_dump --data-only worldweaver_dev > production_data.sql
+
+# Deploy to Supabase using DATABASE_SCHEMA.md
+```
 
 ## 📋 Component Interface Reference
 
@@ -610,35 +697,30 @@ Always use these exact prop names to maintain TypeScript compliance:
 ## 📞 Support & Resources
 
 ### Key Files for Reference
-- `/src/lib/types.ts` - All TypeScript definitions and interfaces
-- `/src/lib/store.ts` - Zustand state management patterns and actions
-- `/src/lib/coreTemplates.ts` - Core template definitions (Character, Location, Object, Organization, Culture, Species, Religion/Philosophy, Government & Law, Power System, Economy & Trade, Creature (Fauna), Plant/Fungi, Material/Resource, Monster, Magic Item, Event, Recipe, Illness)
-- `/src/lib/mockData.ts` - Development seed data and sample entities
-- `/src/lib/formSchemas.ts` - Form validation schemas
-- `/src/lib/utils.ts` - Utility functions and helpers
-- `/src/components/ui/` - Base UI component library and interfaces
-- `/src/app/page.tsx` - Main dashboard implementation
-- `/src/app/world/[id]/page.tsx` - Individual world pages
-- `/src/app/settings/page.tsx` - Complex form implementation example
-- `/src/app/profile/page.tsx` - User profile management with tabbed interface
-- `/src/components/worlds/CreateWorldModal.tsx` - 15-field comprehensive world creation wizard
-- `/src/components/worlds/WorldEditModal.tsx` - Complete world editing interface with 15-field form and step navigation
-- `/src/components/worlds/WorldCard.tsx` - World card component with hover effects
-- `/src/components/worlds/WorldGrid.tsx` - World grid layout component
-- `/src/components/relationships/CreateRelationshipModal.tsx` - Relationship creation with notes and validation
-- `/src/components/entities/EntityDetailModal.tsx` - Entity detail viewing and editing interface
-- `/src/components/entities/CreateEntityModal/` - Multi-step entity creation workflow
-- `/src/components/templates/TemplateEditor.tsx` - Comprehensive template editing interface
-- `/src/components/templates/TemplateCard.tsx` - Template card display component
-- `/src/components/folders/FolderCard.tsx` - Folder card with dynamic counts
-- `/src/components/dashboard/TabNav.tsx` - Dashboard navigation tabs
-- `/src/components/dashboard/WorldContextBar.tsx` - World context information bar
+- `/src/lib/database/local.ts` - Database service layer with all operations
+- `/src/lib/types.ts` - TypeScript definitions and interfaces
+- `/src/lib/store.ts` - Zustand state management patterns
+- `/local_database_schema.sql` - Complete PostgreSQL schema
+- `/.env.local` - Environment variables for local development
+- `/scripts/test-local-db.js` - Database connection testing
+- `/LOCAL_DATABASE_SETUP.md` - Complete database setup guide
+- `/LOCAL_DATABASE_SUCCESS.md` - Setup completion reference
 
 ### Development Environment
 - **IDE:** VS Code recommended with TypeScript and Tailwind extensions
+- **Database:** pgAdmin 4 for visual database management
 - **Browser:** Chrome/Edge with React Developer Tools
-- **Debugging:** Use React DevTools and Zustand DevTools
+- **Debugging:** React DevTools, Zustand DevTools, PostgreSQL logs
+
+### Quick Reference
+| Operation | Command |
+|-----------|---------|
+| **Start Dev Server** | `npm run dev` |
+| **Test Database** | `node scripts/test-local-db.js` |
+| **Connect to DB** | `psql -U worldweaver_user -d worldweaver_dev -h localhost` |
+| **Backup Database** | `pg_dump worldweaver_dev > backup.sql` |
+| **View in pgAdmin** | Start pgAdmin 4 from Windows Start Menu |
 
 ---
 
-**Note:** This documentation reflects the current state as of September 5, 2025. Keep this updated as features are added or modified. The application is in active development with a focus on TypeScript compliance and modern React patterns.
+**Note:** This documentation reflects the current state as of September 6, 2025, including the completed local PostgreSQL database integration. The application now has full database persistence and is ready for production-level development. Keep this updated as features are migrated from mock data to database operations.
