@@ -20,7 +20,7 @@ export class WorldService {
         entityCount: parseInt(dbWorld.entity_count) || 0,
         updatedAt: dbWorld.updated_at,
         isArchived: dbWorld.is_archived || false,
-        archivedAt: dbWorld.archived_at,
+        archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined, // Use updated_at as archived time if archived
         coverImage: dbWorld.cover_image,
         isPublic: dbWorld.is_public || false,
         settings: dbWorld.settings || {}
@@ -47,7 +47,7 @@ export class WorldService {
         entityCount: parseInt(dbWorld.entity_count) || 0,
         updatedAt: dbWorld.updated_at,
         isArchived: dbWorld.is_archived || false,
-        archivedAt: dbWorld.archived_at,
+        archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined, // Use updated_at as archived time if archived
         coverImage: dbWorld.cover_image,
         isPublic: dbWorld.is_public || false,
         settings: dbWorld.settings || {}
@@ -113,7 +113,7 @@ export class WorldService {
         entityCount: parseInt(dbWorld.entity_count) || 0,
         updatedAt: dbWorld.updated_at,
         isArchived: dbWorld.is_archived || false,
-        archivedAt: dbWorld.archived_at,
+        archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined, // Use updated_at as archived time if archived
         coverImage: dbWorld.cover_image,
         isPublic: dbWorld.is_public || false,
         settings: dbWorld.settings || {}

@@ -278,8 +278,8 @@ export const useStore = create<State & Actions>((set, get) => ({
       return;
     }
 
-    // For API mode, we can use the updateWorld endpoint with isArchived: true
-    await get().updateWorld(id, { isArchived: true, archivedAt: new Date().toISOString() });
+    // For API mode, only send isArchived since database doesn't have archivedAt field
+    await get().updateWorld(id, { isArchived: true });
   },
   unarchiveWorld: async (id) => {
     if (!USE_API) {
@@ -293,8 +293,8 @@ export const useStore = create<State & Actions>((set, get) => ({
       return;
     }
 
-    // For API mode, we can use the updateWorld endpoint with isArchived: false
-    await get().updateWorld(id, { isArchived: false, archivedAt: undefined });
+    // For API mode, only send isArchived since database doesn't have archivedAt field
+    await get().updateWorld(id, { isArchived: false });
   },
   addFolder: (f) => {
     const nf: Folder = { id: crypto.randomUUID(), count: 0, ...f };
