@@ -121,6 +121,32 @@ export class LocalDatabaseService {
     return result.rows[0]
   }
 
+  async updateWorld(worldId: string, data: any) {
+    const { name, description, is_public, is_archived, cover_image, settings } = data
+    const result = await this.query(
+      `UPDATE worlds 
+       SET name = COALESCE($2, name),
+           description = COALESCE($3, description),
+           is_public = COALESCE($4, is_public),
+           is_archived = COALESCE($5, is_archived),
+           cover_image = COALESCE($6, cover_image),
+           settings = COALESCE($7, settings),
+           updated_at = NOW()
+       WHERE id = $1 
+       RETURNING *`,
+      [worldId, name, description, is_public, is_archived, cover_image, JSON.stringify(settings)]
+    )
+    return result.rows[0]
+  }
+
+  async deleteWorld(worldId: string) {
+    const result = await this.query(
+      'DELETE FROM worlds WHERE id = $1 RETURNING *',
+      [worldId]
+    )
+    return result.rows[0]
+  }
+
   // ================================
   // Template Operations
   // ================================

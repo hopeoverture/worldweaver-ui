@@ -3,6 +3,10 @@ import { World, Folder, Template, Entity, Link, RelationshipRow, ID, WorldMember
 import * as seed from './mockData';
 import { createCoreTemplates } from './coreTemplates';
 
+// Configuration
+const USE_API = true; // Use API routes for database operations
+const currentUserId = '550e8400-e29b-41d4-a716-446655440000'; // Test user ID
+
 type State = {
   worlds: World[];
   folders: Folder[];
@@ -12,14 +16,23 @@ type State = {
   relationships: RelationshipRow[];
   members: WorldMember[];
   invites: WorldInvite[];
+  
+  // Loading and error states
+  isLoading: boolean;
+  error: string | null;
 };
 
 type Actions = {
-  addWorld: (w: Omit<World, 'id' | 'updatedAt' | 'entityCount'>) => World;
-  updateWorld: (id: ID, patch: Partial<World>) => void;
-  deleteWorld: (id: ID) => void;
-  archiveWorld: (id: ID) => void;
-  unarchiveWorld: (id: ID) => void;
+  // Data loading actions
+  loadUserWorlds: () => Promise<void>;
+  clearError: () => void;
+  
+  // World actions
+  addWorld: (w: Omit<World, 'id' | 'updatedAt' | 'entityCount'>) => Promise<World>;
+  updateWorld: (id: ID, patch: Partial<World>) => Promise<void>;
+  deleteWorld: (id: ID) => Promise<void>;
+  archiveWorld: (id: ID) => Promise<void>;
+  unarchiveWorld: (id: ID) => Promise<void>;
   addFolder: (f: Omit<Folder, 'id' | 'count'>) => Folder;
   addTemplate: (t: Omit<Template, 'id'>) => Template;
   updateTemplate: (id: ID, patch: Partial<Template>) => void;
@@ -49,8 +62,41 @@ export const useStore = create<State & Actions>((set, get) => ({
   relationships: seed.relationships,
   members: seed.members,
   invites: seed.invites,
+  
+  // Loading and error states
+  isLoading: false,
+  error: null,
 
-  addWorld: (w) => {
+  // Data loading actions
+  loadUserWorlds: async () => {
+    if (!USE_API) {
+      // Use mock data
+      set({ worlds: seed.worlds.filter(w => !w.isArchived) });
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await fetch(`/api/worlds?userId=${currentUserId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch worlds');
+      }
+      
+      const { worlds } = await response.json();
+      set({ worlds, isLoading: false });
+    } catch (error) {
+      console.error('Failed to load worlds:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to load worlds',
+        isLoading: false 
+      });
+    }
+  },
+
+  clearError: () => set({ error: null }),
+
+  addWorld: async (w) => {
     const worldId = crypto.randomUUID();
     const nw: World = { id: worldId, entityCount: 0, updatedAt: new Date().toISOString(), ...w };
     
@@ -131,37 +177,125 @@ export const useStore = create<State & Actions>((set, get) => ({
     
     return nw;
   },
-  updateWorld: (id, patch) =>
-    set(s => ({ worlds: s.worlds.map(w => w.id === id ? { ...w, ...patch, updatedAt: new Date().toISOString() } : w) })),
-  deleteWorld: (id) =>
-    set(s => ({
-      worlds: s.worlds.filter(w => w.id !== id),
-      folders: s.folders.filter(f => f.worldId !== id),
-      templates: s.templates.filter(t => t.worldId !== id),
-      entities: s.entities.filter(e => e.worldId !== id),
-      links: s.links.filter(l => {
-        const fromEntity = s.entities.find(e => e.id === l.fromEntityId);
-        const toEntity = s.entities.find(e => e.id === l.toEntityId);
-        return fromEntity?.worldId !== id && toEntity?.worldId !== id;
-      }),
-      relationships: s.relationships.filter(r => r.worldId !== id)
-    })),
-  archiveWorld: (id) =>
-    set(s => ({ 
-      worlds: s.worlds.map(w => 
-        w.id === id 
-          ? { ...w, isArchived: true, archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-          : w
-      ) 
-    })),
-  unarchiveWorld: (id) =>
-    set(s => ({ 
-      worlds: s.worlds.map(w => 
-        w.id === id 
-          ? { ...w, isArchived: false, archivedAt: undefined, updatedAt: new Date().toISOString() }
-          : w
-      ) 
-    })),
+  updateWorld: async (id, patch) => {
+    if (!USE_API) {
+      set(s => ({ worlds: s.worlds.map(w => w.id === id ? { ...w, ...patch, updatedAt: new Date().toISOString() } : w) }));
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await fetch(`/api/worlds/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...patch,
+          userId: currentUserId
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update world');
+      }
+
+      const { world } = await response.json();
+      
+      set(s => ({ 
+        worlds: s.worlds.map(w => w.id === id ? world : w),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Failed to update world:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to update world',
+        isLoading: false 
+      });
+      throw error;
+    }
+  },
+  deleteWorld: async (id) => {
+    if (!USE_API) {
+      set(s => ({
+        worlds: s.worlds.filter(w => w.id !== id),
+        folders: s.folders.filter(f => f.worldId !== id),
+        templates: s.templates.filter(t => t.worldId !== id),
+        entities: s.entities.filter(e => e.worldId !== id),
+        links: s.links.filter(l => {
+          const fromEntity = s.entities.find(e => e.id === l.fromEntityId);
+          const toEntity = s.entities.find(e => e.id === l.toEntityId);
+          return fromEntity?.worldId !== id && toEntity?.worldId !== id;
+        }),
+        relationships: s.relationships.filter(r => r.worldId !== id)
+      }));
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+    
+    try {
+      const response = await fetch(`/api/worlds/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete world');
+      }
+
+      set(s => ({
+        worlds: s.worlds.filter(w => w.id !== id),
+        folders: s.folders.filter(f => f.worldId !== id),
+        templates: s.templates.filter(t => t.worldId !== id),
+        entities: s.entities.filter(e => e.worldId !== id),
+        links: s.links.filter(l => {
+          const fromEntity = s.entities.find(e => e.id === l.fromEntityId);
+          const toEntity = s.entities.find(e => e.id === l.toEntityId);
+          return fromEntity?.worldId !== id && toEntity?.worldId !== id;
+        }),
+        relationships: s.relationships.filter(r => r.worldId !== id),
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error('Failed to delete world:', error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to delete world',
+        isLoading: false 
+      });
+      throw error;
+    }
+  },
+  archiveWorld: async (id) => {
+    if (!USE_API) {
+      set(s => ({ 
+        worlds: s.worlds.map(w => 
+          w.id === id 
+            ? { ...w, isArchived: true, archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+            : w
+        ) 
+      }));
+      return;
+    }
+
+    // For API mode, we can use the updateWorld endpoint with isArchived: true
+    await get().updateWorld(id, { isArchived: true, archivedAt: new Date().toISOString() });
+  },
+  unarchiveWorld: async (id) => {
+    if (!USE_API) {
+      set(s => ({ 
+        worlds: s.worlds.map(w => 
+          w.id === id 
+            ? { ...w, isArchived: false, archivedAt: undefined, updatedAt: new Date().toISOString() }
+            : w
+        ) 
+      }));
+      return;
+    }
+
+    // For API mode, we can use the updateWorld endpoint with isArchived: false
+    await get().updateWorld(id, { isArchived: false, archivedAt: undefined });
+  },
   addFolder: (f) => {
     const nf: Folder = { id: crypto.randomUUID(), count: 0, ...f };
     set(s => ({ folders: [nf, ...s.folders] }));
