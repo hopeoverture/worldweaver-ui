@@ -1,9 +1,9 @@
 # WorldWeaver UI - Development Documentation
 
-**Last Updated:** September 6, 2025  
+**Last Updated:** September 5, 2025  
 **Version:** 0.1.0  
 **Build Status:** Active Development  
-**Latest Changes:** Local PostgreSQL database integration, database service layer, comprehensive local development environment setup
+**Latest Changes:** Step-by-step database integration with Next.js API routes, async store architecture, and clean server-side data operations
 
 ## 🚀 Project Overview
 
@@ -22,9 +22,14 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 ## 🛠️ Technology Stack
 
 ### Core Framework
-- **Next.js 15.5.2** - React framework with App Router
+- **Next.js 15.5.2** - React framework with App Router and API routes
 - **React 19.1.0** - Latest React with modern hooks
 - **TypeScript 5** - Full type safety throughout the application
+
+### API Architecture
+- **Next.js API Routes** - Server-side database operations
+- **RESTful Endpoints** - Clean separation between client and server
+- **Async/Await Patterns** - Modern JavaScript for data fetching
 
 ### Database & Persistence
 - **PostgreSQL 17.5** - Local development database with full SQL support
@@ -37,13 +42,25 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Custom Components** - Reusable UI component library
 
 ### 11. State Management
-- **Zustand 5.0.8** - Lightweight state management for global app state
+- **Zustand 5.0.8** - Lightweight state management with async actions
 
 ### Development Tools
 - **ESLint 9** - Code linting with Next.js configuration
 - **Vitest** - Testing framework (configured but not extensively used yet)
 
 ## 🗄️ Database Architecture
+
+### Step-by-Step Integration Approach
+- **API-First Design** - Server-side database operations via Next.js API routes
+- **Feature Flags** - Incremental enablement of database features (`USE_DATABASE` flags)
+- **Mock Data Fallback** - Backward compatibility during transition period
+- **Clean Separation** - Client-side components use fetch API to call server endpoints
+
+### Next.js API Routes
+- **`/api/worlds/route.ts`** - GET all worlds, POST new world
+- **`/api/worlds/[id]/route.ts`** - GET, PUT, DELETE individual worlds
+- **Server-Side Only** - Database imports and operations isolated to API routes
+- **Type-Safe Responses** - Consistent JSON response formats with TypeScript
 
 ### Local PostgreSQL Setup
 - **PostgreSQL 17.5** running locally on port 5432
@@ -81,6 +98,8 @@ export class LocalDatabaseService {
   async createWorld(name: string, description: string, ownerId: string)
   async getWorldsByUser(userId: string)
   async getWorldById(worldId: string, userId: string)
+  async updateWorld(worldId: string, data: any)
+  async deleteWorld(worldId: string)
   
   // Template operations
   async getSystemTemplates()
@@ -98,6 +117,38 @@ export class LocalDatabaseService {
 }
 ```
 
+### World Service Adapter
+```typescript
+// src/lib/services/worldService.ts
+export class WorldService {
+  async getUserWorlds(userId: string): Promise<World[]>
+  async getWorldById(worldId: string, userId: string): Promise<World>
+  async createWorld(data: WorldCreate, userId: string): Promise<World>
+  async updateWorld(worldId: string, data: Partial<World>): Promise<World>
+  async deleteWorld(worldId: string): Promise<void>
+  async archiveWorld(worldId: string, archived: boolean): Promise<void>
+}
+```
+
+### Async Store Architecture
+```typescript
+// src/lib/store.ts
+type State = {
+  worlds: World[];
+  isLoading: boolean;
+  error: string | null;
+};
+
+type Actions = {
+  loadUserWorlds: () => Promise<void>;
+  addWorld: (w: WorldCreate) => Promise<World>;
+  updateWorld: (id: string, patch: Partial<World>) => Promise<void>;
+  deleteWorld: (id: string) => Promise<void>;
+  archiveWorld: (id: string) => Promise<void>;
+  clearError: () => void;
+};
+```
+
 ### Connection Details
 - **Database URL:** `postgresql://worldweaver_user:worldweaver2025!@localhost:5432/worldweaver_dev`
 - **Environment:** Configured in `.env.local`
@@ -109,7 +160,11 @@ export class LocalDatabaseService {
 worldweaver-ui/
 ├── src/
 │   ├── app/                     # Next.js App Router pages
-│   │   ├── page.tsx            # Dashboard/Home page
+│   │   ├── api/                 # Next.js API routes
+│   │   │   └── worlds/          # World CRUD endpoints
+│   │   │       ├── route.ts     # GET all worlds, POST new world
+│   │   │       └── [id]/route.ts # GET, PUT, DELETE by ID
+│   │   ├── page.tsx            # Dashboard/Home page with async loading
 │   │   ├── layout.tsx          # Root layout with providers
 │   │   ├── globals.css         # Global styles and Tailwind
 │   │   ├── favicon.ico         # Application favicon
@@ -167,13 +222,15 @@ worldweaver-ui/
 │   │       └── AppHeader.tsx   # Main application header
 │   └── lib/                    # Utilities and configuration
 │       ├── types.ts           # TypeScript type definitions
-│       ├── store.ts           # Zustand state management
+│       ├── store.ts           # Zustand async state management
 │       ├── mockData.ts        # Development seed data
 │       ├── formSchemas.ts     # Form validation schemas
 │       ├── coreTemplates.ts   # Core template definitions
 │       ├── utils.ts           # Utility functions
-│       └── database/          # Database layer
-│           └── local.ts       # PostgreSQL database service
+│       ├── database/          # Database layer
+│       │   └── local.ts       # PostgreSQL database service
+│       └── services/          # Service adapters
+│           └── worldService.ts # World operations adapter
 ├── scripts/                   # Development scripts
 │   ├── test-local-db.js      # Database connection test
 │   └── test-database-service.ts # Service layer test
@@ -332,7 +389,15 @@ Application runs on `http://localhost:3000`
 
 ## 🌟 Key Features Implemented
 
-### 1. Local Database Integration ✅
+### 1. Step-by-Step Database Integration ✅
+- **Next.js API Routes** - Clean server-side database operations
+- **Async Store Architecture** - Zustand store with Promise-based actions
+- **Error Handling & Loading States** - User-friendly async operation feedback
+- **Feature Flags** - Incremental database enablement with `USE_API` and `USE_DATABASE` flags
+- **Mock Data Fallback** - Backward compatibility during transition
+- **Type-Safe API Responses** - Consistent JSON response patterns
+
+### 2. Local Database Foundation ✅
 - **PostgreSQL 17.5** local database setup and configuration
 - **Complete schema** with 11 tables and proper relationships
 - **8 system templates** automatically installed (Character, Location, Object, Organization, Event, Species, Religion, Magic System)
@@ -340,14 +405,14 @@ Application runs on `http://localhost:3000`
 - **Connection testing** and verification scripts
 - **Environment configuration** for local development
 
-### 2. Database Service Layer ✅
-- **LocalDatabaseService class** with comprehensive CRUD operations
-- **Type-safe interfaces** for all database entities
-- **Connection pooling** with proper resource management
-- **Error handling** and validation
-- **Development utilities** for testing and debugging
+### 3. API-First Architecture ✅
+- **Clean Client-Server Separation** - Database operations only on server-side
+- **Fetch-Based Store Actions** - Client-side store uses fetch API for all data operations
+- **Consistent Error Handling** - Standardized error responses and user feedback
+- **Loading State Management** - Real-time loading indicators during async operations
+- **Development Flexibility** - Easy switching between mock data and database
 
-### 3. Enhanced Creation Button Hover Effects ✅
+### 4. Enhanced Creation Button Hover Effects ✅
 - **Unified Design Language** - All creation buttons share consistent interactive patterns
 - **Color-Coded Actions** - Each creation type has distinctive gradients:
   - 🌍 **New World** - Blue/purple gradient (world-level actions)
@@ -358,22 +423,22 @@ Application runs on `http://localhost:3000`
 - **Enhanced Shadows** - Color-matched glows (blue, green, amber, purple shadows)
 - **Smooth Transitions** - 300ms coordinated animations across all elements
 
-### 2. Enhanced Card Hover Effects
+### 5. Enhanced Card Hover Effects
 - Consistent hover animations across all card components
 - Blue hover effects for entities, amber for templates
 - Smooth transitions with transform and color changes
 
-### 3. World Cards with Premium Animations
+### 6. World Cards with Premium Animations
 - Floating particle effects with geometric patterns
 - Dynamic hover states with depth and movement
 - Visual hierarchy with gradient overlays
 
-### 4. Comprehensive Settings Page
+### 7. Comprehensive Settings Page
 - 5 tabbed sections: General, Appearance, Data & Storage, Privacy, Notifications
 - Proper TypeScript interfaces for all components
 - Form state management with validation
 
-### 5. Entity & Template Creation
+### 8. Entity & Template Creation
 - **CreateEntityModal** (`/src/components/entities/CreateEntityModal/CreateEntityModal.tsx`) - Multi-step creation workflows
 - **StepChooseTemplate** (`/src/components/entities/CreateEntityModal/StepChooseTemplate.tsx`) - Template selection step
 - **StepFillForm** (`/src/components/entities/CreateEntityModal/StepFillForm.tsx`) - Field completion step
@@ -383,7 +448,7 @@ Application runs on `http://localhost:3000`
 - Folder assignment and organization
 - Form validation with user feedback
 
-### 6. Comprehensive World Creation
+### 9. Comprehensive World Creation
 - **15-field detailed world creation form** with 3-step wizard:
   - **Step 1 - Core Information:** Name, logline, genre blend, tone, themes
   - **Step 2 - World Parameters:** Audience rating, scope/scale, technology/magic levels, cosmology, climate/biomes
@@ -393,7 +458,7 @@ Application runs on `http://localhost:3000`
 - Progress indicator and step navigation
 - Comprehensive dropdown options for all world-building aspects
 
-### 7. Relationship Management System
+### 10. Relationship Management System
 - **Create New Relationship Button** - Purple/pink themed creation button on Relationships tab
 - **CreateRelationshipModal** (`/src/components/relationships/CreateRelationshipModal.tsx`) - Comprehensive relationship creation interface:
   - Entity selection dropdowns (From/To entities)
@@ -405,7 +470,7 @@ Application runs on `http://localhost:3000`
 - **Enhanced EmptyState** (`/src/components/ui/EmptyState.tsx`) - Creation buttons in empty states with matching hover effects
 - **Store Integration** (`/src/lib/store.ts`) - Proper Zustand state management for relationship creation
 
-### 9. Core Template System
+### 11. Core Template System
 - **Core Templates** (`/src/lib/coreTemplates.ts`) - Centralized template definitions
 - **Comprehensive Character Template** - 15-field character creation with:
   - Character Name, One-Line Concept, Role/Archetype, Pronouns & Form of Address
@@ -505,7 +570,7 @@ Application runs on `http://localhost:3000`
 - **Automatic Template Creation** - Core templates automatically added to all new worlds
 - **Extensive Field Options** - Comprehensive dropdown and tag options for world-building
 
-### 10. Entity Detail Modal System
+### 12. Entity Detail Modal System
 - **EntityDetailModal** (`/src/components/entities/EntityDetailModal.tsx`) - Comprehensive entity viewing and editing interface:
   - Full entity information display with template-based field rendering
   - Edit mode with form validation and error handling
@@ -520,7 +585,7 @@ Application runs on `http://localhost:3000`
 - Optimistic updates for better UX
 - Seed data for development
 
-### 12. World Editing System
+### 13. World Editing System
 - **WorldEditModal** (`/src/components/worlds/WorldEditModal.tsx`) - Comprehensive world editing interface with 3-step wizard:
   - **Step 1 - Core Information:** Edit name, logline, genre blend, tone, themes
   - **Step 2 - World Parameters:** Update audience rating, scope/scale, technology/magic levels, cosmology, climate/biomes
@@ -532,7 +597,7 @@ Application runs on `http://localhost:3000`
 - **Store Integration** (`/src/lib/store.ts`) - Proper Zustand state management for world updates
 - **Consistent UI** - Matches CreateWorldModal design patterns and styling
 
-### 11. Template Editing System
+### 14. Template Editing System
 - **TemplateDetailModal** (`/src/components/templates/TemplateDetailModal.tsx`) - Template viewing interface with edit mode toggle:
   - Click template cards to view template details
   - Clear field breakdown with type indicators and options preview
@@ -576,49 +641,94 @@ Application runs on `http://localhost:3000`
 ## ⚠️ Known Issues & Technical Debt
 
 ### Current Status ✅
-- **Database Integration Complete** - Local PostgreSQL fully operational
-- **Service Layer Complete** - TypeScript database service implemented
-- **Environment Setup Complete** - Development environment configured
-- **Testing Infrastructure** - Database testing scripts functional
+- **Step-by-Step Integration Complete** - API routes and async store architecture implemented
+- **Database Foundation Ready** - Local PostgreSQL fully operational and service layer complete
+- **Clean Architecture** - Proper separation between client and server operations
+- **Backward Compatibility** - Mock data fallback ensures smooth transition
+
+### Next Steps for Database Activation
+1. **Enable Database Flag** - Set `USE_DATABASE = true` in API routes when ready
+2. **Test API Integration** - Verify worlds CRUD operations work with database
+3. **Extend to Other Entities** - Apply same pattern to entities, templates, folders
+4. **Authentication Integration** - Connect user authentication with database users
 
 ### Areas for Improvement
-1. **Mock Data Migration** - Replace remaining mock data with database calls
-2. **Authentication Integration** - Implement NextAuth.js with local database
-3. **Error Boundaries** - Add comprehensive error handling
-4. **Performance Optimization** - Implement caching and optimization
-5. **Real-time Features** - Add live collaboration capabilities
+1. **World Creation API** - Implement POST endpoint database operations
+2. **Entity API Routes** - Create entity CRUD endpoints following worlds pattern
+3. **Template API Routes** - Extend API pattern to template operations
+4. **Error Boundaries** - Add comprehensive error handling
+5. **Performance Optimization** - Implement caching and optimization
 
 ## 🚧 Development Priorities
 
-### Immediate (Next Sprint)
-1. **Replace Mock Data** - Migrate all components to use database service
-2. **Authentication Setup** - Implement NextAuth.js with PostgreSQL adapter
-3. **Error Handling** - Add try/catch blocks and error boundaries
-4. **Form Validation** - Enhance client-side validation
+### Immediate (Next Steps)
+1. **Activate Database Operations** - Set `USE_DATABASE = true` in `/api/worlds/` routes
+2. **Test World CRUD** - Verify create, read, update, delete operations work with database
+3. **Extend API Pattern** - Create `/api/entities/` and `/api/templates/` following same pattern
+4. **Authentication Setup** - Implement NextAuth.js with PostgreSQL adapter
 
 ### Short Term (1-2 Weeks)
-1. **Search & Filtering** - Implement comprehensive search across entities
-2. **Bulk Operations** - Multi-select and bulk actions
-3. **Import/Export** - Data backup and migration tools
-4. **Performance Monitoring** - Add logging and performance metrics
+1. **Complete API Migration** - Move all CRUD operations to API routes
+2. **Enhanced Error Handling** - Add try/catch blocks and error boundaries
+3. **Form Validation** - Enhance client-side validation
+4. **Search & Filtering** - Implement comprehensive search across entities
 
 ### Medium Term (1 Month)
-1. **Supabase Migration** - Prepare for cloud database deployment
-2. **Real-time Features** - WebSocket integration for live updates
-3. **Mobile Responsiveness** - Optimize for mobile devices
-4. **Advanced Visualization** - Enhanced relationship graphs
+1. **Bulk Operations** - Multi-select and bulk actions
+2. **Import/Export** - Data backup and migration tools
+3. **Performance Monitoring** - Add logging and performance metrics
+4. **Mobile Responsiveness** - Optimize for mobile devices
 
 ### Long Term (3+ Months)
-1. **Multi-user Collaboration** - Real-time collaborative editing
-2. **AI Integration** - Content generation and assistance
-3. **Plugin System** - Extensible architecture
-4. **Advanced Analytics** - Usage insights and reporting
+1. **Supabase Migration** - Prepare for cloud database deployment
+2. **Real-time Features** - WebSocket integration for live updates
+3. **Advanced Visualization** - Enhanced relationship graphs
+4. **AI Integration** - Content generation and assistance
 
-## 📋 Database Development Workflow
+## 📋 API Development Workflow
 
-### Daily Development
+### Step-by-Step Database Integration
 ```bash
-# Start development
+# 1. Start development server
+cd "d:\World Deck\worldweaver-ui"
+npm run dev
+
+# 2. Test API endpoints with mock data
+curl http://localhost:3000/api/worlds?userId=550e8400-e29b-41d4-a716-446655440000
+
+# 3. Enable database operations (when ready)
+# Edit /src/app/api/worlds/route.ts
+# Set USE_DATABASE = true
+
+# 4. Test database integration
+node scripts/test-local-db.js
+```
+
+### API Endpoint Testing
+```bash
+# Test GET all worlds
+curl "http://localhost:3000/api/worlds?userId=550e8400-e29b-41d4-a716-446655440000"
+
+# Test GET single world
+curl "http://localhost:3000/api/worlds/world-1"
+
+# Test POST new world
+curl -X POST "http://localhost:3000/api/worlds" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test World","description":"Test Description","userId":"550e8400-e29b-41d4-a716-446655440000"}'
+
+# Test PUT update world
+curl -X PUT "http://localhost:3000/api/worlds/world-1" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Updated Name","userId":"550e8400-e29b-41d4-a716-446655440000"}'
+
+# Test DELETE world
+curl -X DELETE "http://localhost:3000/api/worlds/world-1"
+```
+
+### Database Development
+```bash
+# Daily Development
 cd "d:\World Deck\worldweaver-ui"
 npm run dev
 
@@ -697,14 +807,15 @@ Always use these exact prop names to maintain TypeScript compliance:
 ## 📞 Support & Resources
 
 ### Key Files for Reference
+- **`/src/app/api/worlds/route.ts`** - Main worlds API endpoint (GET all, POST new)
+- **`/src/app/api/worlds/[id]/route.ts`** - Individual world operations (GET, PUT, DELETE)
+- **`/src/lib/services/worldService.ts`** - Database service adapter layer
+- **`/src/lib/store.ts`** - Async Zustand store with API integration
 - `/src/lib/database/local.ts` - Database service layer with all operations
 - `/src/lib/types.ts` - TypeScript definitions and interfaces
-- `/src/lib/store.ts` - Zustand state management patterns
 - `/local_database_schema.sql` - Complete PostgreSQL schema
 - `/.env.local` - Environment variables for local development
 - `/scripts/test-local-db.js` - Database connection testing
-- `/LOCAL_DATABASE_SETUP.md` - Complete database setup guide
-- `/LOCAL_DATABASE_SUCCESS.md` - Setup completion reference
 
 ### Development Environment
 - **IDE:** VS Code recommended with TypeScript and Tailwind extensions
@@ -716,6 +827,8 @@ Always use these exact prop names to maintain TypeScript compliance:
 | Operation | Command |
 |-----------|---------|
 | **Start Dev Server** | `npm run dev` |
+| **Test API Endpoints** | `curl http://localhost:3000/api/worlds` |
+| **Enable Database** | Set `USE_DATABASE = true` in API routes |
 | **Test Database** | `node scripts/test-local-db.js` |
 | **Connect to DB** | `psql -U worldweaver_user -d worldweaver_dev -h localhost` |
 | **Backup Database** | `pg_dump worldweaver_dev > backup.sql` |
@@ -723,4 +836,4 @@ Always use these exact prop names to maintain TypeScript compliance:
 
 ---
 
-**Note:** This documentation reflects the current state as of September 6, 2025, including the completed local PostgreSQL database integration. The application now has full database persistence and is ready for production-level development. Keep this updated as features are migrated from mock data to database operations.
+**Note:** This documentation reflects the current state as of September 5, 2025, including the completed step-by-step database integration with Next.js API routes. The application now has a clean client-server architecture with async store operations and is ready for incremental database activation. The foundation is set for full database integration by simply enabling the database flags in the API routes.

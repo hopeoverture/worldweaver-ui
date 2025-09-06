@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // import { worldService } from '@/lib/services/worldService';
 
 // Development flag to switch between mock data and database
-const USE_DATABASE = false; // Start with false for step-by-step integration
+const USE_DATABASE = true; // Enable database operations
 
 // Mock data for fallback
 import * as seed from '@/lib/mockData';
@@ -16,11 +16,9 @@ export async function GET(request: NextRequest) {
     const includeArchived = searchParams.get('includeArchived') === 'true';
 
     if (USE_DATABASE) {
-      // TODO: Uncomment when ready to test database
-      // const { worldService } = await import('@/lib/services/worldService');
-      // const worlds = await worldService.getUserWorlds(userId);
-      // return NextResponse.json({ worlds });
-      return NextResponse.json({ error: 'Database not yet enabled' }, { status: 501 });
+      const { worldService } = await import('@/lib/services/worldService');
+      const worlds = await worldService.getUserWorlds(userId);
+      return NextResponse.json({ worlds });
     } else {
       // Use mock data
       let worlds = seed.worlds;
@@ -47,16 +45,13 @@ export async function POST(request: NextRequest) {
     const userId = body.userId || '550e8400-e29b-41d4-a716-446655440000';
 
     if (USE_DATABASE) {
-      // TODO: Uncomment when ready to test database
-      // const { worldService } = await import('@/lib/services/worldService');
-      // const newWorld = await worldService.createWorld({
-      //   name,
-      //   description,
-      //   coverImage,
-      //   isPublic: isPublic || false
-      // }, userId);
-      // return NextResponse.json({ world: newWorld });
-      return NextResponse.json({ error: 'Database not yet enabled' }, { status: 501 });
+      const { worldService } = await import('@/lib/services/worldService');
+      const newWorld = await worldService.createWorld({
+        name,
+        description,
+        isPublic: isPublic || false
+      }, userId);
+      return NextResponse.json({ world: newWorld });
     } else {
       // Use mock data approach
       const newWorld = {
