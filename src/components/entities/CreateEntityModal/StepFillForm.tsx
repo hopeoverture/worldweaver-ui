@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
+import { sanitizeTemplateField, validateJsonField } from '@/lib/security';
 import { LinkEditor } from './LinkEditor';
 import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
@@ -31,11 +32,30 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
   const entityFolders = (remoteFolders.length ? remoteFolders : folders).filter((f: any) => f.worldId === worldId && f.kind === 'entities');
 
   const handleFieldChange = (fieldId: string, value: any) => {
+    // Find the field definition to get its type
+    const field = template.fields.find(f => f.id === fieldId);
+    const fieldType = field?.type || 'shortText';
+    
+    // Sanitize the value based on field type
+    const sanitizedValue = sanitizeTemplateField(fieldType, value);
+    
+    // Additional validation for rich text and long text fields
+    if (fieldType === 'richText' || fieldType === 'longText') {
+      const validation = validateJsonField(sanitizedValue);
+      if (!validation.isValid && validation.error) {
+        setErrors(prev => ({
+          ...prev,
+          [fieldId]: validation.error!
+        }));
+        return;
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
       fields: {
         ...prev.fields,
-        [fieldId]: value
+        [fieldId]: sanitizedValue
       }
     }));
     

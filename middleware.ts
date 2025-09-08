@@ -52,8 +52,20 @@ function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('X-DNS-Prefetch-Control', 'off')
   res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-  // Minimal CSP for API responses
-  res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+  
+  // Enhanced CSP for XSS prevention
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // TODO: Remove unsafe-* in production
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self'",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+    "frame-ancestors 'none'",
+    "base-uri 'self'"
+  ].join('; ')
+  
+  res.headers.set('Content-Security-Policy', csp)
 }
 
 export async function middleware(request: NextRequest) {

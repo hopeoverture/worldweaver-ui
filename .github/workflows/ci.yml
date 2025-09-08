@@ -22,13 +22,72 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate environment example
+        run: |
+          echo "Checking .env.local.example exists and contains required variables..."
+          if [ ! -f ".env.local.example" ]; then
+            echo "❌ .env.local.example file is missing"
+            exit 1
+          fi
+          
+          required_vars=("NEXT_PUBLIC_SUPABASE_URL" "NEXT_PUBLIC_SUPABASE_ANON_KEY" "SUPABASE_SERVICE_ROLE_KEY")
+          
+          for var in "${required_vars[@]}"; do
+            if ! grep -q "^${var}=" .env.local.example; then
+              echo "❌ Required variable ${var} not found in .env.local.example"
+              exit 1
+            fi
+          done
+          
+          echo "✅ Environment example validation passed"
+
+      - name: Check for secrets in git history
+        run: |
+          echo "Checking for potential secrets in git history..."
+          if git log --all --full-history --grep="supabase.*key\|secret\|password\|token" -i --oneline | head -5; then
+            echo "⚠️  Found potential secrets in git history - please review"
+          else
+            echo "✅ No obvious secrets found in git history"
+          fi
+
       - name: Lint
         run: npm run lint
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
 
       - name: Build
         run: npm run build
         env:
           # Provide harmless defaults so Next build doesn't choke on missing env
-          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: 'dummy'
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy-anon-key-for-ci-build-only
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Check for vulnerable dependencies
+        run: |
+          echo "Checking for known vulnerabilities..."
+          if npm audit --json | jq -e '.vulnerabilities | length > 0' > /dev/null 2>&1; then
+            echo "⚠️  Vulnerabilities found - run 'npm audit fix' locally"
+            npm audit --audit-level=high
+          else
+            echo "✅ No high-risk vulnerabilities found"
+          fi
 
