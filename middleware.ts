@@ -1,49 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __rateLimitStore: Map<string, { count: number; reset: number }>
-}
-
-function getClientIp(req: NextRequest): string {
-  const xf = req.headers.get('x-forwarded-for')
-  if (xf) return xf.split(',')[0].trim()
-  return (req as any).ip ?? '127.0.0.1'
-}
-
-function matchBucket(pathname: string, method: string): { key: string; max: number; windowMs: number } | null {
-  if (method === 'POST' && /^\/api\/worlds\/[\w-]+\/invites$/.test(pathname)) {
-    return { key: 'invites.create', max: 10, windowMs: 60_000 }
-  }
-  if (method === 'POST' && pathname === '/api/admin/seed-core-templates') {
-    return { key: 'admin.seed', max: 2, windowMs: 60_000 }
-  }
-  return null
-}
-
-function rateLimit(req: NextRequest): NextResponse | null {
-  if (!globalThis.__rateLimitStore) globalThis.__rateLimitStore = new Map()
-  const store = globalThis.__rateLimitStore
-  const bucket = matchBucket(req.nextUrl.pathname, req.method)
-  if (!bucket) return null
-  const ip = getClientIp(req)
-  const now = Date.now()
-  const key = `${ip}:${bucket.key}`
-  const record = store.get(key)
-  if (!record || now > record.reset) {
-    store.set(key, { count: 1, reset: now + bucket.windowMs })
-    return null
-  }
-  if (record.count >= bucket.max) {
-    const res = NextResponse.json({ error: 'Too many requests' }, { status: 429 })
-    res.headers.set('Retry-After', Math.ceil((record.reset - now) / 1000).toString())
-    return res
-  }
-  record.count += 1
-  store.set(key, record)
-  return null
-}
+import { checkRateLimit } from '@/lib/rate-limiting'
 
 function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('X-Frame-Options', 'DENY')
@@ -66,6 +23,56 @@ function applySecurityHeaders(res: NextResponse): void {
   ].join('; ')
   
   res.headers.set('Content-Security-Policy', csp)
+}
+
+async function applyRateLimit(request: NextRequest, response: NextResponse): Promise<NextResponse | null> {
+  try {
+    const rateLimit = await checkRateLimit(request)
+    
+    if (rateLimit && !rateLimit.allowed) {
+      // Create rate limit exceeded response
+      const limitedResponse = NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'Too many requests. Please try again later.',
+            details: {
+              retryAfter: rateLimit.retryAfter,
+              resetTime: rateLimit.resetTime
+            }
+          }
+        },
+        { status: 429 }
+      )
+
+      // Add rate limit headers
+      limitedResponse.headers.set('X-RateLimit-Limit', rateLimit.count.toString())
+      limitedResponse.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString())
+      limitedResponse.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString())
+      limitedResponse.headers.set('Retry-After', rateLimit.retryAfter.toString())
+
+      // Propagate any cookies set by Supabase into the limited response
+      for (const c of response.cookies.getAll()) {
+        limitedResponse.cookies.set(c.name, c.value)
+      }
+
+      return limitedResponse
+    }
+
+    // Add rate limit headers to successful responses
+    if (rateLimit) {
+      response.headers.set('X-RateLimit-Limit', rateLimit.count.toString())
+      response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString())
+      response.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString())
+    }
+
+    return null // Continue normally
+  } catch (error) {
+    console.error('Rate limiting error in middleware:', error)
+    // Continue without rate limiting on error (fail open)
+    return null
+  }
 }
 
 export async function middleware(request: NextRequest) {
@@ -94,15 +101,11 @@ export async function middleware(request: NextRequest) {
 
   const isApi = request.nextUrl.pathname.startsWith('/api/')
   if (isApi) {
-    const limited = rateLimit(request)
-    if (limited) {
-      // Propagate any cookies set by Supabase into the limited response
-      for (const c of supabaseResponse.cookies.getAll()) {
-        // Best-effort copy; omit options to satisfy types
-        limited.cookies.set(c.name, c.value)
-      }
-      applySecurityHeaders(limited)
-      return limited
+    // Apply enhanced rate limiting
+    const limitedResponse = await applyRateLimit(request, supabaseResponse)
+    if (limitedResponse) {
+      applySecurityHeaders(limitedResponse)
+      return limitedResponse
     }
     applySecurityHeaders(supabaseResponse)
   }

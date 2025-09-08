@@ -1,24 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { z } from 'zod'
+import { 
+  apiSuccess, 
+  apiAuthRequired, 
+  apiNotFound,
+  parseRequestBody,
+  withApiErrorHandling,
+  generateRequestId
+} from '@/lib/api-utils'
+import { EntityResponse } from '@/lib/api-types'
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    const entity = await worldService.getEntityById(params.id, user.id)
-    if (!entity) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    return NextResponse.json({ entity })
-  } catch (error) {
-    console.error('Error fetching entity:', error)
-    return NextResponse.json({ error: 'Failed to fetch entity' }, { status: 500 })
+export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse<EntityResponse>> => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  
+  if (authError || !user) {
+    return apiAuthRequired()
   }
-}
+
+  const { worldService } = await import('@/lib/services/worldService')
+  const entity = await worldService.getEntityById(params.id, user.id)
+  
+  if (!entity) {
+    return apiNotFound('Entity')
+  }
+  
+  return apiSuccess(entity, { 'X-Request-ID': requestId })
+})
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
