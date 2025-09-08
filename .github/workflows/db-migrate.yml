@@ -21,28 +21,38 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client
 
-      - name: Preflight connectivity (owner)
+      - name: Resolve IPv4 and prepare URL
         env:
           SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
         run: |
           if [ -z "$SUPABASE_DB_OWNER_URL" ]; then echo "Missing secret SUPABASE_DB_OWNER_URL" && exit 1; fi
-          psql "$SUPABASE_DB_OWNER_URL" -c "select current_user, current_database();"
-          psql "$SUPABASE_DB_OWNER_URL" -c "select tableowner from pg_tables where schemaname='storage' and tablename='objects';"
+          HOST=$(echo "$SUPABASE_DB_OWNER_URL" | sed -E 's|.*@([^:/?]+).*|\1|')
+          IP=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
+          if [ -z "$IP" ]; then echo "Failed to resolve IPv4 for $HOST" && exit 1; fi
+          echo "Resolved $HOST -> $IP"
+          # Append hostaddr to force IPv4 in libpq
+          if echo "$SUPABASE_DB_OWNER_URL" | grep -q '?'; then
+            URL_IP4="${SUPABASE_DB_OWNER_URL}&hostaddr=${IP}"
+          else
+            URL_IP4="${SUPABASE_DB_OWNER_URL}?hostaddr=${IP}"
+          fi
+          # Ensure sslmode=require present
+          if ! echo "$URL_IP4" | grep -q 'sslmode='; then URL_IP4="${URL_IP4}&sslmode=require"; fi
+          echo "URL_IP4=$URL_IP4" >> $GITHUB_ENV
+
+      - name: Preflight connectivity (owner)
+        run: |
+          psql "$URL_IP4" -c "select current_user, current_database();"
+          psql "$URL_IP4" -c "select tableowner from pg_tables where schemaname='storage' and tablename='objects';"
 
       - name: Run storage policies migration (psql)
-        env:
-          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
         run: |
-          psql "$SUPABASE_DB_OWNER_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20250907170000_add_storage_policies.sql
+          psql "$URL_IP4" -v ON_ERROR_STOP=1 -f supabase/migrations/20250907170000_add_storage_policies.sql
 
       - name: Optimize RLS auth calls (psql)
-        env:
-          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
         run: |
-          psql "$SUPABASE_DB_OWNER_URL" -v ON_ERROR_STOP=1 -f supabase/migrations/20250907173500_optimize_rls_auth_calls.sql
+          psql "$URL_IP4" -v ON_ERROR_STOP=1 -f supabase/migrations/20250907173500_optimize_rls_auth_calls.sql
 
       - name: Verify storage policies present
-        env:
-          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
         run: |
-          psql "$SUPABASE_DB_OWNER_URL" -c "select polname, cmd from pg_policies where schemaname='storage' and tablename='objects' order by polname;"
+          psql "$URL_IP4" -c "select polname, cmd from pg_policies where schemaname='storage' and tablename='objects' order by polname;"
