@@ -20,7 +20,6 @@ export class SupabaseWorldService {
           entities(count),
           world_members(count)
         `)
-        .or(`owner_id.eq.${userId},world_members.user_id.eq.${userId}`)
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
 
@@ -60,7 +59,6 @@ export class SupabaseWorldService {
           entities(count)
         `)
         .eq('id', worldId)
-        .or(`owner_id.eq.${userId},is_public.eq.true,world_members.user_id.eq.${userId}`)
         .single();
 
       if (error) {
@@ -99,12 +97,19 @@ export class SupabaseWorldService {
   }, userId: string): Promise<World> {
     try {
       const supabase = await createServerSupabaseClient()
+      // Ensure server client has an authenticated user context (RLS)
+      const { data: authData, error: authErr } = await supabase.auth.getUser()
+      if (authErr || !authData?.user) {
+        console.error('createWorld: missing server auth user', authErr)
+        throw new Error('Not authenticated (server)')
+      }
+      const ownerId = authData.user.id
       const { data: world, error } = await supabase
         .from('worlds')
         .insert({
           name: data.name,
           description: data.description || '',
-          owner_id: userId,
+          owner_id: ownerId,
           is_public: data.isPublic || false,
           is_archived: false,
           settings: {} as Json
@@ -129,8 +134,8 @@ export class SupabaseWorldService {
         settings: (world.settings as Record<string, any>) || {}
       };
     } catch (error) {
-      console.error('Error creating world:', error);
-      throw new Error('Failed to create world');
+      console.error('Error creating world:', error)
+      throw (error as Error)
     }
   }
 
@@ -616,7 +621,13 @@ export class SupabaseWorldService {
    */
   async getWorldTemplates(worldId: string): Promise<Template[]> {
     try {
-      const supabase = await createServerSupabaseClient()
+      // Use service role key for system templates since they need elevated access
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      
       const { data: templates, error } = await supabase
         .from('templates')
         .select('*')
@@ -631,6 +642,7 @@ export class SupabaseWorldService {
       // Deduplicate by name, preferring world-specific overrides over system versions
       const byName = new Map<string, any>()
       const list = templates || []
+      
       // First pass: insert world-specific overrides for this world
       for (const t of list) {
         const key = (t.name || '').toLowerCase()
@@ -647,8 +659,9 @@ export class SupabaseWorldService {
       }
 
       const deduped = Array.from(byName.values())
+      
       // Map to domain type
-      return deduped.map(template => ({
+      const result = deduped.map(template => ({
         id: template.id,
         worldId: template.world_id || worldId,
         folderId: undefined,
@@ -658,7 +671,9 @@ export class SupabaseWorldService {
         category: template.category || 'General',
         fields: (template.fields as any[]) || [],
         isSystem: template.is_system || false
-      }))
+      }));
+      
+      return result;
     } catch (error) {
       console.error('Error fetching world templates:', error);
       throw new Error('Failed to fetch templates');
@@ -1044,6 +1059,210 @@ export class SupabaseWorldService {
     if (error) {
       console.error('Supabase error deleting folder:', error)
       throw new Error(`Database error: ${error.message}`)
+    }
+  }
+
+  // Members management
+  async getWorldMembers(worldId: string, userId: string) {
+    try {
+      // First verify user has access to this world
+      const world = await this.getWorldById(worldId, userId);
+      if (!world) {
+        throw new Error('World not found or access denied');
+      }
+
+      const supabase = await createServerSupabaseClient()
+      
+      // For now, just return the world owner as a member
+      // TODO: Implement full members functionality when world_members table is properly set up
+      const { data: worldData, error: worldError } = await supabase
+        .from('worlds')
+        .select(`
+          owner_id
+        `)
+        .eq('id', worldId)
+        .single();
+
+      if (worldError) {
+        console.error('Supabase error fetching world owner:', worldError);
+        throw new Error(`Database error: ${worldError.message}`);
+      }
+
+      // Get owner profile
+      let ownerProfile: any = null;
+      if (worldData?.owner_id) {
+        const { data: ownerProfileData, error: ownerProfileError } = await supabase
+          .from('profiles')
+          .select('id, email, full_name, avatar_url')
+          .eq('id', worldData.owner_id)
+          .single();
+          
+        if (!ownerProfileError && ownerProfileData) {
+          ownerProfile = ownerProfileData;
+        }
+      }
+
+      // Return just the owner for now
+      if (worldData?.owner_id && ownerProfile) {
+        const ownerMember = {
+          id: `owner-${worldData.owner_id}`, // Special ID for owner
+          worldId: worldId,
+          userId: worldData.owner_id,
+          role: 'owner' as const,
+          joinedAt: new Date().toISOString(), // Placeholder
+          lastActiveAt: new Date().toISOString(),
+          name: ownerProfile.full_name || 'Unknown User',
+          email: ownerProfile.email || '',
+          avatar: ownerProfile.avatar_url || undefined,
+          permissions: {}
+        };
+        
+        return [ownerMember];
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching world members:', error);
+      throw new Error('Failed to fetch members');
+    }
+  }
+
+  async updateMemberRole(worldId: string, memberId: string, role: string, userId: string) {
+    try {
+      // First verify user has admin/owner access to this world
+      const world = await this.getWorldById(worldId, userId);
+      if (!world) {
+        throw new Error('World not found or access denied');
+      }
+
+      const supabase = await createServerSupabaseClient()
+      
+      // Check if the requesting user is the owner or admin
+      const { data: worldData } = await supabase
+        .from('worlds')
+        .select('owner_id')
+        .eq('id', worldId)
+        .single();
+
+      const isOwner = worldData?.owner_id === userId;
+      
+      if (!isOwner) {
+        // Check if user is admin
+        const { data: requestingMember } = await supabase
+          .from('world_members')
+          .select('role')
+          .eq('world_id', worldId)
+          .eq('user_id', userId)
+          .single();
+
+        if (!requestingMember || requestingMember.role !== 'admin') {
+          throw new Error('Insufficient permissions to update member roles');
+        }
+      }
+
+      // Validate role (can't set owner role through this method)
+      const validRoles = ['admin', 'editor', 'viewer'];
+      if (!validRoles.includes(role)) {
+        throw new Error('Invalid role specified');
+      }
+
+      // Update the member role
+      const { data: updatedMember, error } = await supabase
+        .from('world_members')
+        .update({ role: role as 'admin' | 'editor' | 'viewer' })
+        .eq('id', memberId)
+        .eq('world_id', worldId)
+        .select(`
+          id,
+          world_id,
+          user_id,
+          role,
+          joined_at
+        `)
+        .single();
+
+      if (error) {
+        console.error('Supabase error updating member role:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      // Get the updated member's profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url')
+        .eq('id', updatedMember.user_id)
+        .single();
+
+      return {
+        id: updatedMember.id,
+        worldId: updatedMember.world_id,
+        userId: updatedMember.user_id,
+        role: updatedMember.role as 'admin' | 'editor' | 'viewer',
+        joinedAt: updatedMember.joined_at,
+        lastActiveAt: updatedMember.joined_at,
+        name: profileData?.full_name || 'Unknown User',
+        email: profileData?.email || '',
+        avatar: profileData?.avatar_url || undefined,
+        permissions: {}
+      };
+    } catch (error) {
+      console.error('Error updating member role:', error);
+      throw new Error('Failed to update member role');
+    }
+  }
+
+  async removeMember(worldId: string, memberId: string, userId: string) {
+    try {
+      // First verify user has admin/owner access to this world
+      const world = await this.getWorldById(worldId, userId);
+      if (!world) {
+        throw new Error('World not found or access denied');
+      }
+
+      const supabase = await createServerSupabaseClient()
+      
+      // Check if the requesting user is the owner or admin
+      const { data: worldData } = await supabase
+        .from('worlds')
+        .select('owner_id')
+        .eq('id', worldId)
+        .single();
+
+      const isOwner = worldData?.owner_id === userId;
+      
+      if (!isOwner) {
+        // Check if user is admin
+        const { data: requestingMember } = await supabase
+          .from('world_members')
+          .select('role')
+          .eq('world_id', worldId)
+          .eq('user_id', userId)
+          .single();
+
+        if (!requestingMember || requestingMember.role !== 'admin') {
+          throw new Error('Insufficient permissions to remove members');
+        }
+      }
+
+      // Cannot remove the owner (owner is not in world_members table)
+      if (memberId.startsWith('owner-')) {
+        throw new Error('Cannot remove the world owner');
+      }
+
+      // Remove the member
+      const { error } = await supabase
+        .from('world_members')
+        .delete()
+        .eq('id', memberId)
+        .eq('world_id', worldId);
+
+      if (error) {
+        console.error('Supabase error removing member:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error removing member:', error);
+      throw new Error('Failed to remove member');
     }
   }
 }

@@ -85,7 +85,10 @@ export async function middleware(request: NextRequest) {
     const limited = rateLimit(request)
     if (limited) {
       // Propagate any cookies set by Supabase into the limited response
-      limited.cookies.setAll(supabaseResponse.cookies.getAll())
+      for (const c of supabaseResponse.cookies.getAll()) {
+        // Best-effort copy; omit options to satisfy types
+        limited.cookies.set(c.name, c.value)
+      }
       applySecurityHeaders(limited)
       return limited
     }

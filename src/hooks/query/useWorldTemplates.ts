@@ -24,6 +24,7 @@ export function useWorldTemplates(worldId: string | undefined) {
         const key = (t.name || "").toLowerCase();
         if (!byName.has(key)) byName.set(key, t);
       }
+      
       return Array.from(byName.values());
     },
   });

@@ -42,7 +42,8 @@ export class WorldService {
       return await supabaseWorldService.createWorld(data, userId);
     } catch (error) {
       console.error('Error creating world:', error);
-      throw new Error('Failed to create world');
+      // Preserve underlying database error message for the API route to surface in dev
+      throw (error as Error);
     }
   }
 
@@ -293,6 +294,34 @@ export class WorldService {
     } catch (error) {
       console.error('Error deleting relationship:', error)
       throw new Error('Failed to delete relationship')
+    }
+  }
+
+  // Members
+  async getWorldMembers(worldId: string, userId: string) {
+    try {
+      return await supabaseWorldService.getWorldMembers(worldId, userId)
+    } catch (error) {
+      console.error('Error fetching members:', error)
+      throw new Error('Failed to fetch members')
+    }
+  }
+
+  async updateMemberRole(worldId: string, memberId: string, role: string, userId: string) {
+    try {
+      return await supabaseWorldService.updateMemberRole(worldId, memberId, role, userId)
+    } catch (error) {
+      console.error('Error updating member role:', error)
+      throw new Error('Failed to update member role')
+    }
+  }
+
+  async removeMember(worldId: string, memberId: string, userId: string) {
+    try {
+      return await supabaseWorldService.removeMember(worldId, memberId, userId)
+    } catch (error) {
+      console.error('Error removing member:', error)
+      throw new Error('Failed to remove member')
     }
   }
 }

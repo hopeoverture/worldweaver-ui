@@ -12,6 +12,8 @@ import { Toggle } from '@/components/ui/Toggle';
 import { useInvites } from '@/hooks/query/useInvites';
 import { useCreateInvite } from '@/hooks/mutations/useCreateInvite';
 import { useRevokeInvite } from '@/hooks/mutations/useRevokeInvite';
+import { useWorldMembers } from '@/hooks/query/useWorldMembers';
+import { useUpdateMemberRole, useRemoveMember } from '@/hooks/mutations/useMembers';
 
 type MembershipTabProps = {
   world: World;
@@ -53,18 +55,17 @@ export function MembershipTab({ world }: MembershipTabProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<WorldMember | null>(null);
   
-  const { 
-    getWorldMembers, 
-    updateMemberRole, 
-    removeMember,
-    updateWorldSettings,
-    transferOwnership
-  } = useStore();
+  const { updateWorldSettings, transferOwnership } = useStore();
 
-  const members = getWorldMembers(world.id);
+  // Use real API hooks instead of store
+  const { data: members = [], isLoading: membersLoading } = useWorldMembers(world.id);
   const { data: invites = [], isLoading: invitesLoading } = useInvites(activeSection === 'invites' ? world.id : '');
   const createInvite = useCreateInvite(world.id);
   const revokeInviteMut = useRevokeInvite(world.id);
+  const updateMemberRoleMut = useUpdateMemberRole(world.id);
+  const removeMemberMut = useRemoveMember(world.id);
+
+  // Find current user member (you'd get this from auth context in real app)
   const currentUserMember = members.find((m: WorldMember) => m.email === 'current@user.com'); // In real app, get from auth
   const isOwner = currentUserMember?.role === 'owner';
   const canManageMembers = currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role);
@@ -75,12 +76,12 @@ export function MembershipTab({ world }: MembershipTabProps) {
   };
 
   const handleChangeRole = (memberId: string, newRole: MemberRole) => {
-    updateMemberRole(world.id, memberId, newRole);
+    updateMemberRoleMut.mutate({ memberId, role: newRole });
   };
 
   const handleRemoveMember = (memberId: string) => {
     if (confirm('Are you sure you want to remove this member from the world?')) {
-      removeMember(world.id, memberId);
+      removeMemberMut.mutate(memberId);
     }
   };
 
@@ -170,7 +171,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Members</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {members.length} of {world.seatLimit || '∞'} seats used
+                {membersLoading ? 'Loading members...' : `${members.length} of ${world.seatLimit || '∞'} seats used`}
               </p>
             </div>
             {canManageMembers && (
@@ -201,7 +202,33 @@ export function MembershipTab({ world }: MembershipTabProps) {
           </div>
 
           <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
+            {membersLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading members...</p>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No members yet</h4>
+                <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-sm mx-auto">
+                  Invite collaborators to help build and manage this world together.
+                </p>
+                {canManageMembers && (
+                  <Button
+                    onClick={() => setShowInviteModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Send First Invite
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-800/50">
                   <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -322,6 +349,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                 </tbody>
               </table>
             </div>
+            )}
           </Card>
         </div>
       )}

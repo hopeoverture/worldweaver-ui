@@ -34,6 +34,7 @@ export default function WorldDashboard() {
   const { data: remoteEntities = [] as Entity[] } = useWorldEntities(strWorldId);
   const { data: remoteTemplates = [] as Template[] } = useWorldTemplates(strWorldId);
   const { data: remoteFolders = [] as Folder[] } = useWorldFolders(strWorldId);
+  
   const [activeTab, setActiveTab] = useState('entities');
   const deleteTemplateMut = useDeleteTemplate(strWorldId);
   const updateFolderMut = useUpdateFolder();
@@ -45,6 +46,8 @@ export default function WorldDashboard() {
   const [isCreateTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
   const [isCreateRelationshipModalOpen, setCreateRelationshipModalOpen] = useState(false);
   const [folderType, setFolderType] = useState<'entities' | 'templates'>('entities');
+  const [editFolder, setEditFolder] = useState<Folder | null>(null);
+  const [isEditOpen, setEditOpen] = useState(false);
 
   if (isLoading) return (
     <div className="min-h-[50vh] flex items-center justify-center">
@@ -64,9 +67,6 @@ export default function WorldDashboard() {
       onError: (e) => toast({ title: 'Failed to delete template', description: String((e as Error)?.message || e), variant: 'error' }),
     });
   };
-
-  const [editFolder, setEditFolder] = useState<Folder | null>(null);
-  const [isEditOpen, setEditOpen] = useState(false);
   const handleFolderRename = (folder: Folder) => {
     setEditFolder(folder);
     setEditOpen(true);
@@ -85,13 +85,13 @@ export default function WorldDashboard() {
   const entityFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'entities');
   const templateFolders: Folder[] = []; // Templates don't use folders in current schema
 
-  const entitiesInFolder = selectedFolder ? remoteEntities.filter((e) => e.folderId === selectedFolder) : [];
-  const templatesInFolder = selectedFolder ? remoteTemplates.filter((t) => t.folderId === selectedFolder) : [];
+  const entitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
+  const templatesInFolder = selectedFolder ? remoteTemplates.filter((template: Template) => template.folderId === selectedFolder) : [];
   
   // Get ungrouped entities (entities without a folder)
-  const ungroupedEntities = remoteEntities.filter((e) => e.worldId === strWorldId && !e.folderId);
+  const ungroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
   // Get ungrouped templates (templates without a folder)  
-  const ungroupedTemplates = remoteTemplates.filter((t) => (t.worldId || strWorldId) === strWorldId && !t.folderId);
+  const ungroupedTemplates = remoteTemplates.filter((template: Template) => (template.worldId || strWorldId) === strWorldId && !template.folderId);
 
   const tabs: TabItem[] = [
     {

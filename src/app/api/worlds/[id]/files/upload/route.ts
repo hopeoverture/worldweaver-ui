@@ -53,8 +53,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     })
 
     if (upErr) {
-      // Rollback metadata if upload fails
-      await supabase.from('world_files').delete().eq('id', meta.id).catch(() => {})
+      // Rollback metadata if upload fails (best-effort; ignore any error)
+      await supabase.from('world_files').delete().eq('id', meta.id)
       return NextResponse.json({ error: upErr.message }, { status: 400 })
     }
 
@@ -76,4 +76,3 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 }
 
 export const dynamic = 'force-dynamic'
-

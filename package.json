@@ -8,7 +8,8 @@
     "start": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next start",
     "test": "vitest run",
     "lint": "eslint",
-    "seed:core": "node scripts/seed-core-templates.js"
+    "seed:core": "node scripts/seed-core-templates.js",
+    "test:api": "node scripts/test-api-endpoints.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -1,17 +1,14 @@
-"use client";
+import { useQuery } from '@tanstack/react-query'
 
-import { useQuery } from "@tanstack/react-query";
-import type { Entity } from "@/lib/types";
-
-export function useWorldEntities(worldId: string) {
+export function useWorldMembers(worldId: string) {
   return useQuery({
-    queryKey: ['world-entities', worldId],
+    queryKey: ['world-members', worldId],
     queryFn: async () => {
       if (!worldId) {
         throw new Error('World ID is required')
       }
 
-      const response = await fetch(`/api/worlds/${worldId}/entities`, {
+      const response = await fetch(`/api/worlds/${worldId}/members`, {
         credentials: 'include',
       })
 
@@ -21,10 +18,10 @@ export function useWorldEntities(worldId: string) {
       }
 
       const data = await response.json()
-      return data.entities
+      return data.members
     },
     enabled: !!worldId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   })
 }

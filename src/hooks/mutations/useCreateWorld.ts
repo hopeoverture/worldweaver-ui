@@ -3,7 +3,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/ToastProvider";
 
-type Body = { name: string; description?: string; isPublic?: boolean };
+type Body = {
+  name: string;
+  description?: string;
+  isPublic?: boolean;
+  // Extended world-creation fields
+  logline?: string;
+  genreBlend?: string[];
+  overallTone?: string;
+  keyThemes?: string[];
+  audienceRating?: string;
+  scopeScale?: string;
+  technologyLevel?: string[];
+  magicLevel?: string[];
+  cosmologyModel?: string;
+  climateBiomes?: string[];
+  calendarTimekeeping?: string;
+  societalOverview?: string;
+  conflictDrivers?: string[];
+  rulesConstraints?: string;
+  aestheticDirection?: string;
+};
 
 export function useCreateWorld() {
   const qc = useQueryClient();

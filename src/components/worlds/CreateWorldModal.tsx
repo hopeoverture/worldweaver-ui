@@ -168,7 +168,23 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
       try {
         await createWorld.mutateAsync({
           name: formData.name,
+          // Keep description as a general summary; use logline for dedicated column too
           description: formData.logline,
+          logline: formData.logline,
+          genreBlend: formData.genreBlend,
+          overallTone: formData.overallTone || undefined,
+          keyThemes: formData.keyThemes,
+          audienceRating: formData.audienceRating || undefined,
+          scopeScale: formData.scopeScale || undefined,
+          technologyLevel: formData.technologyLevel,
+          magicLevel: formData.magicLevel,
+          cosmologyModel: formData.cosmologyModel || undefined,
+          climateBiomes: formData.climateBiomes,
+          calendarTimekeeping: formData.calendarTimekeeping || undefined,
+          societalOverview: formData.societalOverview || undefined,
+          conflictDrivers: formData.conflictDrivers,
+          rulesConstraints: formData.rulesConstraints || undefined,
+          aestheticDirection: formData.aestheticDirection || undefined,
         });
         // Reset form and close modal
         setFormData(initialFormData);
