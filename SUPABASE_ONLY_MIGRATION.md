@@ -19,32 +19,32 @@ Result:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - For seeding (dev only): `SUPABASE_SERVICE_ROLE_KEY`, `SEED_ADMIN_TOKEN`
-- Migrations applied (initial + invites/activity/files + RPC):
+- Migrations applied (baseline + invites/activity/files + storage + RLS optimizations):
   - `supabase/migrations/20250906000001_create_tables.sql`
   - `supabase/migrations/20250906000002_create_policies.sql`
-  - `supabase/migrations/20250907013251_initial_setup.sql`
   - `supabase/migrations/20250907020000_add_invites_activity_files.sql`
+  - `supabase/migrations/20250907170000_add_storage_policies.sql`
+  - `supabase/migrations/20250907173500_optimize_rls_auth_calls.sql`
 - Dev server runs cleanly: `npm run dev`
 
-Optional (recommended):
-- Regenerate Supabase types after schema changes:
+Optional (recommended): Regenerate Supabase types after schema changes:
 
 ```bash
 # Example: generate to src/lib/supabase/types.generated.ts
 supabase gen types typescript --linked --schema public > worldweaver-ui/src/lib/supabase/types.generated.ts
 
-# Or generate to database.types.ts (app-preferred file)
-supabase gen types typescript --linked --schema public > worldweaver-ui/src/lib/supabase/database.types.ts
+# Types are consumed via the wrapper re-export:
+#   src/lib/supabase/types.ts (re-exports from types.generated.ts)
 ```
 
-Note: Both `src/lib/supabase/types.generated.ts` and `src/lib/supabase/database.types.ts` exist. Prefer importing `Json` and `Database` from `src/lib/supabase/database.types.ts` in app code.
+Note: Prefer importing `Json` and `Database` from `src/lib/supabase/types` (wrapper), which re-exports from `types.generated.ts`.
 
 ## JSON Columns and TypeScript
 
 Several tables use JSON columns (e.g., `worlds.settings`, `entities.data`, `templates.fields`). When inserting/updating through Supabase, ensure the payload is typed as `Json` to satisfy TypeScript overloads:
 
 ```ts
-import type { Json } from '@/lib/supabase/database.types'
+import type { Json } from '@/lib/supabase/types'
 
 // Example: creating an entity
 const { data: row } = await supabase
@@ -220,17 +220,17 @@ Implement/verify the following endpoints before fully deleting store data:
 - Entities
   - [x] `GET /api/worlds/[id]/entities`
   - [x] `POST /api/worlds/[id]/entities`
-  - `GET/PUT/DELETE /api/entities/[id]`
+  - [x] `GET/PUT/DELETE /api/entities/[id]`
 - Folders
   - [x] `GET /api/worlds/[id]/folders`
-  - `POST /api/worlds/[id]/folders`
-  - `PUT/DELETE /api/folders/[id]`
+  - [x] `POST /api/worlds/[id]/folders`
+  - [x] `GET/PUT/DELETE /api/folders/[id]`
 - Templates
   - [x] `GET /api/worlds/[id]/templates` (world + system)
   - [x] `POST /api/worlds/[id]/templates`
   - [x] `PUT/DELETE /api/templates/[id]`
 - Relationships
-  - `GET/POST /api/worlds/[id]/relationships`, `PUT/DELETE /api/relationships/[id]`
+  - [x] `GET/POST /api/worlds/[id]/relationships`, `PUT/DELETE /api/relationships/[id]`
 
 ## Phase 5 - Delete Mock Data & Local Implementations
 
@@ -249,8 +249,8 @@ If Zustand is no longer used for any UI state:
 
 - Add zod validation to all write operations:
   - Worlds: `PUT /api/worlds/[id]` [x]; `POST /api/worlds` [x]
-  - Invites: `POST /api/worlds/[id]/invites`
-  - Entities/Templates/Folders/Relationships: their `POST/PUT`
+  - Invites: `POST /api/worlds/[id]/invites` [x]; `POST /api/invites/accept` [x]
+  - Entities/Templates/Folders/Relationships: their `POST/PUT` [x]
 - [x] Use the SSR Supabase client (`src/lib/supabase/server.ts`) in API routes for RLS.
 - [x] For JSON columns, cast to `Json` as shown above to satisfy TypeScript.
 
@@ -289,4 +289,3 @@ curl -X POST "http://localhost:3000/api/admin/seed-core-templates" \
 ```
 
 If you want, I can help wire up the TanStack Query hooks and migrate the dashboard and Members tab to live API data, then remove the store arrays.
-

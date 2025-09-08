@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import crypto from 'node:crypto'
+import { z } from 'zod'
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -12,24 +13,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     const worldId = params.id
-    const body = await req.json().catch(() => ({}))
-    const email: string = String(body?.email || '').trim()
-    const role: 'admin' | 'editor' | 'viewer' = body?.role || 'viewer'
-    const days: number = Number(body?.expiresInDays ?? 7)
-    if (!email) {
-      return NextResponse.json({ error: 'Missing email' }, { status: 400 })
+
+    const schema = z.object({
+      email: z.string().email(),
+      role: z.enum(['admin','editor','viewer']).default('viewer'),
+      expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+    })
+
+    let body: z.infer<typeof schema>
+    try {
+      body = schema.parse(await req.json())
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        return NextResponse.json({ error: 'Invalid request body', issues: e.issues }, { status: 400 })
+      }
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
     const token = crypto.randomBytes(24).toString('hex')
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + body.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
 
     // RLS ensures only owner/admin can insert
     const { data, error } = await supabase
       .from('world_invites')
       .insert({
         world_id: worldId,
-        email,
-        role,
+        email: body.email.trim(),
+        role: body.role,
         invited_by: user.id,
         token,
         expires_at: expiresAt,

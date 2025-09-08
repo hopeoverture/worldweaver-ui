@@ -414,6 +414,204 @@ export class SupabaseWorldService {
   }
 
   /**
+   * Relationships: list for a world
+   */
+  async getWorldRelationships(worldId: string, userId: string): Promise<Array<{
+    id: string;
+    worldId: string;
+    from: string;
+    to: string;
+    label: string;
+    description?: string | null;
+    metadata?: Json | null;
+    updatedAt?: string;
+  }>> {
+    // Verify access to world
+    const world = await this.getWorldById(worldId, userId)
+    if (!world) throw new Error('World not found or access denied')
+
+    const supabase = await createServerSupabaseClient()
+    const { data: rows, error } = await supabase
+      .from('relationships')
+      .select('*')
+      .eq('world_id', worldId)
+      .order('updated_at', { ascending: false })
+
+    if (error) {
+      console.error('Supabase error fetching relationships:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    return (rows || []).map(r => ({
+      id: r.id,
+      worldId: r.world_id,
+      from: r.from_entity_id,
+      to: r.to_entity_id,
+      label: r.relationship_type,
+      description: r.description,
+      metadata: r.metadata as Json | null,
+      updatedAt: r.updated_at,
+    }))
+  }
+
+  /**
+   * Relationships: create (idempotent on unique triple)
+   */
+  async createRelationship(
+    worldId: string,
+    data: { fromEntityId: string; toEntityId: string; label: string; description?: string | null; metadata?: Json | null },
+    userId: string,
+  ): Promise<{
+    id: string;
+    worldId: string;
+    from: string;
+    to: string;
+    label: string;
+    description?: string | null;
+    metadata?: Json | null;
+    created?: boolean;
+  }> {
+    // Verify access
+    const world = await this.getWorldById(worldId, userId)
+    if (!world) throw new Error('World not found or access denied')
+
+    const supabase = await createServerSupabaseClient()
+
+    // Pre-check to avoid uniqueness error and behave idempotently
+    const { data: existingRows, error: findErr } = await supabase
+      .from('relationships')
+      .select('*')
+      .eq('world_id', worldId)
+      .eq('from_entity_id', data.fromEntityId)
+      .eq('to_entity_id', data.toEntityId)
+      .eq('relationship_type', data.label)
+      .limit(1)
+    if (findErr) {
+      console.error('Supabase error pre-checking relationship:', findErr)
+      throw new Error(`Database error: ${findErr.message}`)
+    }
+    if (existingRows && existingRows.length > 0) {
+      const r = existingRows[0]
+      return {
+        id: r.id,
+        worldId: r.world_id,
+        from: r.from_entity_id,
+        to: r.to_entity_id,
+        label: r.relationship_type,
+        description: r.description,
+        metadata: r.metadata as Json | null,
+        created: false,
+      }
+    }
+
+    const { data: row, error } = await supabase
+      .from('relationships')
+      .insert({
+        world_id: worldId,
+        from_entity_id: data.fromEntityId,
+        to_entity_id: data.toEntityId,
+        relationship_type: data.label,
+        description: data.description ?? null,
+        metadata: (data.metadata ?? null) as Json | null,
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      console.error('Supabase error creating relationship:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+
+    return {
+      id: row.id,
+      worldId: row.world_id,
+      from: row.from_entity_id,
+      to: row.to_entity_id,
+      label: row.relationship_type,
+      description: row.description,
+      metadata: row.metadata as Json | null,
+      created: true,
+    }
+  }
+
+  /**
+   * Relationships: update label/metadata by ID
+   */
+  async updateRelationship(
+    relationshipId: string,
+    data: { label?: string; description?: string | null; metadata?: Json | null },
+    userId: string,
+  ): Promise<{ id: string; worldId: string; from: string; to: string; label: string; description?: string | null; metadata?: Json | null }> {
+    const supabase = await createServerSupabaseClient()
+
+    // Fetch current to check access via world
+    const { data: current, error: fetchErr } = await supabase
+      .from('relationships')
+      .select('*')
+      .eq('id', relationshipId)
+      .single()
+    if (fetchErr) {
+      console.error('Supabase error fetching relationship:', fetchErr)
+      throw new Error(`Database error: ${fetchErr.message}`)
+    }
+
+    const world = await this.getWorldById(current.world_id, userId)
+    if (!world) throw new Error('Relationship not found or access denied')
+
+    const patch: any = {}
+    if (data.label !== undefined) patch.relationship_type = data.label
+    if (data.description !== undefined) patch.description = data.description
+    if (data.metadata !== undefined) patch.metadata = data.metadata as Json | null
+
+    const { data: row, error } = await supabase
+      .from('relationships')
+      .update(patch)
+      .eq('id', relationshipId)
+      .select('*')
+      .single()
+    if (error) {
+      console.error('Supabase error updating relationship:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+    return {
+      id: row.id,
+      worldId: row.world_id,
+      from: row.from_entity_id,
+      to: row.to_entity_id,
+      label: row.relationship_type,
+      description: row.description,
+      metadata: row.metadata as Json | null,
+    }
+  }
+
+  /**
+   * Relationships: delete by ID
+   */
+  async deleteRelationship(relationshipId: string, userId: string): Promise<void> {
+    const supabase = await createServerSupabaseClient()
+    const { data: current, error: fetchErr } = await supabase
+      .from('relationships')
+      .select('id, world_id')
+      .eq('id', relationshipId)
+      .single()
+    if (fetchErr) {
+      console.error('Supabase error fetching relationship:', fetchErr)
+      throw new Error(`Database error: ${fetchErr.message}`)
+    }
+    const world = await this.getWorldById(current.world_id, userId)
+    if (!world) throw new Error('Relationship not found or access denied')
+
+    const { error } = await supabase
+      .from('relationships')
+      .delete()
+      .eq('id', relationshipId)
+    if (error) {
+      console.error('Supabase error deleting relationship:', error)
+      throw new Error(`Database error: ${error.message}`)
+    }
+  }
+
+  /**
    * Get templates for a world (including system templates)
    */
   async getWorldTemplates(worldId: string): Promise<Template[]> {

@@ -2,7 +2,7 @@
 
 > Note: Portions of this document may be outdated or contain encoding artifacts. For the authoritative quickstart and environment details, see `README.md` and `SUPABASE_AUTH_SETUP.md`.
 
-**Last Updated:** September 6, 2025  
+**Last Updated:** September 8, 2025  
 **Version:** 0.1.0  
 **Build Status:** Active Development  
 **Latest Changes:** Complete Supabase authentication integration, protected API routes, authenticated user sessions, and fixed store authentication context
@@ -58,7 +58,7 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Production Database** - Deployed to Supabase project: `rkjtxcavocbhhwuywduj`
 - **Authentication System** - Complete Supabase Auth with protected routes
 - **Row Level Security** - User-scoped data access policies on all tables
-- **TypeScript Types** - Auto-generated from live database schema (530 lines)
+- **TypeScript Types** - Auto-generated from live database schema via `src/lib/supabase/types.generated.ts` (re-exported by `src/lib/supabase/types.ts`)
 - **API Authentication** - Server-side session verification with middleware
 
 ### Supabase Configuration
@@ -69,11 +69,15 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Environment:** Configured in `.env.local` with service role keys
 
 ### Supabase API Routes
-- **`/api/worlds/route.ts`** - GET all worlds, POST new world (authenticated)
-- **`/api/worlds/[id]/route.ts`** - GET, PUT, DELETE individual worlds (authenticated)
-- **Authentication Middleware** - Automatic user session verification
-- **Type-Safe Responses** - Consistent JSON response formats with TypeScript
-- **Graceful Fallback** - Mock data for unauthenticated users
+- Worlds: `GET /api/worlds`, `GET/PUT/DELETE /api/worlds/[id]`
+- Entities: `GET/POST /api/worlds/[id]/entities`, `GET/PUT/DELETE /api/entities/[id]`
+- Templates: `GET/POST /api/worlds/[id]/templates`, `PUT/DELETE /api/templates/[id]`
+- Folders: `GET/POST /api/worlds/[id]/folders`, `GET/PUT/DELETE /api/folders/[id]`
+- Invites: `POST/GET /api/worlds/[id]/invites`, `DELETE /api/worlds/[id]/invites/[inviteId]`, `POST /api/invites/accept`
+- Relationships: `GET/POST /api/worlds/[id]/relationships`, `PUT/DELETE /api/relationships/[id]`
+- Authentication Middleware: security headers + light rate limiting on key API endpoints
+- Type-Safe Responses: consistent JSON response formats with TypeScript
+- Unauthenticated: protected routes return 401 (no mock fallback)
 
 ### Database Schema
 - **auth.users** - Supabase authentication (managed by Supabase)
@@ -84,6 +88,10 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **public.templates** - Entity templates (system & custom)
 - **public.folders** - Organization structure for entities and templates
 - **public.entities** - World-building content (characters, locations, etc.)
+- **public.relationships** - Edges between entities with unique (from,to,type)
+- **public.world_bans** - World-level bans
+- **public.activity_logs** - Append-only activity records
+- **public.world_files** - File metadata paired with Storage
 
 ### Authentication Context
 ```typescript
@@ -308,9 +316,9 @@ type Folder = {
 };
 ```
 
-## � Authentication System
+## Authentication System
 
-### Complete Supabase Auth Integration ✅
+### Complete Supabase Auth Integration
 - **User Registration & Login** - Complete authentication flows with validation
 - **Protected Routes** - Middleware-based authentication for Next.js 15
 - **User Profiles** - Profile management with display names and settings
@@ -325,37 +333,31 @@ type Folder = {
 - **Auth Context** (`/src/contexts/AuthContext.tsx`) - Global authentication state
 - **Middleware** (`/middleware.ts`) - Route protection and session management
 - **App Header** (`/src/components/header/AppHeader.tsx`) - User status and logout
-
 ### Current Auth Status
-- ✅ **User Registration** - Functional with email verification
-- ✅ **User Login** - Working with session persistence  
-- ✅ **Protected API Routes** - All `/api/worlds` endpoints require authentication
-- ✅ **User Context** - Authentication state available throughout app
-- ✅ **Profile Management** - Users can update display names and preferences
-- ✅ **Graceful Fallback** - Non-authenticated users see mock data
-- ✅ **Store Integration** - World operations use authenticated user's ID
+- ? **User Registration** - Functional with email verification
+- ? **User Login** - Works with session persistence
+- ? **Protected API Routes** - All `/api/worlds` endpoints require authentication
+- ? **User Context** - Authentication state available throughout app
+- ? **Profile Management** - Users can update display names and preferences
+- ? **Unauthenticated** - Protected routes return 401 (no mock fallback)
+- ? **Store Integration** - World operations use authenticated user's ID
 
-## 📊 Data Integration Status
+## Data Integration Status
 
-### ✅ Fully Integrated with Supabase
+### Fully Integrated with Supabase
 - **Authentication** - Complete Supabase Auth system with protected routes
 - **Worlds** - Full CRUD operations with user-scoped access via RLS policies
 - **User Profiles** - Profile creation and management connected to auth users
 
-### ⚠️ Partially Integrated (Mock Data Fallback)
-- **Templates** - System templates loaded, custom templates still use mock data
-- **Entities** - Entity creation and management still using mock data
-- **Folders** - Folder organization still using mock data  
-- **Relationships** - Relationship mapping still using mock data
+### Fully Integrated (API + RLS)
+- Templates, Entities, Folders, and Relationships are API-backed and RLS-protected.
 
 ### Integration Architecture
 - **API-First Approach** - All database operations go through protected API routes
 - **Authenticated Sessions** - User ID automatically retrieved from Supabase session
 - **RLS Security** - Row Level Security ensures users only see their own data
-- **Mock Data Fallback** - Graceful degradation for non-authenticated users
+- Unauthenticated � protected routes return 401 (no mock fallback)
 - **Type Safety** - Auto-generated TypeScript types from live database schema
-
-## �🔧 Development Setup
 
 ### Prerequisites
 - Node.js 20+ 
@@ -498,7 +500,7 @@ How to apply:
 - **Authentication Context** - React context provider for global auth state
 - **Session Persistence** - Automatic session management across page reloads
 - **Middleware Protection** - Next.js middleware for route-based authentication
-- **Graceful Fallback** - Mock data for non-authenticated users
+- Unauthenticated — protected routes return 401 (no mock fallback)
 
 ### 2. Production Database Integration ✅
 - **Supabase Production Database** - Cloud-hosted PostgreSQL with complete schema
@@ -512,7 +514,7 @@ How to apply:
 - **API Integration** - Store methods call protected API endpoints
 - **Automatic User Context** - User ID retrieved from authenticated sessions
 - **Error Handling & Loading States** - User-friendly feedback for async operations
-- **Mock Data Fallback** - Graceful degradation for non-authenticated users
+- Unauthenticated — protected routes return 401 (no mock fallback)
 - **Type-Safe Operations** - TypeScript support throughout store operations
 
 ### 4. Enhanced Creation Button Hover Effects ✅
@@ -954,3 +956,4 @@ Always use these exact prop names to maintain TypeScript compliance:
 ---
 
 **Note:** This documentation reflects the current state as of September 6, 2025, including the completed Supabase authentication integration with protected API routes. The application now has a fully functional authentication system with user-scoped data access and is ready for expanding the remaining entities to use the same authenticated database integration pattern.
+

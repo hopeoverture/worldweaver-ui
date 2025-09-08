@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next dev",
     "build": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next build",
-    "start": "next start",
+    "start": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next start",
     "test": "vitest run",
     "lint": "eslint",
     "seed:core": "node scripts/seed-core-templates.js"

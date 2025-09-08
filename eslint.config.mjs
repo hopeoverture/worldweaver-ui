@@ -23,7 +23,6 @@ export default [
       'scripts/**',
       'test-connection.mjs',
       // Generated types – keep out of lint
-      'src/lib/supabase/database.types.ts',
       'src/lib/supabase/types.generated.ts',
     ],
   },

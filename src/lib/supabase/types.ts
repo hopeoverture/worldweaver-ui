@@ -1,6 +1,6 @@
-// Import and re-export database types for easier imports
-import type { Database, Json } from './database.types'
-export type { Database, Json } from './database.types'
+// Import and re-export database types for easier imports (canonical source)
+import type { Database, Json } from './types.generated'
+export type { Database, Json } from './types.generated'
 
 // Convenience type exports for common table types
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']

@@ -9,13 +9,17 @@ Legend:
 - [x] (P0) Apply invites/activity/files migration in Supabase SQL Editor
   - SQL: `supabase/migrations/20250907020000_add_invites_activity_files.sql`
 - [x] (P0) Document incremental SQL in `DATABASE_SCHEMA.md` (Invites/Activity/Files + RPC)
-- [ ] (P0) Storage bucket for files
+- [x] (P0) Storage bucket for files
   - Create private bucket `world-assets` in Supabase Storage
   - Add storage policies mirroring `public.world_files` RLS
 - [x] (P1) Ensure performance indexes
   - `templates(name) WHERE is_system AND world_id IS NULL`
   - `templates(world_id, name)`, `worlds(is_archived)`, `entities(world_id, updated_at)`
-- [ ] (P2) Unify baseline + incremental migrations documentation (choose one authoritative path)
+- [x] (P0) Optimize RLS: scalar subselects for `auth.*`, dedupe SELECTs, per‑action manage policies
+  - SQL: `supabase/migrations/20250907173500_optimize_rls_auth_calls.sql`
+  - Docs: `docs/SUPABASE_SCHEMA.md`
+- [x] (P2) Unify baseline + incremental migrations documentation (choose one authoritative path)
+  - See `MIGRATIONS.md` for the canonical sequence and conventions
 
 ## 2) API & Feature Work
 - Worlds (REST)
@@ -34,32 +38,33 @@ Legend:
 - Folders
   - [x] (P1) CRUD API: world folders + move entity to folder
 - Relationships
-  - [ ] (P1) CRUD API using unique index on `(from_entity_id,to_entity_id,relationship_type)`
+  - [x] (P1) CRUD API using unique index on `(from_entity_id,to_entity_id,relationship_type)`
 
 ## 3) Types & Codebase Cleanup
 - [x] (P0) Prefer `src/lib/supabase/types.generated.ts` as DB type source
-- [ ] (P1) Regenerate Supabase types from Dashboard and update `types.generated.ts`
-- [ ] (P1) Retire `src/lib/supabase/database.types.ts` and update any lingering imports
+- [x] (P1) Regenerate Supabase types from Dashboard and update `types.generated.ts`
+- [x] (P1) Retire `src/lib/supabase/database.types.ts` and update any lingering imports
+  - All app imports rely on `src/lib/supabase/types.generated.ts` via `src/lib/supabase/types.ts`
 - [x] (P0) Ensure all services use SSR client per-request (`src/lib/supabase/server.ts`)
 
 ## 4) Security & Hardening
 - [x] (P0) Gate admin seeder to dev-only (blocked in prod unless `ADMIN_SEED_ENABLED=true`)
-- [ ] (P0) Add zod validation to all POST/PUT APIs (worlds, invites, entities, templates)
-- [ ] (P1) Add basic rate limiting (invite creation, admin endpoints)
-- [ ] (P2) Add security headers & CSP via middleware (optional for MVP)
+- [x] (P0) Add zod validation to all POST/PUT APIs (worlds, invites, entities, templates)
+- [x] (P1) Add basic rate limiting (invite creation, admin endpoints)
+- [x] (P2) Add security headers & CSP via middleware (optional for MVP)
 
 ## 5) UI Work
 - Invites (Owner/Admin)
-  - [ ] (P1) World screen: list pending invites (email, role, status, expiry)
-  - [ ] (P1) Actions: copy invite link, revoke invite
+  - [x] (P1) World screen: list pending invites (email, role, status, expiry)
+  - [x] (P1) Actions: copy invite link, revoke invite
 - Entities
-  - [ ] (P0) Wire create/edit/list to Supabase API; remove mock fallback for authenticated users
+  - [x] (P0) Wire create/edit/list to Supabase API; remove mock fallback for authenticated users
 - Templates
-  - [ ] (P1) Add UI to create/list/edit world templates (system templates remain read-only)
+  - [x] (P1) Add UI to create/list/edit world templates (system templates remain read-only)
 - Folders
-  - [ ] (P1) Folder tree CRUD + filter entities by folder
+  - [x] (P1) Folder tree CRUD + filter entities by folder
 - UX polish
-  - [ ] (P2) Toasts for success/error; loading states; empty states
+  - [x] (P2) Toasts for success/error; loading states; empty states
 
 ## 6) Testing & QA
 - [x] (P1) Auth-aware API test script (`scripts/test-api-endpoints.js`)

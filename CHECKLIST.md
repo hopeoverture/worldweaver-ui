@@ -18,19 +18,19 @@ This checklist complements `TODO.md` by focusing on repo health, build readiness
 
 ## P1: Supabase/Auth Sanity
 - [x] Provide `.env.example` and `.env.local.example` (Supabase-only)
-- [x] Middleware excludes API routes for perf
+- [x] Middleware adds security headers and rate limits on API routes
 - [x] `await cookies()` used in route handlers (Next 15 typing)
 - [ ] Verify hosting env has required vars:
   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SEED_ADMIN_TOKEN`
 
 ## P1: API Coverage & Validation
-- [ ] CRUD coverage with Zod validation where applicable
-  - Worlds: GET/POST (done), GET/PUT/DELETE by id
+- [x] CRUD coverage with Zod validation where applicable
+  - Worlds: GET/POST, GET/PUT/DELETE by id
   - Entities: world list/create, entity GET/PUT/DELETE
   - Templates: world-level CRUD (system templates read-only)
-  - Folders: world CRUD + move entity
+  - Folders: world CRUD + update/delete
   - Invites: create/list/revoke + accept
-- [ ] Ensure RLS-aware filters on list endpoints
+- [x] Ensure RLS-aware filters on list endpoints
 
 ## P1: Database & Local Dev
 - [ ] If using local Postgres from UI, keep `pg` under server-only scripts or separate package
@@ -44,7 +44,8 @@ This checklist complements `TODO.md` by focusing on repo health, build readiness
 
 ## P1: Docs
 - [x] Update `README.md` quickstart (env, Supabase, scripts)
-- [ ] Choose one authoritative DB doc (baseline vs incremental) and link others as appendix
+- [x] Choose one authoritative DB doc (baseline vs incremental) and link others as appendix
+  - Canonical: `MIGRATIONS.md`, schema reference: `docs/SUPABASE_SCHEMA.md`
 
 ## P2: UX & Reliability
 - [x] App Router error boundaries (`src/app/error.tsx`, `src/app/not-found.tsx`)
@@ -53,7 +54,7 @@ This checklist complements `TODO.md` by focusing on repo health, build readiness
 
 ## P2: CI/CD & Ops
 - [ ] Add CI (install + build + lint + optional API smoke)
-- [ ] Security headers/CSP via middleware (as needed)
+- [x] Security headers/CSP via middleware (as needed)
 - [ ] Telemetry (e.g., Sentry) post-MVP
 
 ---
@@ -68,4 +69,3 @@ References (where applicable):
 - `src/app/api/admin/seed-core-templates/route.ts:1`
 - `scripts/test-api-endpoints.js:1`
 - `README.md:1`
-

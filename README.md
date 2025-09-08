@@ -82,6 +82,10 @@ Known Issues
 - See `KNOWN_ISSUES.md` for a living list of common errors and fixes.
 
 Additional Docs
-- See `CHECKLIST.md` for repo health tasks and priorities.
-- See `DEVELOPMENT.md`, `DATABASE_SCHEMA.md`, and related docs for schema and migrations.
- - Older setup guides (e.g., `PHASE1_ENVIRONMENT_SETUP.md`, `DEVELOPMENT_ROADMAP.md`) include legacy NextAuth references; prefer Supabase docs above.
+- `CHECKLIST.md` — repo health tasks and priorities
+- `DEVELOPMENT.md` — developer guide and feature overview
+- `MIGRATIONS.md` — authoritative migration order and conventions
+- `docs/SUPABASE_SCHEMA.md` — current schema and RLS policy reference
+- `SUPABASE_ONLY_MIGRATION.md` — migrating fully to Supabase-backed data
+- `DATABASE_SCHEMA.md` — historical notes (see the two docs above as canonical)
+- Older setup guides (e.g., `PHASE1_ENVIRONMENT_SETUP.md`, `DEVELOPMENT_ROADMAP.md`) include legacy NextAuth references; prefer Supabase docs above.

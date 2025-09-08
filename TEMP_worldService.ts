@@ -299,3 +299,4 @@ export class WorldService {
 
 // Export singleton instance
 export const worldService = new WorldService();
+

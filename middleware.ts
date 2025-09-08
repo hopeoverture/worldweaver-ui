@@ -1,10 +1,64 @@
-import { createServerClient } from '@supabase/ssr';
-import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __rateLimitStore: Map<string, { count: number; reset: number }>
+}
+
+function getClientIp(req: NextRequest): string {
+  const xf = req.headers.get('x-forwarded-for')
+  if (xf) return xf.split(',')[0].trim()
+  return (req as any).ip ?? '127.0.0.1'
+}
+
+function matchBucket(pathname: string, method: string): { key: string; max: number; windowMs: number } | null {
+  if (method === 'POST' && /^\/api\/worlds\/[\w-]+\/invites$/.test(pathname)) {
+    return { key: 'invites.create', max: 10, windowMs: 60_000 }
+  }
+  if (method === 'POST' && pathname === '/api/admin/seed-core-templates') {
+    return { key: 'admin.seed', max: 2, windowMs: 60_000 }
+  }
+  return null
+}
+
+function rateLimit(req: NextRequest): NextResponse | null {
+  if (!globalThis.__rateLimitStore) globalThis.__rateLimitStore = new Map()
+  const store = globalThis.__rateLimitStore
+  const bucket = matchBucket(req.nextUrl.pathname, req.method)
+  if (!bucket) return null
+  const ip = getClientIp(req)
+  const now = Date.now()
+  const key = `${ip}:${bucket.key}`
+  const record = store.get(key)
+  if (!record || now > record.reset) {
+    store.set(key, { count: 1, reset: now + bucket.windowMs })
+    return null
+  }
+  if (record.count >= bucket.max) {
+    const res = NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    res.headers.set('Retry-After', Math.ceil((record.reset - now) / 1000).toString())
+    return res
+  }
+  record.count += 1
+  store.set(key, record)
+  return null
+}
+
+function applySecurityHeaders(res: NextResponse): void {
+  res.headers.set('X-Frame-Options', 'DENY')
+  res.headers.set('X-Content-Type-Options', 'nosniff')
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.headers.set('X-DNS-Prefetch-Control', 'off')
+  res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
+  // Minimal CSP for API responses
+  res.headers.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")
+}
 
 export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+  // Prepare Supabase response wrapper for session handling
+  let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,48 +66,39 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
     }
-  );
+  )
 
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+  // Keep auth call adjacent to client creation to avoid subtle bugs
+  await supabase.auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const isApi = request.nextUrl.pathname.startsWith('/api/')
+  if (isApi) {
+    const limited = rateLimit(request)
+    if (limited) {
+      // Propagate any cookies set by Supabase into the limited response
+      limited.cookies.setAll(supabaseResponse.cookies.getAll())
+      applySecurityHeaders(limited)
+      return limited
+    }
+    applySecurityHeaders(supabaseResponse)
+  }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-  // creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object instead of the supabaseResponse object
-
-  return supabaseResponse;
+  return supabaseResponse
 }
 
 export const config = {
+  // Apply to API routes and app routes (excluding static assets)
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-};
+}
