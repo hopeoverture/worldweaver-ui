@@ -2,11 +2,16 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { useWorld } from '@/hooks/query/useWorld';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
+import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { WorldContextBar } from '@/components/dashboard/WorldContextBar';
 import { TabNav } from '@/components/dashboard/TabNav';
 import { FolderGrid } from '@/components/folders/FolderGrid';
 import { EntityGrid } from '@/components/entities/EntityGrid';
 import { TemplateGrid } from '@/components/templates/TemplateGrid';
+import { useDeleteTemplate } from '@/hooks/mutations/useDeleteTemplate';
 import { RelationshipGraph } from '@/components/relationships/RelationshipGraph';
 import { RelationshipTable } from '@/components/relationships/RelationshipTable';
 import { MembershipTab } from '@/components/membership/MembershipTab';
@@ -15,11 +20,25 @@ import { CreateEntityModal } from '@/components/entities/CreateEntityModal/Creat
 import { CreateFolderModal } from '@/components/folders/CreateFolderModal';
 import { CreateTemplateModal } from '@/components/templates/CreateTemplateModal';
 import { TabItem } from '@/components/ui/Tabs';
+import { useUpdateFolder } from '@/hooks/mutations/useUpdateFolder';
+import { useDeleteFolder } from '@/hooks/mutations/useDeleteFolder';
+import { useToast } from '@/components/ui/ToastProvider';
+import { EditFolderModal } from '@/components/folders/EditFolderModal';
+import type { Entity, Template, Folder } from '@/lib/types';
 
 export default function WorldDashboard() {
   const { id: worldId } = useParams();
-  const { worlds, folders, entities, templates, relationships, updateTemplate, deleteTemplate } = useStore();
+  const { relationships, updateTemplate, deleteTemplate } = useStore();
+  const strWorldId = String(worldId);
+  const { data: world, isLoading, error } = useWorld(strWorldId);
+  const { data: remoteEntities = [] as Entity[] } = useWorldEntities(strWorldId);
+  const { data: remoteTemplates = [] as Template[] } = useWorldTemplates(strWorldId);
+  const { data: remoteFolders = [] as Folder[] } = useWorldFolders(strWorldId);
   const [activeTab, setActiveTab] = useState('entities');
+  const deleteTemplateMut = useDeleteTemplate(strWorldId);
+  const updateFolderMut = useUpdateFolder();
+  const deleteFolderMut = useDeleteFolder();
+  const { toast } = useToast();
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isCreateEntityModalOpen, setCreateEntityModalOpen] = useState(false);
   const [isCreateFolderModalOpen, setCreateFolderModalOpen] = useState(false);
@@ -27,28 +46,52 @@ export default function WorldDashboard() {
   const [isCreateRelationshipModalOpen, setCreateRelationshipModalOpen] = useState(false);
   const [folderType, setFolderType] = useState<'entities' | 'templates'>('entities');
 
-  const world = worlds.find(w => w.id === worldId);
-
-  if (!world) {
-    return <div>World not found</div>;
-  }
+  if (isLoading) return (
+    <div className="min-h-[50vh] flex items-center justify-center">
+      <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
+        <span>Loading world...</span>
+      </div>
+    </div>
+  );
+  if (error) return <div>Failed to load world</div>;
+  if (!world) return <div>World not found</div>;
 
   const handleTemplateDelete = (templateId: string) => {
-    if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
-      deleteTemplate(templateId);
+    if (!confirm('Are you sure you want to delete this template? This action cannot be undone.')) return;
+    deleteTemplateMut.mutate(templateId, {
+      onSuccess: () => toast({ title: 'Template deleted', variant: 'success' }),
+      onError: (e) => toast({ title: 'Failed to delete template', description: String((e as Error)?.message || e), variant: 'error' }),
+    });
+  };
+
+  const [editFolder, setEditFolder] = useState<Folder | null>(null);
+  const [isEditOpen, setEditOpen] = useState(false);
+  const handleFolderRename = (folder: Folder) => {
+    setEditFolder(folder);
+    setEditOpen(true);
+  };
+
+  const handleFolderDelete = async (folder: Folder) => {
+    if (!confirm(`Delete folder “${folder.name}”? Items inside remain ungrouped.`)) return;
+    try {
+      await deleteFolderMut.mutateAsync({ id: folder.id, worldId: strWorldId });
+      toast({ title: 'Folder deleted', variant: 'success' });
+    } catch (e) {
+      toast({ title: 'Failed to delete folder', description: String((e as Error)?.message || e), variant: 'error' });
     }
   };
 
-  const entityFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
-  const templateFolders = folders.filter(f => f.worldId === worldId && f.kind === 'templates');
+  const entityFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'entities');
+  const templateFolders: Folder[] = []; // Templates don't use folders in current schema
 
-  const entitiesInFolder = selectedFolder ? entities.filter(e => e.folderId === selectedFolder) : [];
-  const templatesInFolder = selectedFolder ? templates.filter(t => t.folderId === selectedFolder) : [];
+  const entitiesInFolder = selectedFolder ? remoteEntities.filter((e) => e.folderId === selectedFolder) : [];
+  const templatesInFolder = selectedFolder ? remoteTemplates.filter((t) => t.folderId === selectedFolder) : [];
   
   // Get ungrouped entities (entities without a folder)
-  const ungroupedEntities = entities.filter(e => e.worldId === worldId && !e.folderId);
+  const ungroupedEntities = remoteEntities.filter((e) => e.worldId === strWorldId && !e.folderId);
   // Get ungrouped templates (templates without a folder)  
-  const ungroupedTemplates = templates.filter(t => t.worldId === worldId && !t.folderId);
+  const ungroupedTemplates = remoteTemplates.filter((t) => (t.worldId || strWorldId) === strWorldId && !t.folderId);
 
   const tabs: TabItem[] = [
     {
@@ -59,7 +102,7 @@ export default function WorldDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
         </svg>
       ),
-      count: entities.filter(e => e.worldId === worldId).length,
+      count: remoteEntities.length,
       render: (
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -101,7 +144,12 @@ export default function WorldDashboard() {
             <div className="space-y-8">
               {/* Folder Grid */}
               {entityFolders.length > 0 ? (
-                <FolderGrid folders={entityFolders} onFolderClick={setSelectedFolder} />
+                <FolderGrid
+                  folders={entityFolders}
+                  onFolderClick={setSelectedFolder}
+                  onRename={handleFolderRename}
+                  onDelete={handleFolderDelete}
+                />
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-neutral-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-700">
                   <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,7 +206,7 @@ export default function WorldDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      count: templates.filter(t => t.worldId === worldId).length,
+      count: remoteTemplates.filter((t: any) => (t.worldId || strWorldId) === strWorldId).length,
       render: (
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -204,7 +252,12 @@ export default function WorldDashboard() {
             <div className="space-y-8">
               {/* Template Folder Grid */}
               {templateFolders.length > 0 ? (
-                <FolderGrid folders={templateFolders} onFolderClick={setSelectedFolder} />
+                <FolderGrid
+                  folders={templateFolders}
+                  onFolderClick={setSelectedFolder}
+                  onRename={handleFolderRename}
+                  onDelete={handleFolderDelete}
+                />
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-neutral-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-700">
                   <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -331,7 +384,7 @@ export default function WorldDashboard() {
       <TabNav
         tabs={tabs}
         activeTab={activeTab}
-        onTabChange={(key) => {
+        onTabChange={(key: string) => {
           setSelectedFolder(null);
           setActiveTab(key);
         }}
@@ -356,6 +409,11 @@ export default function WorldDashboard() {
         isOpen={isCreateRelationshipModalOpen}
         worldId={world.id}
         onClose={() => setCreateRelationshipModalOpen(false)}
+      />
+      <EditFolderModal
+        open={isEditOpen}
+        folder={editFolder}
+        onClose={() => { setEditOpen(false); setEditFolder(null); }}
       />
     </main>
   );

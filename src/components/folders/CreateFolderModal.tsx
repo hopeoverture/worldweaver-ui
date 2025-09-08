@@ -5,7 +5,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
-import { useStore } from '@/lib/store';
+import { folderColorOptions } from './folderColors';
+import { useCreateFolder } from '@/hooks/mutations/useCreateFolder';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface CreateFolderModalProps {
   open: boolean;
@@ -15,7 +17,8 @@ interface CreateFolderModalProps {
 }
 
 export function CreateFolderModal({ open, worldId, folderType, onClose }: CreateFolderModalProps) {
-  const { addFolder } = useStore();
+  const createFolder = useCreateFolder(worldId);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -31,19 +34,17 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
     setIsSubmitting(true);
     
     try {
-      addFolder({
+      await createFolder.mutateAsync({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        worldId,
-        kind: folderType,
-        color: formData.color
+        color: formData.color,
       });
-
-      // Reset form and close modal
+      toast({ title: 'Folder created', description: `“${formData.name.trim()}” added`, variant: 'success' });
       setFormData({ name: '', description: '', color: 'blue' });
       onClose();
     } catch (error) {
       console.error('Error creating folder:', error);
+      toast({ title: 'Failed to create folder', description: String((error as Error)?.message || error), variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -54,16 +55,7 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
     onClose();
   };
 
-  const colorOptions = [
-    { value: 'blue', label: 'Blue', preview: 'bg-blue-500' },
-    { value: 'green', label: 'Green', preview: 'bg-green-500' },
-    { value: 'purple', label: 'Purple', preview: 'bg-purple-500' },
-    { value: 'red', label: 'Red', preview: 'bg-red-500' },
-    { value: 'yellow', label: 'Yellow', preview: 'bg-yellow-500' },
-    { value: 'pink', label: 'Pink', preview: 'bg-pink-500' },
-    { value: 'indigo', label: 'Indigo', preview: 'bg-indigo-500' },
-    { value: 'gray', label: 'Gray', preview: 'bg-gray-500' }
-  ];
+  const colorOptions = folderColorOptions;
 
   return (
     <Modal

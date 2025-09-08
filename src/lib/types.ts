@@ -1,5 +1,13 @@
 export type ID = string;
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[]
+
 export type World = {
   id: ID;
   name: string;
@@ -12,7 +20,7 @@ export type World = {
   isArchived?: boolean;
   archivedAt?: string; // ISO
   isPublic?: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, Json>;
   seatLimit?: number;
   inviteLinkEnabled?: boolean;
   inviteLinkRole?: MemberRole;

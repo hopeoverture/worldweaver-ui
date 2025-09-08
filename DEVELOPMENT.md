@@ -1,9 +1,11 @@
 # WorldWeaver UI - Development Documentation
 
-**Last Updated:** September 5, 2025  
+> Note: Portions of this document may be outdated or contain encoding artifacts. For the authoritative quickstart and environment details, see `README.md` and `SUPABASE_AUTH_SETUP.md`.
+
+**Last Updated:** September 6, 2025  
 **Version:** 0.1.0  
 **Build Status:** Active Development  
-**Latest Changes:** Step-by-step database integration with Next.js API routes, async store architecture, and clean server-side data operations
+**Latest Changes:** Complete Supabase authentication integration, protected API routes, authenticated user sessions, and fixed store authentication context
 
 ## 🚀 Project Overview
 
@@ -32,9 +34,11 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Async/Await Patterns** - Modern JavaScript for data fetching
 
 ### Database & Persistence
-- **PostgreSQL 17.5** - Local development database with full SQL support
-- **pg** - PostgreSQL driver for Node.js with TypeScript support
-- **Custom Database Service** - Type-safe database abstraction layer
+- **Supabase Production Database** - Cloud-hosted PostgreSQL with complete schema and RLS policies
+- **Supabase Auth** - Complete authentication system with login/register flows  
+- **TypeScript Integration** - Auto-generated database types from live schema
+- **Row Level Security** - User-scoped data access with authenticated sessions
+- **Protected API Routes** - Server-side authentication verification
 
 ### Styling & UI
 - **Tailwind CSS 4.1.13** - Utility-first CSS framework with modern features
@@ -50,70 +54,64 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 
 ## 🗄️ Database Architecture
 
-### Step-by-Step Integration Approach
-- **API-First Design** - Server-side database operations via Next.js API routes
-- **Feature Flags** - Incremental enablement of database features (`USE_DATABASE` flags)
-- **Mock Data Fallback** - Backward compatibility during transition period
-- **Clean Separation** - Client-side components use fetch API to call server endpoints
+### Complete Supabase Integration
+- **Production Database** - Deployed to Supabase project: `rkjtxcavocbhhwuywduj`
+- **Authentication System** - Complete Supabase Auth with protected routes
+- **Row Level Security** - User-scoped data access policies on all tables
+- **TypeScript Types** - Auto-generated from live database schema (530 lines)
+- **API Authentication** - Server-side session verification with middleware
 
-### Next.js API Routes
-- **`/api/worlds/route.ts`** - GET all worlds, POST new world
-- **`/api/worlds/[id]/route.ts`** - GET, PUT, DELETE individual worlds
-- **Server-Side Only** - Database imports and operations isolated to API routes
+### Supabase Configuration
+- **Project URL:** `https://rkjtxcavocbhhwuywduj.supabase.co`
+- **Database Schema:** 8 tables with complete relationships and constraints
+- **RLS Policies:** User-scoped access control on all data operations
+- **Authentication:** Email/password with profile management
+- **Environment:** Configured in `.env.local` with service role keys
+
+### Supabase API Routes
+- **`/api/worlds/route.ts`** - GET all worlds, POST new world (authenticated)
+- **`/api/worlds/[id]/route.ts`** - GET, PUT, DELETE individual worlds (authenticated)
+- **Authentication Middleware** - Automatic user session verification
 - **Type-Safe Responses** - Consistent JSON response formats with TypeScript
+- **Graceful Fallback** - Mock data for unauthenticated users
 
-### Local PostgreSQL Setup
-- **PostgreSQL 17.5** running locally on port 5432
-- **worldweaver_dev** database with 11 core tables
-- **worldweaver_user** with full database permissions
-- **Test user:** `developer@worldweaver.com` for development
+### Database Schema
+- **auth.users** - Supabase authentication (managed by Supabase)
+- **public.profiles** - User profile information and preferences
+- **public.worlds** - World/project containers with user ownership
+- **public.world_members** - Collaboration and permissions system
+- **public.world_invites** - Invitation system for collaboration
+- **public.templates** - Entity templates (system & custom)
+- **public.folders** - Organization structure for entities and templates
+- **public.entities** - World-building content (characters, locations, etc.)
 
-### Database Tables
-1. **auth_users** - Local authentication (replaces Supabase auth)
-2. **profiles** - User profile information
-3. **worlds** - World/project containers
-4. **world_members** - Collaboration and permissions
-5. **world_invites** - Invitation system
-6. **templates** - Entity templates (system & custom)
-7. **folders** - Organization structure
-8. **entities** - World-building content
-9. **relationships** - Entity connections
-10. **activity_logs** - Audit trail
-11. **world_files** - File attachments
-
-### Database Service Layer
+### Authentication Context
 ```typescript
-// src/lib/database/local.ts
-export class LocalDatabaseService {
-  // User operations
-  async createUser(email: string, passwordHash?: string)
-  async getUserByEmail(email: string)
-  async getUserById(id: string)
-  
-  // Profile operations
-  async getProfile(userId: string)
-  async updateProfile(userId: string, data: any)
-  
-  // World operations
-  async createWorld(name: string, description: string, ownerId: string)
-  async getWorldsByUser(userId: string)
-  async getWorldById(worldId: string, userId: string)
-  async updateWorld(worldId: string, data: any)
-  async deleteWorld(worldId: string)
-  
-  // Template operations
-  async getSystemTemplates()
-  async getWorldTemplates(worldId: string)
-  async getAllTemplates(worldId?: string)
-  
-  // Entity operations
-  async createEntity(data: any)
-  async getEntitiesByWorld(worldId: string)
-  async getEntityById(entityId: string)
-  
-  // Utility operations
-  async testConnection()
-  async getStats()
+// src/contexts/AuthContext.tsx
+interface AuthContextType {
+  user: User | null;
+  profile: Profile | null;
+  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  loading: boolean;
+}
+```
+
+### Supabase Service Layer
+```typescript
+// src/lib/supabase/client.ts
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// src/lib/services/supabaseWorldService.ts
+export class SupabaseWorldService {
+  async getUserWorlds(userId: string): Promise<World[]>
+  async createWorld(worldData: any, userId: string): Promise<World>
+  async updateWorld(worldId: string, updates: any): Promise<World>
+  async deleteWorld(worldId: string): Promise<void>
 }
 ```
 
@@ -130,7 +128,7 @@ export class WorldService {
 }
 ```
 
-### Async Store Architecture
+### Authenticated Store Architecture
 ```typescript
 // src/lib/store.ts
 type State = {
@@ -140,19 +138,19 @@ type State = {
 };
 
 type Actions = {
-  loadUserWorlds: () => Promise<void>;
-  addWorld: (w: WorldCreate) => Promise<World>;
+  loadUserWorlds: () => Promise<void>;           // Uses authenticated session
+  addWorld: (w: WorldCreate) => Promise<World>;   // Authenticated user context
   updateWorld: (id: string, patch: Partial<World>) => Promise<void>;
   deleteWorld: (id: string) => Promise<void>;
-  archiveWorld: (id: string) => Promise<void>;
   clearError: () => void;
 };
 ```
 
 ### Connection Details
-- **Database URL:** `postgresql://worldweaver_user:worldweaver2025!@localhost:5432/worldweaver_dev`
-- **Environment:** Configured in `.env.local`
-- **Testing:** `node scripts/test-local-db.js`
+- **Supabase Project:** `rkjtxcavocbhhwuywduj`
+- **Database URL:** Configured via environment variables
+- **Authentication:** Supabase Auth with email/password
+- **Environment:** Production Supabase instance with full schema
 
 ## 📁 Project Structure
 
@@ -310,12 +308,59 @@ type Folder = {
 };
 ```
 
-## 🔧 Development Setup
+## � Authentication System
+
+### Complete Supabase Auth Integration ✅
+- **User Registration & Login** - Complete authentication flows with validation
+- **Protected Routes** - Middleware-based authentication for Next.js 15
+- **User Profiles** - Profile management with display names and settings
+- **Session Management** - Persistent authentication state across page reloads
+- **Auth Context** - React context provider for authentication state
+- **Protected API** - Server-side authentication verification on all endpoints
+
+### Authentication Components
+- **Login Page** (`/src/app/login/page.tsx`) - Email/password login with validation
+- **Register Page** (`/src/app/register/page.tsx`) - User registration with confirmation
+- **Profile Page** (`/src/app/profile/page.tsx`) - Profile management interface
+- **Auth Context** (`/src/contexts/AuthContext.tsx`) - Global authentication state
+- **Middleware** (`/middleware.ts`) - Route protection and session management
+- **App Header** (`/src/components/header/AppHeader.tsx`) - User status and logout
+
+### Current Auth Status
+- ✅ **User Registration** - Functional with email verification
+- ✅ **User Login** - Working with session persistence  
+- ✅ **Protected API Routes** - All `/api/worlds` endpoints require authentication
+- ✅ **User Context** - Authentication state available throughout app
+- ✅ **Profile Management** - Users can update display names and preferences
+- ✅ **Graceful Fallback** - Non-authenticated users see mock data
+- ✅ **Store Integration** - World operations use authenticated user's ID
+
+## 📊 Data Integration Status
+
+### ✅ Fully Integrated with Supabase
+- **Authentication** - Complete Supabase Auth system with protected routes
+- **Worlds** - Full CRUD operations with user-scoped access via RLS policies
+- **User Profiles** - Profile creation and management connected to auth users
+
+### ⚠️ Partially Integrated (Mock Data Fallback)
+- **Templates** - System templates loaded, custom templates still use mock data
+- **Entities** - Entity creation and management still using mock data
+- **Folders** - Folder organization still using mock data  
+- **Relationships** - Relationship mapping still using mock data
+
+### Integration Architecture
+- **API-First Approach** - All database operations go through protected API routes
+- **Authenticated Sessions** - User ID automatically retrieved from Supabase session
+- **RLS Security** - Row Level Security ensures users only see their own data
+- **Mock Data Fallback** - Graceful degradation for non-authenticated users
+- **Type Safety** - Auto-generated TypeScript types from live database schema
+
+## �🔧 Development Setup
 
 ### Prerequisites
 - Node.js 20+ 
 - npm 9+
-- PostgreSQL 14+ (17.5 recommended)
+- Supabase account (project: `rkjtxcavocbhhwuywduj`)
 - Modern browser with ES2022 support
 
 ### Installation
@@ -324,16 +369,12 @@ cd worldweaver-ui
 npm install
 ```
 
-### Database Setup
-```bash
-# 1. Ensure PostgreSQL is running
-psql --version
-
-# 2. Test database connection
-node scripts/test-local-db.js
-
-# 3. View database in pgAdmin 4 (optional)
-# Already installed with PostgreSQL
+### Environment Setup
+Create `.env.local` with Supabase credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://rkjtxcavocbhhwuywduj.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ### Development Server
@@ -348,7 +389,68 @@ Application runs on `http://localhost:3000`
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
 - `npm run test` - Run Vitest tests
-- `node scripts/test-local-db.js` - Test database connection
+
+### Authentication Testing
+```bash
+# 1. Start development server
+npm run dev
+
+# 2. Register a new user
+# Navigate to http://localhost:3000/register
+
+# 3. Login with your account
+# Navigate to http://localhost:3000/login
+
+## Recent Updates (Supabase + API)
+
+### Supabase migrations
+- Added: invitations, activity logs, and world files with RLS and indexes.
+  - File: `supabase/migrations/20250907020000_add_invites_activity_files.sql`
+- Includes RPC: `accept_world_invite(invite_token text)` (SECURITY DEFINER) to accept invites.
+
+How to apply:
+- Paste the migration SQL into Supabase SQL Editor and run. Policies are created without IF NOT EXISTS (will fail if policy already exists).
+
+### System template seeding
+- HTTP seeder (via Next API):
+  - Requirements in `.env.local`: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SEED_ADMIN_TOKEN`.
+  - Run dev server: `npm run dev`
+  - Seed: `npm run seed:core`
+  - Endpoint: `POST /api/admin/seed-core-templates?token=SEED_ADMIN_TOKEN`
+- Direct local Postgres seeder (bypasses HTTP/Supabase):
+  - Script: `scripts/seed-core-templates-local.js`
+  - Env: `DATABASE_URL=postgresql://...`
+  - Run: `node scripts/seed-core-templates-local.js`
+
+### New API routes
+- Worlds (REST):
+  - `GET /api/worlds/[id]` – fetch a world if user has access
+  - `PUT /api/worlds/[id]` – update (owner only); body: `{ name, description, isPublic, isArchived }`
+  - `DELETE /api/worlds/[id]` – delete (owner only)
+- Invites:
+  - `POST /api/worlds/[id]/invites` – create invite (owner/admin). Body: `{ email, role: 'viewer'|'editor'|'admin', expiresInDays }`
+  - `POST /api/invites/accept` – accept invite. Body: `{ token }`
+  - Page: `/invite/accept?token=...` – simple client page to accept via link (user must be logged in with invited email).
+
+### Supabase types
+- App now uses `src/lib/supabase/types.generated.ts` as the type source.
+- To regenerate from Supabase Dashboard: API → Types → copy TS → replace file contents.
+- Optional Supabase CLI example:
+  - `SUPABASE_ACCESS_TOKEN=... npx supabase gen types typescript --project-id <project-ref> --schema public > src/lib/supabase/types.generated.ts`
+
+### Endpoint test script (auth-aware)
+- Script: `scripts/test-api-endpoints.js`
+- Set in `.env.local`:
+  - `TEST_EMAIL=you@example.com`
+  - `TEST_PASSWORD=your-password`
+  - `TEST_INVITE_EMAIL=invitee@example.com` (optional)
+- Run: `node scripts/test-api-endpoints.js`
+- What it does: lists worlds, creates/reads/updates/deletes a world, and exercises invite creation.
+
+
+# 4. Test authenticated world operations
+# Create/edit/delete worlds as authenticated user
+```
 
 ## 🎨 UI Component Library
 
@@ -389,28 +491,29 @@ Application runs on `http://localhost:3000`
 
 ## 🌟 Key Features Implemented
 
-### 1. Step-by-Step Database Integration ✅
-- **Next.js API Routes** - Clean server-side database operations
-- **Async Store Architecture** - Zustand store with Promise-based actions
-- **Error Handling & Loading States** - User-friendly async operation feedback
-- **Feature Flags** - Incremental database enablement with `USE_API` and `USE_DATABASE` flags
-- **Mock Data Fallback** - Backward compatibility during transition
-- **Type-Safe API Responses** - Consistent JSON response patterns
+### 1. Complete Supabase Authentication ✅
+- **User Registration & Login** - Full authentication flows with Supabase Auth
+- **Protected API Routes** - Server-side authentication verification on all endpoints
+- **User Profile Management** - Profile creation, editing, and display name management
+- **Authentication Context** - React context provider for global auth state
+- **Session Persistence** - Automatic session management across page reloads
+- **Middleware Protection** - Next.js middleware for route-based authentication
+- **Graceful Fallback** - Mock data for non-authenticated users
 
-### 2. Local Database Foundation ✅
-- **PostgreSQL 17.5** local database setup and configuration
-- **Complete schema** with 11 tables and proper relationships
-- **8 system templates** automatically installed (Character, Location, Object, Organization, Event, Species, Religion, Magic System)
-- **Database service layer** with TypeScript support and type safety
-- **Connection testing** and verification scripts
-- **Environment configuration** for local development
+### 2. Production Database Integration ✅
+- **Supabase Production Database** - Cloud-hosted PostgreSQL with complete schema
+- **Row Level Security** - User-scoped data access with RLS policies on all tables
+- **Auto-Generated Types** - TypeScript types generated from live database schema
+- **Protected World Operations** - Full CRUD operations for authenticated users only
+- **Database Service Layer** - Clean abstraction for Supabase operations
 
-### 3. API-First Architecture ✅
-- **Clean Client-Server Separation** - Database operations only on server-side
-- **Fetch-Based Store Actions** - Client-side store uses fetch API for all data operations
-- **Consistent Error Handling** - Standardized error responses and user feedback
-- **Loading State Management** - Real-time loading indicators during async operations
-- **Development Flexibility** - Easy switching between mock data and database
+### 3. Authenticated Store Architecture ✅
+- **Zustand Store with Authentication** - State management using authenticated user context
+- **API Integration** - Store methods call protected API endpoints
+- **Automatic User Context** - User ID retrieved from authenticated sessions
+- **Error Handling & Loading States** - User-friendly feedback for async operations
+- **Mock Data Fallback** - Graceful degradation for non-authenticated users
+- **Type-Safe Operations** - TypeScript support throughout store operations
 
 ### 4. Enhanced Creation Button Hover Effects ✅
 - **Unified Design Language** - All creation buttons share consistent interactive patterns
@@ -641,49 +744,62 @@ Application runs on `http://localhost:3000`
 ## ⚠️ Known Issues & Technical Debt
 
 ### Current Status ✅
-- **Step-by-Step Integration Complete** - API routes and async store architecture implemented
-- **Database Foundation Ready** - Local PostgreSQL fully operational and service layer complete
-- **Clean Architecture** - Proper separation between client and server operations
-- **Backward Compatibility** - Mock data fallback ensures smooth transition
+- **Complete Authentication Integration** - Supabase Auth fully operational with protected routes
+- **Production Database Connected** - All world operations use authenticated database access
+- **Clean Store Architecture** - Store methods properly use authenticated user context
+- **Type Safety** - Auto-generated types from live database schema
 
-### Next Steps for Database Activation
-1. **Enable Database Flag** - Set `USE_DATABASE = true` in API routes when ready
-2. **Test API Integration** - Verify worlds CRUD operations work with database
-3. **Extend to Other Entities** - Apply same pattern to entities, templates, folders
-4. **Authentication Integration** - Connect user authentication with database users
+### Partial Integration Status
+- **Worlds**: ✅ Fully integrated with Supabase
+- **Authentication**: ✅ Complete Supabase Auth integration  
+- **Templates**: ⚠️ System templates loaded, custom templates still use mock data
+- **Entities**: ⚠️ Still using mock data, needs API routes and database integration
+- **Folders**: ⚠️ Still using mock data, needs API routes and database integration
+- **Relationships**: ⚠️ Still using mock data, needs API routes and database integration
+
+### Next Steps for Complete Integration
+1. **Create Entity API Routes** - `/api/entities` following same pattern as worlds
+2. **Create Template API Routes** - `/api/templates` for custom template operations
+3. **Create Folder API Routes** - `/api/folders` for organization structure
+4. **Create Relationship API Routes** - `/api/relationships` for entity connections
+5. **Update Store Methods** - Connect remaining operations to authenticated API routes
 
 ### Areas for Improvement
-1. **World Creation API** - Implement POST endpoint database operations
-2. **Entity API Routes** - Create entity CRUD endpoints following worlds pattern
-3. **Template API Routes** - Extend API pattern to template operations
-4. **Error Boundaries** - Add comprehensive error handling
-5. **Performance Optimization** - Implement caching and optimization
+1. **Complete Entity Integration** - Create API routes and connect entities to Supabase
+2. **Template Management** - Implement custom template CRUD operations with database
+3. **Folder System** - Connect folder organization to Supabase
+4. **Relationship System** - Implement relationship mapping with database persistence
+5. **Performance Optimization** - Implement caching and query optimization
 
 ## 🚧 Development Priorities
 
 ### Immediate (Next Steps)
-1. **Activate Database Operations** - Set `USE_DATABASE = true` in `/api/worlds/` routes
-2. **Test World CRUD** - Verify create, read, update, delete operations work with database
-3. **Extend API Pattern** - Create `/api/entities/` and `/api/templates/` following same pattern
-4. **Authentication Setup** - Implement NextAuth.js with PostgreSQL adapter
+1. **Complete Entity Integration** - Create `/api/entities` routes with Supabase integration
+2. **Template API Development** - Implement `/api/templates` for custom template operations  
+3. **Folder Management** - Create `/api/folders` for organization structure
+4. **Relationship Persistence** - Implement `/api/relationships` with database storage
+5. **Store Migration** - Update remaining store methods to use authenticated API routes
 
 ### Short Term (1-2 Weeks)
-1. **Complete API Migration** - Move all CRUD operations to API routes
-2. **Enhanced Error Handling** - Add try/catch blocks and error boundaries
-3. **Form Validation** - Enhance client-side validation
-4. **Search & Filtering** - Implement comprehensive search across entities
+1. **Complete API Migration** - Move all CRUD operations to authenticated API routes
+2. **Enhanced Error Handling** - Add comprehensive error boundaries
+3. **Form Validation** - Enhance client-side validation across all forms
+4. **Search & Filtering** - Implement comprehensive search across all entities
+5. **Performance Optimization** - Add query optimization and caching
 
 ### Medium Term (1 Month)
-1. **Bulk Operations** - Multi-select and bulk actions
+1. **Bulk Operations** - Multi-select and bulk actions for entities
 2. **Import/Export** - Data backup and migration tools
-3. **Performance Monitoring** - Add logging and performance metrics
-4. **Mobile Responsiveness** - Optimize for mobile devices
+3. **Real-time Features** - Live updates for collaborative editing
+4. **Mobile Responsiveness** - Optimize interface for mobile devices
+5. **Advanced Permissions** - Granular role-based access control
 
 ### Long Term (3+ Months)
-1. **Supabase Migration** - Prepare for cloud database deployment
-2. **Real-time Features** - WebSocket integration for live updates
-3. **Advanced Visualization** - Enhanced relationship graphs
-4. **AI Integration** - Content generation and assistance
+1. **Advanced Visualization** - Enhanced relationship graphs and data visualization
+2. **AI Integration** - Content generation and world-building assistance
+3. **Plugin System** - Extensible architecture for custom functionality
+4. **Advanced Analytics** - Usage metrics and world-building insights
+5. **Enterprise Features** - Team management and advanced collaboration tools
 
 ## 📋 API Development Workflow
 
@@ -807,33 +923,34 @@ Always use these exact prop names to maintain TypeScript compliance:
 ## 📞 Support & Resources
 
 ### Key Files for Reference
-- **`/src/app/api/worlds/route.ts`** - Main worlds API endpoint (GET all, POST new)
-- **`/src/app/api/worlds/[id]/route.ts`** - Individual world operations (GET, PUT, DELETE)
-- **`/src/lib/services/worldService.ts`** - Database service adapter layer
-- **`/src/lib/store.ts`** - Async Zustand store with API integration
-- `/src/lib/database/local.ts` - Database service layer with all operations
-- `/src/lib/types.ts` - TypeScript definitions and interfaces
-- `/local_database_schema.sql` - Complete PostgreSQL schema
-- `/.env.local` - Environment variables for local development
-- `/scripts/test-local-db.js` - Database connection testing
+- **`/src/app/api/worlds/route.ts`** - Authenticated worlds API endpoint (GET all, POST new)
+- **`/src/app/api/worlds/[id]/route.ts`** - Individual world operations (GET, PUT, DELETE) with auth
+- **`/src/contexts/AuthContext.tsx`** - Complete authentication context provider
+- **`/src/lib/supabase/client.ts`** - Supabase client configuration
+- **`/src/lib/services/supabaseWorldService.ts`** - Database operations using Supabase
+- **`/src/lib/store.ts`** - Authenticated Zustand store with API integration
+- **`/middleware.ts`** - Authentication middleware for route protection
+- **`/src/lib/supabase/database.types.ts`** - Auto-generated TypeScript types
+- `/src/lib/types.ts` - Application TypeScript definitions and interfaces
+- `/.env.local` - Environment variables for Supabase configuration
 
 ### Development Environment
 - **IDE:** VS Code recommended with TypeScript and Tailwind extensions
-- **Database:** pgAdmin 4 for visual database management
+- **Database:** Supabase Dashboard for visual database management
 - **Browser:** Chrome/Edge with React Developer Tools
-- **Debugging:** React DevTools, Zustand DevTools, PostgreSQL logs
+- **Debugging:** React DevTools, Zustand DevTools, Supabase Dashboard
 
 ### Quick Reference
-| Operation | Command |
-|-----------|---------|
+| Operation | Command/Action |
+|-----------|----------------|
 | **Start Dev Server** | `npm run dev` |
-| **Test API Endpoints** | `curl http://localhost:3000/api/worlds` |
-| **Enable Database** | Set `USE_DATABASE = true` in API routes |
-| **Test Database** | `node scripts/test-local-db.js` |
-| **Connect to DB** | `psql -U worldweaver_user -d worldweaver_dev -h localhost` |
-| **Backup Database** | `pg_dump worldweaver_dev > backup.sql` |
-| **View in pgAdmin** | Start pgAdmin 4 from Windows Start Menu |
+| **Test Authentication** | Register/Login at `http://localhost:3000` |
+| **View Database** | Supabase Dashboard - Table Editor |
+| **Check API Endpoints** | `curl http://localhost:3000/api/worlds` (requires auth) |
+| **View Auth Users** | Supabase Dashboard - Authentication |
+| **Monitor API Logs** | Supabase Dashboard - API Logs |
+| **Update Database Types** | Generated automatically from schema |
 
 ---
 
-**Note:** This documentation reflects the current state as of September 5, 2025, including the completed step-by-step database integration with Next.js API routes. The application now has a clean client-server architecture with async store operations and is ready for incremental database activation. The foundation is set for full database integration by simply enabling the database flags in the API routes.
+**Note:** This documentation reflects the current state as of September 6, 2025, including the completed Supabase authentication integration with protected API routes. The application now has a fully functional authentication system with user-scoped data access and is ready for expanding the remaining entities to use the same authenticated database integration pattern.

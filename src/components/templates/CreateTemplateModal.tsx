@@ -5,7 +5,9 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { useStore } from '@/lib/store';
+import { useCreateTemplate } from '@/hooks/mutations/useCreateTemplate';
 import { TemplateField, FieldType } from '@/lib/types';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface CreateTemplateModalProps {
   open: boolean;
@@ -14,7 +16,8 @@ interface CreateTemplateModalProps {
 }
 
 export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateModalProps) {
-  const { addTemplate, folders } = useStore();
+  const { folders } = useStore();
+  const createTemplate = useCreateTemplate(worldId);
   const [formData, setFormData] = useState({
     name: '',
     folderId: ''
@@ -23,6 +26,7 @@ export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateMo
     { name: 'Name', type: 'shortText' as FieldType, required: true }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const templateFolders = folders.filter(f => f.worldId === worldId && f.kind === 'templates');
 
@@ -49,19 +53,20 @@ export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateMo
         id: crypto.randomUUID()
       }));
 
-      addTemplate({
+      await createTemplate.mutateAsync({
         name: formData.name.trim(),
-        worldId,
-        folderId: formData.folderId || undefined,
-        fields: templateFields
+        description: undefined,
+        fields: templateFields,
       });
 
       // Reset form and close modal
       setFormData({ name: '', folderId: '' });
       setFields([{ name: 'Name', type: 'shortText', required: true }]);
       onClose();
+      toast({ title: 'Template created', description: `“${formData.name.trim()}”`, variant: 'success' });
     } catch (error) {
       console.error('Error creating template:', error);
+      toast({ title: 'Failed to create template', description: String((error as Error)?.message || error), variant: 'error' });
     } finally {
       setIsSubmitting(false);
     }

@@ -442,7 +442,8 @@ DATABASE_URL=postgresql://worldweaver_user:your_secure_password@localhost:5432/w
 # NEXT_PUBLIC_SUPABASE_URL=disabled
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=disabled
 
-# NextAuth (still needed for authentication)
+# Note on Authentication
+# This file includes references to NextAuth from earlier iterations. The app now uses Supabase Auth via `@supabase/ssr`. For current auth setup, see `SUPABASE_AUTH_SETUP.md`.
 NEXTAUTH_SECRET=your-nextauth-secret-32-chars-min
 NEXTAUTH_URL=http://localhost:3000
 

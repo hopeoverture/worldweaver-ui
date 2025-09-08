@@ -1,25 +1,30 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+// Flat config for ESLint v9+
+// Minimal setup that enables Next.js plugin in flat config
+import js from '@eslint/js'
+import nextPlugin from '@next/eslint-plugin-next'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+export default [
+  js.configs.recommended,
+  {
+    // Register Next plugin to satisfy Next build detection and basic rules
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      // You can enable additional Next rules here as needed
+      // '@next/next/no-html-link-for-pages': 'warn',
+    },
+  },
   {
     ignores: [
-      "node_modules/**",
-      ".next/**",
-      "out/**",
-      "build/**",
-      "next-env.d.ts",
+      '.next',
+      'node_modules',
+      'dist',
+      'build',
+      'coverage',
+      'scripts/**',
+      'test-connection.mjs',
+      // Generated types – keep out of lint
+      'src/lib/supabase/database.types.ts',
+      'src/lib/supabase/types.generated.ts',
     ],
   },
-];
-
-export default eslintConfig;
+]

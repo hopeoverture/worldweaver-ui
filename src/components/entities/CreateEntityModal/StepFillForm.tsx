@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { LinkEditor } from './LinkEditor';
 import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
@@ -15,6 +16,7 @@ interface StepFillFormProps {
 
 export function StepFillForm({ template, worldId, onSave, onBack }: StepFillFormProps) {
   const { folders } = useStore();
+  const { data: remoteFolders = [] } = useWorldFolders(worldId);
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
@@ -25,8 +27,8 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get entity folders for this world
-  const entityFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
+  // Get entity folders for this world (prefer remote)
+  const entityFolders = (remoteFolders.length ? remoteFolders : folders).filter((f: any) => f.worldId === worldId && f.kind === 'entities');
 
   const handleFieldChange = (fieldId: string, value: any) => {
     setFormData(prev => ({

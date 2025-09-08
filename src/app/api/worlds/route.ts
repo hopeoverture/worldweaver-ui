@@ -1,34 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// We'll import database services here (server-side only)
-// import { worldService } from '@/lib/services/worldService';
-
-// Development flag to switch between mock data and database
-const USE_DATABASE = true; // Enable database operations
-
-// Mock data for fallback
-import * as seed from '@/lib/mockData';
+import { getServerAuth } from '@/lib/auth/server';
+import { z } from 'zod';
 
 export async function GET(request: NextRequest) {
   try {
+    // Get authenticated user
+    const { user, error: authError } = await getServerAuth();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId') || '550e8400-e29b-41d4-a716-446655440000';
     const includeArchived = searchParams.get('includeArchived') === 'true';
 
-    if (USE_DATABASE) {
-      const { worldService } = await import('@/lib/services/worldService');
-      const worlds = await worldService.getUserWorlds(userId);
-      return NextResponse.json({ worlds });
-    } else {
-      // Use mock data
-      let worlds = seed.worlds;
-      
-      if (!includeArchived) {
-        worlds = worlds.filter(w => !w.isArchived);
-      }
-      
-      return NextResponse.json({ worlds });
-    }
+    const { worldService } = await import('@/lib/services/worldService');
+    const worlds = await worldService.getUserWorlds(user.id);
+    return NextResponse.json({ worlds });
   } catch (error) {
     console.error('Error fetching worlds:', error);
     return NextResponse.json(
@@ -40,41 +31,43 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, description, coverImage, isPublic } = body;
-    const userId = body.userId || '550e8400-e29b-41d4-a716-446655440000';
-
-    if (USE_DATABASE) {
-      const { worldService } = await import('@/lib/services/worldService');
-      const newWorld = await worldService.createWorld({
-        name,
-        description,
-        isPublic: isPublic || false
-      }, userId);
-      return NextResponse.json({ world: newWorld });
-    } else {
-      // Use mock data approach
-      const newWorld = {
-        id: `world-${Date.now()}`,
-        name,
-        summary: description || '',
-        description: description || '',
-        coverImage: coverImage || null,
-        isPublic: isPublic || false,
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        entityCount: 0,
-        memberCount: 1,
-        settings: {
-          theme: 'default',
-          isPublic: isPublic || false,
-          allowCollaboration: false
-        }
-      };
-
-      return NextResponse.json({ world: newWorld });
+    // Get authenticated user
+    const { user, error: authError } = await getServerAuth();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
+
+    // Validate request body
+    const schema = z.object({
+      name: z.string().min(1, 'name is required').max(200),
+      description: z.string().max(5000).optional(),
+      coverImage: z.string().url().optional(),
+      isPublic: z.boolean().optional(),
+    });
+
+    let parsed;
+    try {
+      const body = await request.json();
+      parsed = schema.parse(body);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const issues = err.issues.map((i) => ({ path: Array.isArray(i.path) ? i.path.join('.') : '', message: i.message }));
+        return NextResponse.json({ error: 'Invalid request body', issues }, { status: 400 });
+      }
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const { worldService } = await import('@/lib/services/worldService');
+    const newWorld = await worldService.createWorld({
+      name: parsed.name,
+      description: parsed.description,
+      isPublic: parsed.isPublic ?? false,
+    }, user.id);
+    return NextResponse.json({ world: newWorld });
   } catch (error) {
     console.error('Error creating world:', error);
     return NextResponse.json(

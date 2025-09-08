@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { useStore } from '@/lib/store';
+import { useCreateWorld } from '@/hooks/mutations/useCreateWorld';
 
 interface CreateWorldModalProps {
   isOpen: boolean;
@@ -107,7 +107,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const [formData, setFormData] = useState<WorldFormData>(initialFormData);
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const addWorld = useStore(state => state.addWorld);
+  const createWorld = useCreateWorld();
 
   const totalSteps = 3;
 
@@ -163,21 +163,21 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateStep(currentStep)) {
-      // Create world with basic info, detailed data can be stored in a separate field
-      const newWorld = addWorld({
-        name: formData.name,
-        summary: formData.logline,
-        // Store detailed world data in a future extended format
-        // For now, we'll use the summary field for the logline
-      });
-
-      // Reset form and close modal
-      setFormData(initialFormData);
-      setCurrentStep(1);
-      setErrors({});
-      onClose();
+      try {
+        await createWorld.mutateAsync({
+          name: formData.name,
+          description: formData.logline,
+        });
+        // Reset form and close modal
+        setFormData(initialFormData);
+        setCurrentStep(1);
+        setErrors({});
+        onClose();
+      } catch (e) {
+        setErrors(prev => ({ ...prev, name: 'Failed to create world' }));
+      }
     }
   };
 

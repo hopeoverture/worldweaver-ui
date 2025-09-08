@@ -91,7 +91,8 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # Database
 DATABASE_URL=your-database-url
 
-# NextAuth
+# Note: Legacy NextAuth Section
+# The application now uses Supabase Auth. The following NextAuth content is kept for historical reference and is no longer the recommended path.
 NEXTAUTH_SECRET=your-nextauth-secret
 NEXTAUTH_URL=http://localhost:3000
 ```

@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useStore } from '@/lib/store';
+import { useWorlds } from '@/hooks/query/useWorlds';
 import { WorldGrid } from '@/components/worlds/WorldGrid';
 import { CreateWorldModal } from '@/components/worlds/CreateWorldModal';
 import { WorldEditModal } from '@/components/worlds/WorldEditModal';
@@ -12,34 +12,16 @@ import { useKeyboardShortcuts } from '@/components/ui/KeyboardShortcuts';
 
 export default function WorldsPage() {
   const router = useRouter();
-  const { 
-    worlds, 
-    entities, 
-    isLoading, 
-    error,
-    loadUserWorlds,
-    clearError 
-  } = useStore();
+  const { data: worlds = [], isLoading, error } = useWorlds();
+  const [errorDismissed, setErrorDismissed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editWorldId, setEditWorldId] = useState<string | null>(null);
   const [deleteWorldId, setDeleteWorldId] = useState<string | null>(null);
   const [archiveWorldId, setArchiveWorldId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
-  // Load worlds on component mount
-  useEffect(() => {
-    loadUserWorlds();
-  }, [loadUserWorlds]);
-
-  // Clear error when user acknowledges it
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        clearError();
-      }, 5000); // Auto-clear error after 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [error, clearError]);
+  // Optional: auto dismiss query error after a delay
+  // setTimeout(() => setErrorDismissed(true), 5000);
 
   // Filter worlds based on archived status
   const filteredWorlds = worlds.filter(world => 
@@ -84,17 +66,17 @@ export default function WorldsPage() {
   return (
     <main className="container py-8">
       {/* Error Message */}
-      {error && (
+      {error && !errorDismissed && (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <svg className="w-5 h-5 text-red-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-red-800 dark:text-red-200">{error}</span>
+              <span className="text-red-800 dark:text-red-200">{String((error as any)?.message || 'Failed to load worlds')}</span>
             </div>
             <button
-              onClick={clearError}
+              onClick={() => setErrorDismissed(true)}
               className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -107,10 +89,10 @@ export default function WorldsPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-3">
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
-            <span className="text-gray-600 dark:text-gray-400">Loading your worlds...</span>
+            <span>Loading your worlds...</span>
           </div>
         </div>
       )}

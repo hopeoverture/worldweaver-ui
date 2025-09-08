@@ -5,6 +5,8 @@ import { useStore } from '@/lib/store';
 interface FolderCardProps {
   folder: Folder;
   onClick: () => void;
+  onRename?: (folder: Folder) => void;
+  onDelete?: (folder: Folder) => void;
 }
 
 const colorClasses = {
@@ -58,7 +60,7 @@ const colorClasses = {
   }
 };
 
-export function FolderCard({ folder, onClick }: FolderCardProps) {
+export function FolderCard({ folder, onClick, onRename, onDelete }: FolderCardProps) {
   const { entities, templates } = useStore();
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
 
@@ -77,6 +79,28 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
       <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
       
       <div className="relative">
+        {(onRename || onDelete) && (
+          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onRename && (
+              <button
+                aria-label="Rename folder"
+                className="p-1.5 rounded-md bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-600 dark:text-gray-300"
+                onClick={(e) => { e.stopPropagation(); onRename(folder); }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                aria-label="Delete folder"
+                className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-300"
+                onClick={(e) => { e.stopPropagation(); onDelete(folder); }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 7h4m-1-3h-2a2 2 0 00-2 2h6a2 2 0 00-2-2z"/></svg>
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-3 mb-2">
           <div className={`p-2 rounded-lg ${colors.iconBg} transition-colors`}>
             <svg className={`h-5 w-5 ${colors.iconColor}`} fill="currentColor" viewBox="0 0 24 24">

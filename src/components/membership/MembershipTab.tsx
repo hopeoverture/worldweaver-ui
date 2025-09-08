@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { World, WorldMember, WorldInvite, MemberRole, RolePermissions } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,9 @@ import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
+import { useInvites } from '@/hooks/query/useInvites';
+import { useCreateInvite } from '@/hooks/mutations/useCreateInvite';
+import { useRevokeInvite } from '@/hooks/mutations/useRevokeInvite';
 
 type MembershipTabProps = {
   world: World;
@@ -52,23 +55,22 @@ export function MembershipTab({ world }: MembershipTabProps) {
   
   const { 
     getWorldMembers, 
-    getWorldInvites, 
-    inviteMember, 
     updateMemberRole, 
     removeMember,
-    revokeInvite,
     updateWorldSettings,
     transferOwnership
   } = useStore();
 
   const members = getWorldMembers(world.id);
-  const invites = getWorldInvites(world.id);
+  const { data: invites = [], isLoading: invitesLoading } = useInvites(activeSection === 'invites' ? world.id : '');
+  const createInvite = useCreateInvite(world.id);
+  const revokeInviteMut = useRevokeInvite(world.id);
   const currentUserMember = members.find((m: WorldMember) => m.email === 'current@user.com'); // In real app, get from auth
   const isOwner = currentUserMember?.role === 'owner';
   const canManageMembers = currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role);
 
-  const handleInviteMember = (email: string, role: MemberRole) => {
-    inviteMember(world.id, email, role);
+  const handleInviteMember = async (email: string, role: MemberRole) => {
+    await createInvite.mutateAsync({ email, role });
     setShowInviteModal(false);
   };
 
@@ -90,8 +92,18 @@ export function MembershipTab({ world }: MembershipTabProps) {
   };
 
   const handleRevokeInvite = (inviteId: string) => {
-    revokeInvite(inviteId);
+    revokeInviteMut.mutate(inviteId);
   };
+
+  const handleCopyInviteLink = (token?: string) => {
+    if (!token) {
+      alert('Invite link unavailable for this invite')
+      return
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const url = `${origin}/invite/accept?token=${encodeURIComponent(token)}`
+    navigator.clipboard.writeText(url).catch(() => alert('Failed to copy link'))
+  }
 
   const getRoleColor = (role: MemberRole) => {
     const colors = {
@@ -321,7 +333,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Pending Invites</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {invites.length} {invites.length === 1 ? 'invite' : 'invites'} awaiting response
+                {invitesLoading ? 'Loading invites…' : `${invites.length} ${invites.length === 1 ? 'invite' : 'invites'} awaiting response`}
               </p>
             </div>
             {canManageMembers && (
@@ -376,7 +388,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {invites.map((invite: WorldInvite) => (
+                    {invites.map((invite: any) => (
                       <tr key={invite.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-150">
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
@@ -397,14 +409,14 @@ export function MembershipTab({ world }: MembershipTabProps) {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(invite.invitedAt).toLocaleDateString('en-US', { 
+                          {new Date((invite as any).invitedAt || (invite as any).created_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
                           })}
                         </td>
                         <td className="py-4 px-6 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(invite.expiresAt).toLocaleDateString('en-US', { 
+                          {new Date((invite as any).expiresAt || (invite as any).expires_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
@@ -412,14 +424,24 @@ export function MembershipTab({ world }: MembershipTabProps) {
                         </td>
                         {canManageMembers && (
                           <td className="py-4 px-6 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRevokeInvite(invite.id)}
-                              className="text-xs px-3 py-1.5 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                            >
-                              Revoke
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyInviteLink((invite as any).token)}
+                                className="text-xs px-3 py-1.5"
+                              >
+                                Copy Link
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRevokeInvite(invite.id)}
+                                className="text-xs px-3 py-1.5 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                              >
+                                Revoke
+                              </Button>
+                            </div>
                           </td>
                         )}
                       </tr>
