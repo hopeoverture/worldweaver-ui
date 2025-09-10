@@ -8,7 +8,7 @@ Key routes
 - Sign out: `src/app/auth/signout/route.ts`
 
 Client usage
-- Create client in the browser: `src/lib/supabase/client.ts`
+- Create client in the browser: `src/lib/supabase/browser.ts`
 - Common actions:
   - `supabase.auth.signUp({ email, password })`
   - `supabase.auth.signInWithPassword({ email, password })`

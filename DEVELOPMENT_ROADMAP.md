@@ -98,7 +98,7 @@ NEXTAUTH_URL=http://localhost:3000
 ```
 
 #### Setup Supabase Client
-Create `src/lib/supabase/client.ts`:
+Create `src/lib/supabase/browser.ts`:
 ```typescript
 import { createClient } from '@supabase/supabase-js'
 import { Database } from './types'
@@ -358,7 +358,7 @@ import { SupabaseAdapter } from "@auth/supabase-adapter"
 import GoogleProvider from "next-auth/providers/google"
 import GitHubProvider from "next-auth/providers/github"
 import EmailProvider from "next-auth/providers/email"
-import { supabase } from "./supabase/client"
+import { supabase } from "./supabase/browser"
 
 export const authOptions: NextAuthOptions = {
   adapter: SupabaseAdapter({
@@ -514,7 +514,7 @@ export interface Database {
 #### Create Database Service Layer
 Create `src/lib/services/database.ts`:
 ```typescript
-import { supabase } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/browser'
 import { Database } from '@/lib/supabase/types'
 
 export class DatabaseService {
@@ -615,7 +615,7 @@ export const db = new DatabaseService()
 Create `src/lib/hooks/useRealtime.ts`:
 ```typescript
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/browser'
 import { useAuthStore } from '@/lib/store'
 
 export function useRealtimeEntities(worldId: string) {
@@ -721,7 +721,7 @@ Create storage bucket in Supabase dashboard:
 Create `src/lib/hooks/useFileUpload.ts`:
 ```typescript
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/browser'
 import { v4 as uuidv4 } from 'uuid'
 
 export function useFileUpload() {
@@ -818,7 +818,7 @@ export function useFileUpload() {
 #### Create Search Service
 Create `src/lib/services/search.ts`:
 ```typescript
-import { supabase } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/browser'
 
 export class SearchService {
   async searchEntities(worldId: string, query: string, filters: SearchFilters = {}) {
@@ -1293,7 +1293,7 @@ npm install -D @types/recharts
 #### Create Analytics Service
 Create `src/lib/services/analytics.ts`:
 ```typescript
-import { supabase } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/browser'
 
 export class AnalyticsService {
   async getWorldStats(worldId: string, timeRange = '30d') {
