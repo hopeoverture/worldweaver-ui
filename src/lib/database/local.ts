@@ -11,7 +11,7 @@ const pool = new Pool({
 })
 
 export class LocalDatabaseService {
-  async query(text: string, params?: any[]) {
+  async query(text: string, params?: unknown[]) {
     const client = await pool.connect()
     try {
       const result = await client.query(text, params)
@@ -61,7 +61,7 @@ export class LocalDatabaseService {
     return result.rows[0]
   }
 
-  async updateProfile(userId: string, data: any) {
+  async updateProfile(userId: string, data: Partial<{ full_name: string; username: string; bio: string; website: string; avatar_url: string }>) {
     const { full_name, username, bio, website, avatar_url } = data
     const result = await this.query(
       `UPDATE profiles 
@@ -121,7 +121,7 @@ export class LocalDatabaseService {
     return result.rows[0]
   }
 
-  async updateWorld(worldId: string, data: any) {
+  async updateWorld(worldId: string, data: Partial<{ name?: string; description?: string; is_public?: boolean; is_archived?: boolean; cover_image?: string; settings?: Record<string, import('../types').Json> }>) {
     const { name, description, is_public, is_archived, cover_image, settings } = data
     const result = await this.query(
       `UPDATE worlds 
@@ -173,7 +173,7 @@ export class LocalDatabaseService {
 
   async getAllTemplates(worldId?: string) {
     let query = 'SELECT * FROM templates WHERE is_system = true'
-    let params: any[] = []
+    let params: unknown[] = []
     
     if (worldId) {
       query += ' OR world_id = $1'
@@ -190,7 +190,7 @@ export class LocalDatabaseService {
   // Entity Operations
   // ================================
 
-  async createEntity(data: any) {
+  async createEntity(data: { name: string; description?: string; template_id?: string; world_id: string; folder_id?: string; entity_data?: Record<string, import('../types').Json>; image_url?: string; tags?: string[]; created_by?: string }) {
     const { name, description, template_id, world_id, folder_id, entity_data, image_url, tags, created_by } = data
     const result = await this.query(
       `INSERT INTO entities (name, description, template_id, world_id, folder_id, data, image_url, tags, created_by) 
@@ -284,7 +284,7 @@ export interface World {
   owner_id: string
   is_public: boolean
   is_archived: boolean
-  settings: any
+  settings: Record<string, import('../types').Json>
   created_at: string
   updated_at: string
   entity_count?: number
@@ -297,7 +297,7 @@ export interface Template {
   description?: string
   icon?: string
   category?: string
-  fields: any[]
+  fields: import('../types').TemplateField[]
   is_system: boolean
   world_id?: string
   created_by?: string
@@ -312,7 +312,7 @@ export interface Entity {
   template_id?: string
   world_id: string
   folder_id?: string
-  data: any
+  data: Record<string, import('../types').Json>
   image_url?: string
   tags?: string[]
   is_archived: boolean
@@ -321,5 +321,5 @@ export interface Entity {
   updated_at: string
   template_name?: string
   template_category?: string
-  template_fields?: any[]
+  template_fields?: import('../types').TemplateField[]
 }

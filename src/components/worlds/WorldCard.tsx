@@ -1,21 +1,44 @@
 'use client';
 import * as React from 'react';
+import { memo } from 'react';
 import { Button } from '../ui/Button';
+import { 
+  worldCardAnimation, 
+  gradientOverlay, 
+  floatingOrbs, 
+  geometricPattern, 
+  shineEffect,
+  textColorTransition,
+  buttonHover
+} from '@/lib/animation-utils';
 
+/**
+ * WorldCard component for displaying world information with interactive menu
+ */
 export interface WorldCardProps {
+  /** Unique identifier for the world */
   id: string; 
+  /** Display name of the world */
   name: string; 
+  /** Optional brief description of the world */
   summary?: string; 
+  /** Number of entities in the world */
   entityCount: number; 
+  /** Last updated timestamp */
   updatedAt: string | Date;
+  /** Whether the world is archived */
   isArchived?: boolean;
+  /** Handler for entering the world */
   onEnter: (id: string) => void; 
+  /** Handler for editing the world */
   onEdit: (id: string) => void;
+  /** Optional handler for archiving the world */
   onArchive?: (id: string) => void;
+  /** Optional handler for deleting the world */
   onDelete?: (id: string) => void;
 }
 
-export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchived = false, onEnter, onEdit, onArchive, onDelete }: WorldCardProps) {
+function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchived = false, onEnter, onEdit, onArchive, onDelete }: WorldCardProps) {
   const date = typeof updatedAt === 'string' ? new Date(updatedAt) : (updatedAt as Date);
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -31,23 +54,33 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Get animation configurations
+  const backgroundGradient = gradientOverlay({
+    from: 'from-brand-50/50',
+    to: 'via-purple-50/30 to-blue-50/50',
+    darkFrom: 'dark:from-brand-900/20 dark:via-purple-900/10 dark:to-blue-900/20',
+    duration: 500
+  });
+  const orbs = floatingOrbs();
+  const patterns = geometricPattern();
+  const shine = shineEffect();
   
   return (
     <article 
-      className='group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-2xl transition-all duration-500 p-6 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer overflow-hidden' 
+      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card cursor-pointer overflow-hidden p-6 ${worldCardAnimation()}`}
       data-testid='world-card' 
       aria-label={`World ${name}`}
       onClick={() => onEnter(id)}
     >
       {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-brand-50/50 via-purple-50/30 to-blue-50/50 dark:from-brand-900/20 dark:via-purple-900/10 dark:to-blue-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className={backgroundGradient.className} style={backgroundGradient.style} />
       
       {/* Floating orbs effect */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-        <div className="absolute top-4 right-4 w-2 h-2 bg-brand-400/40 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-        <div className="absolute top-8 right-12 w-1 h-1 bg-purple-400/40 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
-        <div className="absolute bottom-8 left-6 w-1.5 h-1.5 bg-blue-400/40 rounded-full animate-pulse" style={{ animationDelay: '600ms' }} />
-        <div className="absolute bottom-12 right-8 w-1 h-1 bg-brand-400/30 rounded-full animate-pulse" style={{ animationDelay: '900ms' }} />
+        {orbs.map((orb, index) => (
+          <div key={index} className={orb.className} style={orb.style} />
+        ))}
       </div>
       
       {/* Glowing border effect */}
@@ -57,16 +90,16 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
       
       {/* Moving geometric pattern */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 overflow-hidden rounded-xl">
-        <div className="absolute -top-4 -right-4 w-16 h-16 border border-brand-200/30 dark:border-brand-700/30 rounded-full group-hover:rotate-12 transition-transform duration-1000" />
-        <div className="absolute -bottom-4 -left-4 w-12 h-12 border border-purple-200/30 dark:border-purple-700/30 rounded-full group-hover:-rotate-12 transition-transform duration-1000" />
-        <div className="absolute top-1/2 right-0 w-8 h-8 border border-blue-200/30 dark:border-blue-700/30 rounded-full group-hover:rotate-45 transition-transform duration-1000" />
+        {patterns.map((pattern, index) => (
+          <div key={index} className={pattern.className} />
+        ))}
       </div>
       
       <div className="relative z-10">
         <header className='flex items-start justify-between gap-3 mb-4'>
           <div className="group-hover:transform group-hover:translate-x-1 transition-transform duration-300">
             <div className="flex items-center gap-2">
-              <h3 className='text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors duration-300'>
+              <h3 className={`text-lg font-bold ${textColorTransition('text-gray-900 dark:text-gray-100', 'group-hover:text-brand-700 dark:group-hover:text-brand-400')}`}>
                 {name}
               </h3>
               {isArchived && (
@@ -190,7 +223,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
                     e.stopPropagation();
                     onEdit(id);
                   }}
-                  className="hover:scale-105 transition-transform duration-200"
+                  className={buttonHover()}
                 >
                   Edit
                 </Button>
@@ -200,7 +233,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
                     e.stopPropagation();
                     onEnter(id);
                   }}
-                  className="hover:scale-105 transition-transform duration-200"
+                  className={buttonHover()}
                 >
                   Enter
                 </Button>
@@ -224,9 +257,12 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
       </div>
       
       {/* Shine effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+      <div className={shine.containerClass}>
+        <div className={shine.shineClass} />
       </div>
     </article>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const WorldCard = memo(WorldCardComponent);

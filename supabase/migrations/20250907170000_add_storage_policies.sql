@@ -1,0 +1,70 @@
+-- Create private bucket for world assets and apply RLS policies on storage.objects
+
+-- Create bucket if it does not exist (service role required)
+insert into storage.buckets (id, name, public)
+values ('world-assets', 'world-assets', false)
+on conflict (id) do nothing;
+
+-- Ensure RLS is enabled on storage.objects (should be enabled by default)
+alter table storage.objects enable row level security;
+
+-- Allow reading files in the world-assets bucket if user has access to the world
+DO $$ BEGIN
+  EXECUTE 'DROP POLICY "world-assets read" ON storage.objects';
+EXCEPTION WHEN undefined_object THEN NULL; END $$;
+CREATE POLICY "world-assets read" ON storage.objects
+for select using (
+  bucket_id = 'world-assets' and
+  exists (
+    select 1 from public.world_files wf
+    where wf.file_path = storage.objects.name
+      and (
+        wf.world_id in (select id from public.worlds where owner_id = auth.uid())
+        or wf.world_id in (select world_id from public.world_members where user_id = auth.uid())
+      )
+  )
+);
+
+-- Allow inserting (uploading) files into world-assets when metadata exists
+-- and the user can edit the target world
+DO $$ BEGIN
+  EXECUTE 'DROP POLICY "world-assets insert" ON storage.objects';
+EXCEPTION WHEN undefined_object THEN NULL; END $$;
+CREATE POLICY "world-assets insert" ON storage.objects
+for insert with check (
+  bucket_id = 'world-assets' and
+  exists (
+    select 1 from public.world_files wf
+    where wf.file_path = storage.objects.name
+      and (
+        wf.world_id in (select id from public.worlds where owner_id = auth.uid())
+        or wf.world_id in (
+          select world_id from public.world_members where user_id = auth.uid() and role in ('admin','editor')
+        )
+      )
+      and (wf.uploaded_by is null or wf.uploaded_by = auth.uid())
+  )
+);
+
+-- Allow deleting files the user uploaded or world owners/admins
+DO $$ BEGIN
+  EXECUTE 'DROP POLICY "world-assets delete" ON storage.objects';
+EXCEPTION WHEN undefined_object THEN NULL; END $$;
+CREATE POLICY "world-assets delete" ON storage.objects
+for delete using (
+  bucket_id = 'world-assets' and
+  exists (
+    select 1 from public.world_files wf
+    where wf.file_path = storage.objects.name
+      and (
+        wf.uploaded_by = auth.uid()
+        or wf.world_id in (select id from public.worlds where owner_id = auth.uid())
+        or wf.world_id in (
+          select world_id from public.world_members where user_id = auth.uid() and role = 'admin'
+        )
+      )
+  )
+);
+
+-- Note: Policy evaluation assumes world_files.file_path matches storage.objects.name (path within the bucket)
+-- Recommended convention: file_path like 'world/<world_id>/.../filename.ext'

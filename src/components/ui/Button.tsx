@@ -1,52 +1,74 @@
 'use client';
 import * as React from 'react';
-import { clsx } from 'clsx';
+import { cn, buttonVariants, sizeVariants, focusRing, disabledStyles, loadingStyles, transitions } from '@/lib/component-utils';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'success' | 'warning';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
+  asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-95';
+  ({ className, variant = 'primary', size = 'md', loading, disabled, children, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? 'span' : 'button';
     
-    const variantClasses = {
-      primary: 'bg-brand-600 hover:bg-brand-700 text-white shadow-sm hover:shadow-md focus:ring-brand-600',
-      secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-900 shadow-sm hover:shadow-md focus:ring-gray-500 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-gray-100',
-      outline: 'border border-gray-300 hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow-md focus:ring-brand-600 dark:border-neutral-700 dark:hover:bg-neutral-800 dark:text-gray-300',
-      ghost: 'hover:bg-gray-100 text-gray-700 focus:ring-brand-600 dark:hover:bg-neutral-800 dark:text-gray-300'
-    };
+    const baseClasses = cn(
+      'inline-flex items-center justify-center gap-2 font-medium',
+      'rounded-md', // Using design token
+      transitions.default,
+      focusRing.default,
+      disabledStyles,
+      loadingStyles,
+      'active:scale-95 transform'
+    );
     
-    const sizeClasses = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-sm',
-      lg: 'px-6 py-3 text-base'
-    };
+    const variantClass = buttonVariants[variant];
+    const sizeClass = cn(
+      sizeVariants[size].padding,
+      sizeVariants[size].fontSize
+    );
 
     return (
-      <button
-        className={clsx(
+      <Comp
+        className={cn(
           baseClasses,
-          variantClasses[variant],
-          sizeClasses[size],
+          variantClass,
+          sizeClass,
           loading && 'cursor-wait',
           className
         )}
         disabled={disabled || loading}
+        data-loading={loading}
         ref={ref}
         {...props}
       >
         {loading && (
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          <svg 
+            className="animate-spin h-4 w-4" 
+            fill="none" 
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <circle 
+              className="opacity-25" 
+              cx="12" 
+              cy="12" 
+              r="10" 
+              stroke="currentColor" 
+              strokeWidth="4" 
+            />
+            <path 
+              className="opacity-75" 
+              fill="currentColor" 
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" 
+            />
           </svg>
         )}
         {children}
-      </button>
+      </Comp>
     );
   }
 );
+
 Button.displayName = 'Button';

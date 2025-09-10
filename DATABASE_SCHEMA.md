@@ -2,7 +2,7 @@
 
 **Project:** WorldWeaver UI - Database Setup  
 **Version:** 1.0  
-**Last Updated:** September 5, 2025
+**Last Updated:** September 7, 2025  
 
 This document contains the complete SQL script to set up the WorldWeaver database schema in Supabase. Run this script in your Supabase SQL Editor to create all tables, policies, and functions.
 
@@ -700,6 +700,208 @@ BEGIN
 END $$;
 ```
 
+## Incremental Update: Invites, Activity Logs, World Files (RLS)
+
+If your project was created before September 7, 2025, apply the following SQL in the Supabase SQL Editor to add collaboration invites, activity logs, and world files with Row Level Security, plus useful indexes and an RPC for accepting invites.
+
+```sql
+-- ================================
+-- WORLD INVITES
+-- ================================
+
+CREATE TABLE IF NOT EXISTS public.world_invites (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'editor', 'viewer')),
+  invited_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  token TEXT UNIQUE NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE public.world_invites ENABLE ROW LEVEL SECURITY;
+
+-- View invites for invited user (by JWT email) OR world owner/admin
+CREATE POLICY "invites_select"
+  ON public.world_invites FOR SELECT
+  USING (
+    lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')) OR
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+-- Create invites (owner/admin)
+CREATE POLICY "invites_insert"
+  ON public.world_invites FOR INSERT
+  WITH CHECK (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+-- Update invites (owner/admin manage)
+CREATE POLICY "invites_update_manage"
+  ON public.world_invites FOR UPDATE
+  USING (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid() AND role = 'admin')
+  )
+  WITH CHECK (true);
+
+-- Update invites (invited user accept)
+CREATE POLICY "invites_update_accept"
+  ON public.world_invites FOR UPDATE
+  USING (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')))
+  WITH CHECK (lower(email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+-- Delete invites (owner/admin)
+CREATE POLICY "invites_delete"
+  ON public.world_invites FOR DELETE
+  USING (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE INDEX IF NOT EXISTS idx_world_invites_world_id ON public.world_invites(world_id);
+CREATE INDEX IF NOT EXISTS idx_world_invites_email ON public.world_invites(email);
+
+-- ================================
+-- ACTIVITY LOGS
+-- ================================
+
+CREATE TABLE IF NOT EXISTS public.activity_logs (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  entity_type TEXT,
+  entity_id UUID,
+  details JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "activity_select"
+  ON public.activity_logs FOR SELECT
+  USING (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "activity_insert"
+  ON public.activity_logs FOR INSERT
+  WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_activity_logs_world_id ON public.activity_logs(world_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON public.activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON public.activity_logs(created_at);
+
+-- ================================
+-- WORLD FILES (metadata; use Supabase Storage for content)
+-- ================================
+
+CREATE TABLE IF NOT EXISTS public.world_files (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
+  file_name TEXT NOT NULL,
+  file_path TEXT NOT NULL,
+  file_size INTEGER,
+  mime_type TEXT,
+  uploaded_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+ALTER TABLE public.world_files ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "files_select"
+  ON public.world_files FOR SELECT
+  USING (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "files_insert"
+  ON public.world_files FOR INSERT
+  WITH CHECK (
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid()) OR
+    world_id IN (SELECT world_id FROM public.world_members WHERE user_id = auth.uid() AND role IN ('admin','editor'))
+  );
+
+CREATE POLICY "files_delete"
+  ON public.world_files FOR DELETE
+  USING (
+    uploaded_by = auth.uid() OR
+    world_id IN (SELECT id FROM public.worlds WHERE owner_id = auth.uid())
+  );
+
+CREATE INDEX IF NOT EXISTS idx_world_files_world_id ON public.world_files(world_id);
+
+-- ================================
+-- RELATIONSHIPS: prevent duplicates
+-- ================================
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_relationships_pair_type
+  ON public.relationships(from_entity_id, to_entity_id, relationship_type);
+
+-- ================================
+-- PERFORMANCE INDEXES
+-- ================================
+
+CREATE INDEX IF NOT EXISTS idx_worlds_is_archived ON public.worlds(is_archived);
+CREATE INDEX IF NOT EXISTS idx_entities_world_updated_at ON public.entities(world_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_templates_system_name
+  ON public.templates(name) WHERE is_system = TRUE AND world_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_templates_world_name
+  ON public.templates(world_id, name);
+
+-- ================================
+-- INVITE ACCEPTANCE RPC
+-- ================================
+
+CREATE OR REPLACE FUNCTION public.accept_world_invite(invite_token text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_email text := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_user uuid := auth.uid();
+  v_world uuid;
+  v_role text;
+BEGIN
+  SELECT wi.world_id, wi.role INTO v_world, v_role
+  FROM public.world_invites wi
+  WHERE wi.token = invite_token
+    AND lower(wi.email) = v_email
+    AND wi.accepted_at IS NULL
+    AND wi.expires_at > NOW()
+  LIMIT 1;
+
+  IF v_world IS NULL THEN
+    RETURN FALSE;
+  END IF;
+
+  INSERT INTO public.world_members(world_id, user_id, role)
+  VALUES (v_world, v_user, v_role::public.world_member_role)
+  ON CONFLICT (world_id, user_id)
+  DO UPDATE SET role = EXCLUDED.role;
+
+  UPDATE public.world_invites SET accepted_at = NOW() WHERE token = invite_token;
+
+  RETURN TRUE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.accept_world_invite(text) TO authenticated;
+```
+
+Notes:
+- Policies are created without IF NOT EXISTS to enforce intentional upgrades. Drop existing policies if needed before re‑applying.
+- `invites_select` and `invites_update_accept` use the Supabase JWT email claim: `(auth.jwt() ->> 'email')`.
+
 ## 🚀 After Running the Script
 
 ### 1. **Verify Schema Creation**
@@ -711,7 +913,7 @@ END $$;
 1. Go to Supabase Dashboard → Storage
 2. Create new bucket: `world-assets`
 3. Set bucket to **Private** (not public)
-4. Configure storage policies for authenticated users
+4. Apply storage policies that mirror  `public.world_files` RLS`n   - Easiest: run `supabase/migrations/20250907170000_add_storage_policies.sql` in SQL Editor (service role)`n   - Details: see `SUPABASE_STORAGE.md` 
 
 ### 3. **Test Database Connection**
 Run this test in your SQL Editor:
@@ -734,3 +936,4 @@ WHERE table_schema = 'public' AND table_name LIKE '%world%' OR table_name IN ('p
 ✅ **Comprehensive Policies** for secure data access  
 
 Your WorldWeaver database is now ready for Phase 1 implementation! 🎯
+

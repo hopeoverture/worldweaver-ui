@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Entity, Template, Folder, TemplateField, Link } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
+import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate } from '@/lib/utils';
 
 interface EntityDetailModalProps {
@@ -16,10 +18,12 @@ interface EntityDetailModalProps {
 }
 
 export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
-  const { templates, folders, entities, links, updateEntity, addLink, removeLink } = useStore();
+  const { templates, folders, entities, links, addLink, removeLink } = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const updateEntityMut = useUpdateEntity(entity?.worldId || '');
+  const { toast } = useToast();
 
   // Get the template for this entity
   const template = entity ? templates.find(t => t.id === entity.templateId) : null;
@@ -47,7 +51,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
 
   if (!entity || !template) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const newErrors: Record<string, string> = {};
 
     // Validate required fields
@@ -67,16 +71,22 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
       return;
     }
 
-    // Update the entity
-    updateEntity(entity.id, {
-      name: formData.name!,
-      summary: formData.summary,
-      folderId: formData.folderId,
-      fields: formData.fields || {}
-    });
-
-    setIsEditing(false);
-    setErrors({});
+    try {
+      await updateEntityMut.mutateAsync({
+        id: entity.id,
+        patch: {
+          name: formData.name!,
+          folderId: (formData.folderId ?? null) as string | null,
+          fields: formData.fields || {},
+          // tags and templateId unchanged here
+        },
+      });
+      setIsEditing(false);
+      setErrors({});
+      toast({ title: 'Entity updated', variant: 'success' });
+    } catch (e) {
+      toast({ title: 'Failed to update entity', description: String((e as Error)?.message || e), variant: 'error' });
+    }
   };
 
   const handleCancel = () => {

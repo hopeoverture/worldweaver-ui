@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "introspectedAt": "2025-09-10T00:44:37.724Z",
+    "database": "supabase",
+    "schema": "public"
+  },
+  "tables": [
+    {
+      "name": "worlds",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "entities",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "templates",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "folders",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "relationships",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "profiles",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "world_members",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "world_invites",
+      "type": "BASE TABLE"
+    },
+    {
+      "name": "world_bans",
+      "type": "BASE TABLE"
+    }
+  ],
+  "columns": [],
+  "constraints": [],
+  "indexes": [],
+  "rlsPolicies": [],
+  "rlsEnabled": [],
+  "functions": [],
+  "storageBuckets": [
+    {
+      "id": "world-assets",
+      "name": "world-assets",
+      "public": false,
+      "allowedMimeTypes": null,
+      "fileSizeLimit": null
+    },
+    {
+      "id": "public.world_files",
+      "name": "public.world_files",
+      "public": true,
+      "allowedMimeTypes": null,
+      "fileSizeLimit": null
+    }
+  ]
+}

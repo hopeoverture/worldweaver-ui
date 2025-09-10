@@ -46,4 +46,3 @@ jobs:
           SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
         run: |
           psql "$SUPABASE_DB_OWNER_URL" -c "select polname, cmd from pg_policies where schemaname='storage' and tablename='objects' order by polname;"
-

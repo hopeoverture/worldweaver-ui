@@ -4,6 +4,8 @@ import { useStore } from '@/lib/store';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
+import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { logError } from '@/lib/logging';
 
 interface WorldEditModalProps {
   isOpen: boolean;
@@ -61,9 +63,10 @@ const climateOptions = [
 ];
 
 export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps) {
-  const { worlds, updateWorld } = useStore();
+  const { worlds } = useStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const updateWorldMut = useUpdateWorld(worldId);
   
   // Form state - using same structure as CreateWorldModal
   const [formData, setFormData] = useState({
@@ -134,16 +137,18 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
     
     setIsSubmitting(true);
     try {
-      // Update world with form data
-      updateWorld(worldId, {
+      await updateWorldMut.mutateAsync({
         name: formData.name,
-        summary: formData.logline,
-        // TODO: Store extended world data when data model is expanded
+        description: formData.logline,
       });
-      
       onClose();
     } catch (error) {
-      console.error('Error updating world:', error);
+      logError('Error updating world', error as Error, {
+        worldId,
+        action: 'update_world',
+        component: 'WorldEditModal',
+        metadata: { worldName: formData.name }
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,10 +1,21 @@
 'use client';
+import { memo } from 'react';
 import { Folder } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { itemCardAnimation, gradientOverlay, iconBackgroundTransition } from '@/lib/animation-utils';
 
+/**
+ * FolderCard component for displaying folder information
+ */
 interface FolderCardProps {
+  /** The folder data to display */
   folder: Folder;
+  /** Click handler for folder interaction */
   onClick: () => void;
+  /** Optional handler for renaming the folder */
+  onRename?: (folder: Folder) => void;
+  /** Optional handler for deleting the folder */
+  onDelete?: (folder: Folder) => void;
 }
 
 const colorClasses = {
@@ -58,7 +69,7 @@ const colorClasses = {
   }
 };
 
-export function FolderCard({ folder, onClick }: FolderCardProps) {
+function FolderCardComponent({ folder, onClick, onRename, onDelete }: FolderCardProps) {
   const { entities, templates } = useStore();
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
 
@@ -67,24 +78,54 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
     ? entities.filter(e => e.folderId === folder.id).length
     : templates.filter(t => t.folderId === folder.id).length;
 
+  // Get animation utilities
+  const folderGradient = gradientOverlay({ 
+    from: colors.gradient,
+    to: 'to-transparent',
+    darkFrom: colors.gradient
+  });
+  const iconStyles = iconBackgroundTransition(colors);
+
   return (
     <button
       onClick={onClick}
       data-testid="folder-card"
-      className="group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 text-left w-full"
+      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card text-left w-full p-6 ${itemCardAnimation()}`}
     >
       {/* Gradient overlay for visual interest */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+      <div className={folderGradient.className} style={folderGradient.style} />
       
       <div className="relative">
+        {(onRename || onDelete) && (
+          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {onRename && (
+              <button
+                aria-label="Rename folder"
+                className="p-1.5 rounded-md bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-600 dark:text-gray-300"
+                onClick={(e) => { e.stopPropagation(); onRename(folder); }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+            )}
+            {onDelete && (
+              <button
+                aria-label="Delete folder"
+                className="p-1.5 rounded-md bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-300"
+                onClick={(e) => { e.stopPropagation(); onDelete(folder); }}
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 7h4m-1-3h-2a2 2 0 00-2 2h6a2 2 0 00-2-2z"/></svg>
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-3 mb-2">
-          <div className={`p-2 rounded-lg ${colors.iconBg} transition-colors`}>
+          <div className={`p-2 rounded-lg ${iconStyles.iconBg}`}>
             <svg className={`h-5 w-5 ${colors.iconColor}`} fill="currentColor" viewBox="0 0 24 24">
               <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
             </svg>
           </div>
           <div>
-            <h3 className={`font-semibold text-gray-900 dark:text-gray-100 ${colors.textHover} transition-colors`}>{folder.name}</h3>
+            <h3 className={`font-semibold text-gray-900 dark:text-gray-100 ${iconStyles.textHover}`}>{folder.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{dynamicCount} items</p>
           </div>
         </div>
@@ -97,3 +138,6 @@ export function FolderCard({ folder, onClick }: FolderCardProps) {
     </button>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const FolderCard = memo(FolderCardComponent);

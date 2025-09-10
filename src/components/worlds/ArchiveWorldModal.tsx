@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { useStore } from '@/lib/store';
+import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { logError } from '@/lib/logging';
 
 export interface ArchiveWorldModalProps {
   worldId: string | null;
@@ -12,7 +13,7 @@ export interface ArchiveWorldModalProps {
 }
 
 export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onClose }: ArchiveWorldModalProps) {
-  const { archiveWorld, unarchiveWorld } = useStore();
+  const updateWorld = useUpdateWorld(worldId || '');
   const [isProcessing, setIsProcessing] = React.useState(false);
 
   const handleArchive = async () => {
@@ -20,14 +21,15 @@ export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onCl
     
     setIsProcessing(true);
     try {
-      if (isArchived) {
-        unarchiveWorld(worldId);
-      } else {
-        archiveWorld(worldId);
-      }
+      await updateWorld.mutateAsync({ isArchived: !isArchived });
       onClose();
     } catch (error) {
-      console.error('Failed to archive/unarchive world:', error);
+      logError('Failed to archive/unarchive world', error as Error, {
+        worldId,
+        action: isArchived ? 'unarchive_world' : 'archive_world',
+        component: 'ArchiveWorldModal',
+        metadata: { worldName, isArchived }
+      });
     } finally {
       setIsProcessing(false);
     }

@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-memory"],
+      "description": "Persistent memory - remember project context, track issues, store notes"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem"],
+      "description": "File system access - read/write files, directory operations"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Sequential problem solving - complex debugging and planning"
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["@supabase/mcp-server-supabase"],
+      "env": {
+        "SUPABASE_URL": "https://rkjtxcavocbhhwuywduj.supabase.co",
+        "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranR4Y2F2b2NiaGh3dXl3ZHVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxMjQ4MjcsImV4cCI6MjA3MjcwMDgyN30.jkEPXRgYcgOhjr45nhdDlMTrBr92qWHbhxsuOjYLfK4"
+      },
+      "description": "Official Supabase MCP - database queries, auth, storage, edge functions"
+    },
+    "supabase-advanced": {
+      "command": "npx", 
+      "args": ["mcp-supabase"],
+      "env": {
+        "SUPABASE_URL": "https://rkjtxcavocbhhwuywduj.supabase.co",
+        "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJranR4Y2F2b2NiaGh3dXl3ZHVqIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzEyNDgyNywiZXhwIjoyMDcyNzAwODI3fQ.ahFxCfhiRd_E4IasvW77sknX264ftZb17QZK8kG5u20"
+      },
+      "description": "Comprehensive Supabase tools - advanced database operations, storage management"
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["enhanced-postgres-mcp-server"],
+      "env": {
+        "DATABASE_URL": "https://rkjtxcavocbhhwuywduj.supabase.co"
+      },
+      "description": "Enhanced PostgreSQL access - raw SQL queries, schema analysis, performance debugging"
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": ["puppeteer-mcp-server"],
+      "description": "Browser automation - test UI, debug frontend issues, screenshots"
+    }
+  }
+}

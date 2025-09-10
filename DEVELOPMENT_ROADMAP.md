@@ -91,7 +91,8 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # Database
 DATABASE_URL=your-database-url
 
-# NextAuth
+# Note: Legacy NextAuth Section
+# The application now uses Supabase Auth. The following NextAuth content is kept for historical reference and is no longer the recommended path.
 NEXTAUTH_SECRET=your-nextauth-secret
 NEXTAUTH_URL=http://localhost:3000
 ```
@@ -100,7 +101,7 @@ NEXTAUTH_URL=http://localhost:3000
 Create `src/lib/supabase/client.ts`:
 ```typescript
 import { createClient } from '@supabase/supabase-js'
-import { Database } from './database.types'
+import { Database } from './types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -112,7 +113,7 @@ Create `src/lib/supabase/server.ts`:
 ```typescript
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import { Database } from './database.types'
+import { Database } from './types'
 
 export const createClient = () => {
   const cookieStore = cookies()
@@ -423,7 +424,8 @@ export { handler as GET, handler as POST }
 
 ### Step 1.4: Update Type Definitions
 
-Create `src/lib/database.types.ts`:
+Prefer generated types: `src/lib/supabase/types.generated.ts` (re-exported by `src/lib/supabase/types.ts`).
+If you need a local scaffold, you may stub a minimal Database interface temporarily, but the canonical source is generated from Supabase.
 ```typescript
 export interface Database {
   public: {
@@ -513,7 +515,7 @@ export interface Database {
 Create `src/lib/services/database.ts`:
 ```typescript
 import { supabase } from '@/lib/supabase/client'
-import { Database } from '@/lib/database.types'
+import { Database } from '@/lib/supabase/types'
 
 export class DatabaseService {
   // World operations

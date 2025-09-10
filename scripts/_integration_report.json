@@ -1,0 +1,599 @@
+{
+  "scanMetadata": {
+    "scannedAt": "2025-09-10T00:48:02.457Z",
+    "filesScanned": 147,
+    "totalReferences": 80
+  },
+  "references": {
+    "tables": [
+      {
+        "type": "table",
+        "name": "profiles",
+        "file": "src\\contexts\\AuthContext.tsx",
+        "line": 212,
+        "context": ".from('profiles')"
+      },
+      {
+        "type": "table",
+        "name": "profiles",
+        "file": "src\\contexts\\AuthContext.tsx",
+        "line": 348,
+        "context": ".from('profiles')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 31,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 59,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 114,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 165,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 199,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 206,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 241,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 269,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 317,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 347,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 393,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 426,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 455,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 502,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 535,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 576,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 601,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 627,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 639,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 661,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 719,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 764,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 798,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 848,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 862,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 885,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 906,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 924,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 946,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 966,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1008,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1039,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1077,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1106,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1130,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "profiles",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1146,
+        "context": ".from('profiles')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1193,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1203,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1222,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1230,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "profiles",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1250,
+        "context": ".from('profiles')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1302,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1312,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1330,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "world_members",
+        "file": "src\\lib\\services\\supabaseWorldService.ts",
+        "line": 1338,
+        "context": ".from('world_members')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 19,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 47,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 95,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 134,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 166,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 188,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 211,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 240,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 283,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "relationships",
+        "file": "src\\lib\\services\\worldService.ts",
+        "line": 330,
+        "context": ".from('relationships')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 26,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 74,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 106,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 139,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 191,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "entities",
+        "file": "src\\lib\\services\\entityService.ts",
+        "line": 221,
+        "context": ".from('entities')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\folderService.ts",
+        "line": 24,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\folderService.ts",
+        "line": 51,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\folderService.ts",
+        "line": 75,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\folderService.ts",
+        "line": 107,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "folders",
+        "file": "src\\lib\\services\\folderService.ts",
+        "line": 131,
+        "context": ".from('folders')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\app\\test-types\\page.tsx",
+        "line": 19,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "worlds",
+        "file": "src\\app\\api\\worlds\\route.ts",
+        "line": 75,
+        "context": ".from('worlds')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\app\\api\\admin\\seed-core-templates\\route.ts",
+        "line": 75,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\app\\api\\admin\\seed-core-templates\\route.ts",
+        "line": 100,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "templates",
+        "file": "src\\app\\api\\admin\\seed-core-templates\\route.ts",
+        "line": 123,
+        "context": ".from('templates')"
+      },
+      {
+        "type": "table",
+        "name": "world_invites",
+        "file": "src\\app\\api\\worlds\\[id]\\invites\\route.ts",
+        "line": 38,
+        "context": ".from('world_invites')"
+      },
+      {
+        "type": "table",
+        "name": "world_invites",
+        "file": "src\\app\\api\\worlds\\[id]\\invites\\route.ts",
+        "line": 76,
+        "context": ".from('world_invites')"
+      },
+      {
+        "type": "table",
+        "name": "world_files",
+        "file": "src\\app\\api\\worlds\\[id]\\files\\upload\\route.ts",
+        "line": 62,
+        "context": ".from('world_files')"
+      },
+      {
+        "type": "table",
+        "name": "world_files",
+        "file": "src\\app\\api\\worlds\\[id]\\files\\upload\\route.ts",
+        "line": 87,
+        "context": "await supabase.from('world_files').delete().eq('id', meta.id)"
+      },
+      {
+        "type": "table",
+        "name": "world_invites",
+        "file": "src\\app\\api\\worlds\\[id]\\invites\\[inviteId]\\route.ts",
+        "line": 15,
+        "context": ".from('world_invites')"
+      }
+    ],
+    "rpcs": [
+      {
+        "type": "rpc",
+        "name": "accept_world_invite",
+        "file": "src\\app\\api\\invites\\accept\\route.ts",
+        "line": 26,
+        "context": "const { data, error } = await supabase.rpc('accept_world_invite', { invite_token: body.token })"
+      }
+    ],
+    "storageBuckets": [
+      {
+        "type": "storage_bucket",
+        "name": "world-assets",
+        "file": "src\\app\\api\\worlds\\[id]\\files\\upload\\route.ts",
+        "line": 80,
+        "context": "const { error: upErr } = await supabase.storage.from('world-assets').upload(filePath, bytes, {"
+      }
+    ]
+  },
+  "analysis": {
+    "referencedTables": [
+      "profiles",
+      "worlds",
+      "entities",
+      "relationships",
+      "templates",
+      "folders",
+      "world_members",
+      "world_invites",
+      "world_files"
+    ],
+    "referencedRpcs": [
+      "accept_world_invite"
+    ],
+    "referencedBuckets": [
+      "world-assets"
+    ],
+    "missingTables": [],
+    "missingRpcs": [
+      "accept_world_invite"
+    ],
+    "missingBuckets": []
+  }
+}

@@ -1,111 +1,101 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'
+import type { World } from '@/lib/types'
+import { getServerAuth } from '@/lib/auth/server'
+import { safeConsoleError } from '@/lib/logging'
+import { z } from 'zod'
 
-// Development flag to switch between mock data and database
-const USE_DATABASE = true; // Enable database operations
-
-// Mock data for fallback
-import * as seed from '@/lib/mockData';
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const { id: worldId } = await params;
-
-    if (USE_DATABASE) {
-      const { worldService } = await import('@/lib/services/worldService');
-      const world = await worldService.getWorldById(worldId, '550e8400-e29b-41d4-a716-446655440000');
-      
-      if (!world) {
-        return NextResponse.json({ error: 'World not found' }, { status: 404 });
-      }
-      
-      return NextResponse.json({ world });
-    } else {
-      // Use mock data
-      const world = seed.worlds.find(w => w.id === worldId);
-      
-      if (!world) {
-        return NextResponse.json({ error: 'World not found' }, { status: 404 });
-      }
-      
-      return NextResponse.json({ world });
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    const { worldService } = await import('@/lib/services/worldService')
+    const world = await worldService.getWorldById(params.id, user.id)
+    if (!world) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+    return NextResponse.json({ world })
   } catch (error) {
-    console.error('Error fetching world:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch world' },
-      { status: 500 }
-    );
+    safeConsoleError('Error fetching world by id', error as Error, { action: 'GET_world', worldId: params?.id, userId: user?.id })
+    return NextResponse.json({ error: 'Failed to fetch world' }, { status: 500 })
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const { id: worldId } = await params;
-    const body = await request.json();
-    const userId = body.userId || '550e8400-e29b-41d4-a716-446655440000';
-
-    if (USE_DATABASE) {
-      const { worldService } = await import('@/lib/services/worldService');
-      const updatedWorld = await worldService.updateWorld(worldId, body, userId);
-      return NextResponse.json({ world: updatedWorld });
-    } else {
-      // Mock update - just return the updated data
-      const world = seed.worlds.find(w => w.id === worldId);
-      
-      if (!world) {
-        return NextResponse.json({ error: 'World not found' }, { status: 404 });
-      }
-
-      const updatedWorld = {
-        ...world,
-        ...body,
-        id: worldId, // Ensure ID doesn't change
-        updatedAt: new Date().toISOString()
-      };
-      
-      return NextResponse.json({ world: updatedWorld });
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    // Validate request body with zod (partial update)
+    const schema = z.object({
+      name: z.string().min(1, 'name cannot be empty').max(200).optional(),
+      description: z.string().max(5000).optional(),
+      isPublic: z.boolean().optional(),
+      isArchived: z.boolean().optional(),
+    })
+
+    let parsed
+    try {
+      const json = await req.json()
+      parsed = schema.parse(json)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const issues = err.issues.map((i) => ({ path: Array.isArray(i.path) ? i.path.join('.') : '', message: i.message }))
+        return NextResponse.json({ error: 'Invalid request body', issues }, { status: 400 })
+      }
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
+    if (!parsed || Object.keys(parsed).length === 0) {
+      return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 })
+    }
+
+    // Map description -> summary for service layer
+    const data: Partial<World> = {}
+    if (parsed.name !== undefined) data.name = parsed.name
+    if (parsed.description !== undefined) data.summary = parsed.description
+    if (parsed.isPublic !== undefined) data.isPublic = parsed.isPublic
+    if (parsed.isArchived !== undefined) data.isArchived = parsed.isArchived
+
+    const { worldService } = await import('@/lib/services/worldService')
+    const updated = await worldService.updateWorld(params.id, data, user.id)
+    return NextResponse.json({ world: updated })
   } catch (error) {
-    console.error('Error updating world:', error);
-    return NextResponse.json(
-      { error: 'Failed to update world' },
-      { status: 500 }
-    );
+    safeConsoleError('Error updating world', error as Error, { action: 'PUT_world', worldId: params?.id, userId: user?.id })
+    return NextResponse.json({ error: 'Failed to update world' }, { status: 500 })
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const { id: worldId } = await params;
-
-    if (USE_DATABASE) {
-      const { worldService } = await import('@/lib/services/worldService');
-      await worldService.deleteWorld(worldId);
-      return NextResponse.json({ success: true });
-    } else {
-      // Mock deletion - just return success
-      const world = seed.worlds.find(w => w.id === worldId);
-      
-      if (!world) {
-        return NextResponse.json({ error: 'World not found' }, { status: 404 });
-      }
-      
-      return NextResponse.json({ success: true });
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
+
+    const { worldService } = await import('@/lib/services/worldService')
+    await worldService.deleteWorld(params.id, user.id)
+    return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Error deleting world:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete world' },
-      { status: 500 }
-    );
+    safeConsoleError('Error deleting world', error as Error, { action: 'DELETE_world', worldId: params?.id, userId: user?.id })
+    return NextResponse.json({ error: 'Failed to delete world' }, { status: 500 })
   }
 }
+
+export const dynamic = 'force-dynamic'

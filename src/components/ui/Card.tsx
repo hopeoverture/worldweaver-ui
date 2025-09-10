@@ -1,30 +1,48 @@
 'use client';
 import * as React from 'react';
+import { cn, cardVariants, transitions, hoverEffects } from '@/lib/component-utils';
 
-export const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    hover?: boolean;
-    interactive?: boolean;
-  }
->(({ className, hover = false, interactive = false, ...props }, ref) => {
-  const baseClasses = "rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card p-6";
-  const hoverClasses = hover || interactive ? "group relative hover:shadow-xl transition-all duration-300 hover:-translate-y-1" : "";
-  const interactiveClasses = interactive ? "cursor-pointer" : "";
-  
-  return (
-    <div
-      className={`${baseClasses} ${hoverClasses} ${interactiveClasses} ${className || ''}`}
-      ref={ref}
-      {...props}
-    >
-      {(hover || interactive) && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-transparent dark:from-gray-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      )}
-      <div className="relative">
-        {props.children}
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'elevated' | 'interactive' | 'outline';
+  hover?: boolean;
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+}
+
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, variant = 'default', hover = false, padding = 'md', children, ...props }, ref) => {
+    const paddingClasses = {
+      none: '',
+      sm: 'p-4',
+      md: 'p-6',
+      lg: 'p-8',
+    };
+
+    const isInteractive = variant === 'interactive' || hover;
+    
+    return (
+      <div
+        className={cn(
+          cardVariants[variant],
+          paddingClasses[padding],
+          isInteractive && cn(
+            'group relative cursor-pointer',
+            transitions.all,
+            hoverEffects.lift
+          ),
+          className
+        )}
+        ref={ref}
+        {...props}
+      >
+        {isInteractive && (
+          <div className="absolute inset-0 bg-gradient-to-br from-neutral-50/50 to-transparent dark:from-neutral-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        )}
+        <div className={isInteractive ? 'relative' : undefined}>
+          {children}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
+
 Card.displayName = 'Card';

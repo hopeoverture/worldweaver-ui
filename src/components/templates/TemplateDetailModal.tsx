@@ -1,11 +1,14 @@
 'use client';
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import { Template } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { TemplateEditor } from './TemplateEditor';
 import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
+import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface TemplateDetailModalProps {
   template: Template;
@@ -17,13 +20,36 @@ interface TemplateDetailModalProps {
 export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: TemplateDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const updateTemplate = useStore(state => state.updateTemplate);
+  const params = useParams();
+  const worldId = String(params?.id || '');
+  const updateTemplateMut = useUpdateTemplate(worldId);
+  const { toast } = useToast();
 
   // Check if this is a core template
   const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any);
 
   const handleSave = (updatedTemplate: Template) => {
+    // Optimistic local update for snappy UI
     updateTemplate(template.id, updatedTemplate);
-    setIsEditing(false);
+    // Persist to API; include worldId so system templates create per‑world overrides
+    updateTemplateMut.mutate(
+      { id: template.id, patch: { 
+        name: updatedTemplate.name,
+        description: (updatedTemplate as any).description,
+        icon: (updatedTemplate as any).icon,
+        category: (updatedTemplate as any).category,
+        fields: updatedTemplate.fields,
+      } },
+      {
+        onSuccess: () => {
+          toast({ title: 'Template saved', variant: 'success' });
+          setIsEditing(false);
+        },
+        onError: (e) => {
+          toast({ title: 'Failed to save template', description: String((e as Error)?.message || e), variant: 'error' });
+        }
+      }
+    );
   };
 
   const handleCancel = () => {

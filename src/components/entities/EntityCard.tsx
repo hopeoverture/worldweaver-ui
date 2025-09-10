@@ -1,13 +1,21 @@
 'use client';
+import { memo } from 'react';
 import { Entity } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
+/**
+ * EntityCard component for displaying entity information
+ * @param entity - The entity data to display
+ * @param onClick - Optional click handler
+ */
 interface EntityCardProps {
+  /** The entity data to display */
   entity: Entity;
+  /** Optional click handler for card interaction */
   onClick?: () => void;
 }
 
-export function EntityCard({ entity, onClick }: EntityCardProps) {
+function EntityCardComponent({ entity, onClick }: EntityCardProps) {
   return (
     <div 
       data-testid="entity-card" 
@@ -25,3 +33,6 @@ export function EntityCard({ entity, onClick }: EntityCardProps) {
     </div>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const EntityCard = memo(EntityCardComponent);

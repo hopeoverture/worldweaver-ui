@@ -1,14 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { World, WorldMember, WorldInvite, MemberRole, RolePermissions } from '@/lib/types';
-import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Modal } from '@/components/ui/Modal';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
+import { useInvites } from '@/hooks/query/useInvites';
+import { useCreateInvite } from '@/hooks/mutations/useCreateInvite';
+import { useRevokeInvite } from '@/hooks/mutations/useRevokeInvite';
+import { useWorldMembers } from '@/hooks/query/useWorldMembers';
+import { useUpdateMemberRole, useRemoveMember } from '@/hooks/mutations/useMembers';
+import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
 
 type MembershipTabProps = {
   world: World;
@@ -50,48 +55,58 @@ export function MembershipTab({ world }: MembershipTabProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<WorldMember | null>(null);
   
-  const { 
-    getWorldMembers, 
-    getWorldInvites, 
-    inviteMember, 
-    updateMemberRole, 
-    removeMember,
-    revokeInvite,
-    updateWorldSettings,
-    transferOwnership
-  } = useStore();
+  const updateWorldMutation = useUpdateWorld(world.id);
+  // TODO: transferOwnership would need a dedicated mutation hook
 
-  const members = getWorldMembers(world.id);
-  const invites = getWorldInvites(world.id);
+  // Use real API hooks instead of store
+  const { data: members = [], isLoading: membersLoading } = useWorldMembers(world.id);
+  const { data: invites = [], isLoading: invitesLoading } = useInvites(activeSection === 'invites' ? world.id : '');
+  const createInvite = useCreateInvite(world.id);
+  const revokeInviteMut = useRevokeInvite(world.id);
+  const updateMemberRoleMut = useUpdateMemberRole(world.id);
+  const removeMemberMut = useRemoveMember(world.id);
+
+  // Find current user member (you'd get this from auth context in real app)
   const currentUserMember = members.find((m: WorldMember) => m.email === 'current@user.com'); // In real app, get from auth
   const isOwner = currentUserMember?.role === 'owner';
   const canManageMembers = currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role);
 
-  const handleInviteMember = (email: string, role: MemberRole) => {
-    inviteMember(world.id, email, role);
+  const handleInviteMember = async (email: string, role: MemberRole) => {
+    await createInvite.mutateAsync({ email, role });
     setShowInviteModal(false);
   };
 
   const handleChangeRole = (memberId: string, newRole: MemberRole) => {
-    updateMemberRole(world.id, memberId, newRole);
+    updateMemberRoleMut.mutate({ memberId, role: newRole });
   };
 
   const handleRemoveMember = (memberId: string) => {
     if (confirm('Are you sure you want to remove this member from the world?')) {
-      removeMember(world.id, memberId);
+      removeMemberMut.mutate(memberId);
     }
   };
 
   const handleTransferOwnership = (newOwnerId: string) => {
     if (confirm('Are you sure you want to transfer ownership? You will become an admin.')) {
-      transferOwnership(world.id, newOwnerId);
+      // TODO: Implement transferOwnership mutation
+      console.log('Transfer ownership to:', newOwnerId);
       setShowTransferModal(false);
     }
   };
 
   const handleRevokeInvite = (inviteId: string) => {
-    revokeInvite(inviteId);
+    revokeInviteMut.mutate(inviteId);
   };
+
+  const handleCopyInviteLink = (token?: string) => {
+    if (!token) {
+      alert('Invite link unavailable for this invite')
+      return
+    }
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const url = `${origin}/invite/accept?token=${encodeURIComponent(token)}`
+    navigator.clipboard.writeText(url).catch(() => alert('Failed to copy link'))
+  }
 
   const getRoleColor = (role: MemberRole) => {
     const colors = {
@@ -158,7 +173,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Members</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {members.length} of {world.seatLimit || '∞'} seats used
+                {membersLoading ? 'Loading members...' : `${members.length} of ${world.seatLimit || '∞'} seats used`}
               </p>
             </div>
             {canManageMembers && (
@@ -189,7 +204,33 @@ export function MembershipTab({ world }: MembershipTabProps) {
           </div>
 
           <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
+            {membersLoading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">Loading members...</p>
+              </div>
+            ) : members.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">No members yet</h4>
+                <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-sm mx-auto">
+                  Invite collaborators to help build and manage this world together.
+                </p>
+                {canManageMembers && (
+                  <Button
+                    onClick={() => setShowInviteModal(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Send First Invite
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-gray-800/50">
                   <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -310,6 +351,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                 </tbody>
               </table>
             </div>
+            )}
           </Card>
         </div>
       )}
@@ -321,7 +363,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
             <div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Pending Invites</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {invites.length} {invites.length === 1 ? 'invite' : 'invites'} awaiting response
+                {invitesLoading ? 'Loading invites…' : `${invites.length} ${invites.length === 1 ? 'invite' : 'invites'} awaiting response`}
               </p>
             </div>
             {canManageMembers && (
@@ -376,7 +418,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {invites.map((invite: WorldInvite) => (
+                    {invites.map((invite: any) => (
                       <tr key={invite.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-150">
                         <td className="py-4 px-6">
                           <div className="flex items-center space-x-3">
@@ -397,14 +439,14 @@ export function MembershipTab({ world }: MembershipTabProps) {
                           </span>
                         </td>
                         <td className="py-4 px-6 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(invite.invitedAt).toLocaleDateString('en-US', { 
+                          {new Date((invite as any).invitedAt || (invite as any).created_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
                           })}
                         </td>
                         <td className="py-4 px-6 text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(invite.expiresAt).toLocaleDateString('en-US', { 
+                          {new Date((invite as any).expiresAt || (invite as any).expires_at).toLocaleDateString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             year: 'numeric' 
@@ -412,14 +454,24 @@ export function MembershipTab({ world }: MembershipTabProps) {
                         </td>
                         {canManageMembers && (
                           <td className="py-4 px-6 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRevokeInvite(invite.id)}
-                              className="text-xs px-3 py-1.5 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
-                            >
-                              Revoke
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyInviteLink((invite as any).token)}
+                                className="text-xs px-3 py-1.5"
+                              >
+                                Copy Link
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRevokeInvite(invite.id)}
+                                className="text-xs px-3 py-1.5 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300 hover:bg-red-50"
+                              >
+                                Revoke
+                              </Button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -451,7 +503,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                 <Input
                   type="number"
                   value={world.seatLimit || ''}
-                  onChange={(e) => updateWorldSettings(world.id, { 
+                  onChange={(e) => updateWorldMutation.mutate({ 
                     seatLimit: e.target.value ? parseInt(e.target.value) : undefined 
                   })}
                   placeholder="Unlimited"
@@ -474,7 +526,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                   </div>
                   <Toggle
                     pressed={world.inviteLinkEnabled || false}
-                    onClick={() => updateWorldSettings(world.id, { inviteLinkEnabled: !world.inviteLinkEnabled })}
+                    onClick={() => updateWorldMutation.mutate({ inviteLinkEnabled: !world.inviteLinkEnabled })}
                   />
                 </div>
 
@@ -486,7 +538,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       </label>
                       <Select
                         value={world.inviteLinkRole || 'viewer'}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkRole: e.target.value as MemberRole 
                         })}
                         className="max-w-xs"
@@ -504,7 +556,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       <Input
                         type="number"
                         value={world.inviteLinkMaxUses || ''}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkMaxUses: e.target.value ? parseInt(e.target.value) : undefined 
                         })}
                         placeholder="Unlimited"
@@ -522,7 +574,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       <Input
                         type="datetime-local"
                         value={world.inviteLinkExpires ? new Date(world.inviteLinkExpires).toISOString().slice(0, 16) : ''}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkExpires: e.target.value ? new Date(e.target.value).toISOString() : undefined 
                         })}
                         className="max-w-xs"

@@ -2,9 +2,13 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useStore } from '@/lib/store';
+import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
+import { useCreateEntity } from '@/hooks/mutations/useCreateEntity';
 import { StepChooseTemplate } from './StepChooseTemplate';
 import { StepFillForm } from './StepFillForm';
 import { Entity, Template } from '@/lib/types';
+import { useToast } from '@/components/ui/ToastProvider';
+import { logError } from '@/lib/logging';
 
 interface CreateEntityModalProps {
   open: boolean;
@@ -14,12 +18,14 @@ interface CreateEntityModalProps {
 }
 
 export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEntityModalProps) {
-  const { templates, folders, addEntity } = useStore();
+  const { folders } = useStore();
+  const { data: worldTemplates = [] } = useWorldTemplates(worldId);
+  const createEntity = useCreateEntity(worldId);
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const worldTemplates = templates.filter(t => t.worldId === worldId);
   const worldFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
 
   const handleSelectTemplate = (templateId: string) => {
@@ -37,23 +43,28 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
       // Use provided folderId or template's folder, but allow undefined for ungrouped entities
       const targetFolderId = folderId || entityData.folderId || undefined;
 
-      const finalEntityData = {
-        ...entityData,
-        folderId: targetFolderId
-      };
-
-      const newEntity = addEntity(finalEntityData);
+      await createEntity.mutateAsync({
+        name: entityData.name,
+        templateId: entityData.templateId,
+        folderId: targetFolderId,
+        fields: entityData.fields,
+        tags: entityData.tags,
+      });
       
-      // Update links to reference the new entity
-      if (finalEntityData.links.length > 0) {
-        // Note: In a real app, you'd update the links in the store
-        console.log('Entity created with links:', newEntity);
-      }
+      // Note: Links creation would be a follow-up mutation if needed
       
+      toast({ title: 'Entity created', description: entityData.name, variant: 'success' });
       handleClose();
     } catch (error) {
-      console.error('Error creating entity:', error);
-      throw error; // Re-throw to let StepFillForm handle the error display
+      logError('Error creating entity', error as Error, {
+        worldId,
+        templateId: entityData.templateId,
+        action: 'create_entity',
+        component: 'CreateEntityModal',
+        metadata: { entityName: entityData.name, folderId: entityData.folderId }
+      });
+      toast({ title: 'Failed to create entity', description: String((error as Error)?.message || error), variant: 'error' });
+      throw error; // let StepFillForm handle its own inline error display
     } finally {
       setIsSubmitting(false);
     }

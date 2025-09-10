@@ -1,96 +1,103 @@
 #!/usr/bin/env node
 
-/**
- * Test script for WorldWeaver API endpoints with database integration
- */
+// WorldWeaver API endpoint tests (auth-aware, RESTful)
 
-const TEST_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
-const BASE_URL = 'http://localhost:3000';
+const path = require('path')
+const dotenv = require('dotenv')
+const { createClient } = require('@supabase/supabase-js')
 
-async function testApiEndpoint(endpoint, options = {}) {
-  try {
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      ...options
-    });
-    
-    const data = await response.json();
-    
-    console.log(`✅ ${options.method || 'GET'} ${endpoint}`);
-    console.log(`   Status: ${response.status}`);
-    console.log(`   Response:`, JSON.stringify(data, null, 2));
-    console.log('');
-    
-    return { response, data };
-  } catch (error) {
-    console.log(`❌ ${options.method || 'GET'} ${endpoint}`);
-    console.log(`   Error:`, error.message);
-    console.log('');
-    return { error };
+dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
+dotenv.config({ path: path.resolve(__dirname, '../.env') })
+
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000'
+
+async function getAuthCookies() {
+  const email = process.env.TEST_EMAIL
+  const password = process.env.TEST_PASSWORD
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!email || !password || !url || !anon) {
+    console.log('Skipping auth: set TEST_EMAIL, TEST_PASSWORD, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY to exercise authenticated endpoints.')
+    return ''
   }
+
+  const supabase = createClient(url, anon)
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error || !data?.session) {
+    console.log('Auth failed:', error?.message || 'No session returned')
+    return ''
+  }
+  const at = data.session.access_token
+  const rt = data.session.refresh_token
+  // Cookies understood by @supabase/ssr in Next middleware
+  const cookie = `sb-access-token=${at}; sb-refresh-token=${rt}`
+  return cookie
 }
 
-async function runTests() {
-  console.log('🧪 Testing WorldWeaver API Endpoints with Database Integration\n');
-  
-  // Test 1: Get all worlds for user
-  console.log('📋 Test 1: Get all worlds for user');
-  await testApiEndpoint(`/api/worlds?userId=${TEST_USER_ID}`);
-  
-  // Test 2: Create a new world
-  console.log('🌍 Test 2: Create a new world');
-  const createResult = await testApiEndpoint('/api/worlds', {
+async function request(endpoint, options = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
+  const res = await fetch(`${BASE_URL}${endpoint}`, { ...options, headers })
+  const text = await res.text()
+  let json
+  try { json = JSON.parse(text) } catch { json = { raw: text } }
+  console.log(`${options.method || 'GET'} ${endpoint} -> ${res.status}`)
+  console.log(JSON.stringify(json, null, 2))
+  console.log('')
+  return { res, json }
+}
+
+async function run() {
+  console.log('Testing WorldWeaver REST API endpoints\n')
+
+  const cookie = await getAuthCookies()
+  const authHeaders = cookie ? { Cookie: cookie } : {}
+
+  // 1) List worlds (requires auth)
+  await request('/api/worlds', { headers: authHeaders })
+
+  // 2) Create a world
+  const create = await request('/api/worlds', {
     method: 'POST',
-    body: JSON.stringify({
-      name: 'Test World API',
-      description: 'A test world created via API',
-      isPublic: false,
-      userId: TEST_USER_ID
-    })
-  });
-  
-  if (createResult.data && createResult.data.world) {
-    const worldId = createResult.data.world.id;
-    
-    // Test 3: Get the created world by ID
-    console.log('🔍 Test 3: Get world by ID');
-    await testApiEndpoint(`/api/worlds/${worldId}`);
-    
-    // Test 4: Update the world
-    console.log('✏️ Test 4: Update world');
-    await testApiEndpoint(`/api/worlds/${worldId}`, {
-      method: 'PUT',
-      body: JSON.stringify({
-        name: 'Updated Test World',
-        description: 'Updated description',
-        userId: TEST_USER_ID
-      })
-    });
-    
-    // Test 5: Get updated world
-    console.log('🔍 Test 5: Get updated world');
-    await testApiEndpoint(`/api/worlds/${worldId}`);
-    
-    // Test 6: Delete the world
-    console.log('🗑️ Test 6: Delete world');
-    await testApiEndpoint(`/api/worlds/${worldId}`, {
-      method: 'DELETE'
-    });
-    
-    // Test 7: Verify deletion
-    console.log('✅ Test 7: Verify world deletion');
-    await testApiEndpoint(`/api/worlds/${worldId}`);
+    headers: authHeaders,
+    body: JSON.stringify({ name: 'API Test World', description: 'Created by test script', isPublic: false })
+  })
+  const worldId = create?.json?.world?.id
+  if (!worldId) {
+    console.log('Create world failed or unauthenticated; aborting follow-up tests.')
+    return
   }
-  
-  console.log('🎉 API endpoint testing completed!');
+
+  // 3) Get world by id
+  await request(`/api/worlds/${worldId}`, { headers: authHeaders })
+
+  // 4) Update world
+  await request(`/api/worlds/${worldId}`, {
+    method: 'PUT',
+    headers: authHeaders,
+    body: JSON.stringify({ name: 'API Test World (updated)', description: 'Updated via test' })
+  })
+
+  // 5) Create invite (owner/admin only)
+  await request(`/api/worlds/${worldId}/invites`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ email: process.env.TEST_INVITE_EMAIL || 'nobody@example.com', role: 'viewer', expiresInDays: 3 })
+  })
+
+  // 6) Delete world
+  await request(`/api/worlds/${worldId}`, { method: 'DELETE', headers: authHeaders })
+
+  // 7) Verify deletion
+  await request(`/api/worlds/${worldId}`, { headers: authHeaders })
 }
 
-// Run tests if this script is executed directly
 if (require.main === module) {
-  runTests().catch(console.error);
+  run().catch(err => {
+    console.error('Test run failed:', err)
+    process.exit(1)
+  })
 }
 
-module.exports = { testApiEndpoint, runTests };
+module.exports = { run }
+

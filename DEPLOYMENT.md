@@ -2,9 +2,26 @@
 
 **Project:** WorldWeaver UI - Sophisticated World-Building Application  
 **Version:** 0.1.0  
-**Last Updated:** September 5, 2025
+**Last Updated:** September 7, 2025
 
-This guide provides comprehensive step-by-step instructions for deploying the WorldWeaver application to various platforms, including production-ready configurations, environment setup, and best practices.
+This guide provides comprehensive step-by-step instructions for deploying the WorldWeaver application. The quickstart below reflects the current build. The remainder of this file contains legacy/expanded options and may include outdated NextAuth content — prefer the quickstart and Supabase notes.
+
+## Current Deploy Quickstart (Vercel + Supabase)
+- Prereqs: GitHub repo, Vercel account, Supabase project
+- Environment (Vercel → Project → Settings → Environment Variables):
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY` (only if using admin seed)
+  - `ADMIN_SEED_ENABLED` (only if you intentionally enable seeding in prod)
+- Framework: Next.js (auto)
+- Install: `npm install` (auto)
+- Build: `npm run build` (auto)
+- Start: `next start` (auto)
+- Supabase Auth URL config:
+  - Site URL: your Vercel URL (e.g., `https://your-app.vercel.app`)
+  - Redirect URLs: `https://your-app.vercel.app/auth/callback`
+
+---
 
 ## 📋 Prerequisites
 

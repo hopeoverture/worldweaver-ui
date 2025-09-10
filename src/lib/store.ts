@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import { World, Folder, Template, Entity, Link, RelationshipRow, ID, WorldMember, WorldInvite, MemberRole } from './types';
-import * as seed from './mockData';
-import { createCoreTemplates } from './coreTemplates';
-
-// Configuration
-const USE_API = true; // Use API routes for database operations
-const currentUserId = '550e8400-e29b-41d4-a716-446655440000'; // Test user ID
+import { logError } from './logging';
 
 type State = {
   worlds: World[];
@@ -45,7 +40,7 @@ type Actions = {
   // Membership actions
   getWorldMembers: (worldId: ID) => WorldMember[];
   getWorldInvites: (worldId: ID) => WorldInvite[];
-  inviteMember: (worldId: ID, email: string, role: MemberRole) => void;
+  inviteMember: (worldId: ID, email: string, role: MemberRole) => Promise<void>;
   updateMemberRole: (worldId: ID, memberId: ID, role: MemberRole) => void;
   removeMember: (worldId: ID, memberId: ID) => void;
   revokeInvite: (inviteId: ID) => void;
@@ -54,14 +49,14 @@ type Actions = {
 };
 
 export const useStore = create<State & Actions>((set, get) => ({
-  worlds: seed.worlds,
-  folders: seed.folders,
-  templates: seed.templates,
-  entities: seed.entities,
-  links: seed.links,
-  relationships: seed.relationships,
-  members: seed.members,
-  invites: seed.invites,
+  worlds: [],
+  folders: [],
+  templates: [],
+  entities: [],
+  links: [],
+  relationships: [],
+  members: [],
+  invites: [],
   
   // Loading and error states
   isLoading: false,
@@ -69,119 +64,43 @@ export const useStore = create<State & Actions>((set, get) => ({
 
   // Data loading actions
   loadUserWorlds: async () => {
-    if (!USE_API) {
-      // Use mock data
-      set({ worlds: seed.worlds.filter(w => !w.isArchived) });
-      return;
-    }
-
     set({ isLoading: true, error: null });
-    
     try {
-      const response = await fetch(`/api/worlds?userId=${currentUserId}`);
+      const response = await fetch('/api/worlds', { credentials: 'include' });
       if (!response.ok) {
+        if (response.status === 401) {
+          set({ worlds: [], isLoading: false });
+          return;
+        }
         throw new Error('Failed to fetch worlds');
       }
-      
       const { worlds } = await response.json();
       set({ worlds, isLoading: false });
     } catch (error) {
-      console.error('Failed to load worlds:', error);
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to load worlds',
-        isLoading: false 
+      logError('Failed to load worlds', error as Error, {
+        action: 'load_worlds',
+        component: 'store'
       });
+      set({ isLoading: false, error: error instanceof Error ? error.message : 'Failed to load worlds' });
     }
   },
 
   clearError: () => set({ error: null }),
 
   addWorld: async (w) => {
-    const worldId = crypto.randomUUID();
-    const nw: World = { id: worldId, entityCount: 0, updatedAt: new Date().toISOString(), ...w };
-    
-    // Create default folders for the new world
-    const defaultFolders: Folder[] = [
-      {
-        id: crypto.randomUUID(),
-        worldId: worldId,
-        name: 'Characters',
-        description: 'Player characters, NPCs, and important figures',
-        kind: 'entities',
-        color: 'blue',
-        count: 0
-      },
-      {
-        id: crypto.randomUUID(),
-        worldId: worldId,
-        name: 'Locations',
-        description: 'Towns, dungeons, and places of interest',
-        kind: 'entities',
-        color: 'green',
-        count: 0
-      },
-      {
-        id: crypto.randomUUID(),
-        worldId: worldId,
-        name: 'Items',
-        description: 'Weapons, artifacts, and magical objects',
-        kind: 'entities',
-        color: 'purple',
-        count: 0
-      },
-      {
-        id: crypto.randomUUID(),
-        worldId: worldId,
-        name: 'Organizations',
-        description: 'Factions, guilds, and political groups',
-        kind: 'entities',
-        color: 'red',
-        count: 0
-      }
-    ];
-
-    const coreTemplateFolderId = crypto.randomUUID();
-    const templateFolders: Folder[] = [
-      {
-        id: coreTemplateFolderId,
-        worldId: worldId,
-        name: 'Core Templates',
-        description: 'Essential templates for world building',
-        kind: 'templates',
-        color: 'indigo',
-        count: 0 // Count will be calculated dynamically
-      },
-      {
-        id: crypto.randomUUID(),
-        worldId: worldId,
-        name: 'Custom Templates',
-        description: 'User-created templates for unique content',
-        kind: 'templates',
-        color: 'yellow',
-        count: 0
-      }
-    ];
-
-    // Create core templates automatically
-    const coreTemplates = createCoreTemplates(worldId, coreTemplateFolderId);
-    const newTemplates: Template[] = coreTemplates.map(template => ({
-      id: crypto.randomUUID(),
-      ...template
-    }));
-
-    set(s => ({
-      worlds: [nw, ...s.worlds],
-      folders: [...defaultFolders, ...templateFolders, ...s.folders],
-      templates: [...newTemplates, ...s.templates]
-    }));
-    
+    const res = await fetch('/api/worlds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name: w.name, description: w.summary || w.description, isPublic: w.isPublic ?? false }),
+    });
+    if (!res.ok) throw new Error('Failed to create world');
+    const body = await res.json();
+    const nw: World = body.world;
+    set(s => ({ worlds: [nw, ...s.worlds] }));
     return nw;
   },
   updateWorld: async (id, patch) => {
-    if (!USE_API) {
-      set(s => ({ worlds: s.worlds.map(w => w.id === id ? { ...w, ...patch, updatedAt: new Date().toISOString() } : w) }));
-      return;
-    }
 
     set({ isLoading: true, error: null });
     
@@ -191,10 +110,7 @@ export const useStore = create<State & Actions>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...patch,
-          userId: currentUserId
-        }),
+        body: JSON.stringify(patch),
       });
 
       if (!response.ok) {
@@ -208,7 +124,12 @@ export const useStore = create<State & Actions>((set, get) => ({
         isLoading: false
       }));
     } catch (error) {
-      console.error('Failed to update world:', error);
+      logError('Failed to update world', error as Error, {
+        worldId: id,
+        action: 'update_world',
+        component: 'store',
+        metadata: { patch }
+      });
       set({ 
         error: error instanceof Error ? error.message : 'Failed to update world',
         isLoading: false 
@@ -217,21 +138,6 @@ export const useStore = create<State & Actions>((set, get) => ({
     }
   },
   deleteWorld: async (id) => {
-    if (!USE_API) {
-      set(s => ({
-        worlds: s.worlds.filter(w => w.id !== id),
-        folders: s.folders.filter(f => f.worldId !== id),
-        templates: s.templates.filter(t => t.worldId !== id),
-        entities: s.entities.filter(e => e.worldId !== id),
-        links: s.links.filter(l => {
-          const fromEntity = s.entities.find(e => e.id === l.fromEntityId);
-          const toEntity = s.entities.find(e => e.id === l.toEntityId);
-          return fromEntity?.worldId !== id && toEntity?.worldId !== id;
-        }),
-        relationships: s.relationships.filter(r => r.worldId !== id)
-      }));
-      return;
-    }
 
     set({ isLoading: true, error: null });
     
@@ -258,7 +164,11 @@ export const useStore = create<State & Actions>((set, get) => ({
         isLoading: false
       }));
     } catch (error) {
-      console.error('Failed to delete world:', error);
+      logError('Failed to delete world', error as Error, {
+        worldId: id,
+        action: 'delete_world',
+        component: 'store'
+      });
       set({ 
         error: error instanceof Error ? error.message : 'Failed to delete world',
         isLoading: false 
@@ -267,31 +177,11 @@ export const useStore = create<State & Actions>((set, get) => ({
     }
   },
   archiveWorld: async (id) => {
-    if (!USE_API) {
-      set(s => ({ 
-        worlds: s.worlds.map(w => 
-          w.id === id 
-            ? { ...w, isArchived: true, archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-            : w
-        ) 
-      }));
-      return;
-    }
 
     // For API mode, only send isArchived since database doesn't have archivedAt field
     await get().updateWorld(id, { isArchived: true });
   },
   unarchiveWorld: async (id) => {
-    if (!USE_API) {
-      set(s => ({ 
-        worlds: s.worlds.map(w => 
-          w.id === id 
-            ? { ...w, isArchived: false, archivedAt: undefined, updatedAt: new Date().toISOString() }
-            : w
-        ) 
-      }));
-      return;
-    }
 
     // For API mode, only send isArchived since database doesn't have archivedAt field
     await get().updateWorld(id, { isArchived: false });
@@ -343,17 +233,13 @@ export const useStore = create<State & Actions>((set, get) => ({
     return state.invites.filter(i => i.worldId === worldId && !i.acceptedAt && !i.revokedAt);
   },
   
-  inviteMember: (worldId, email, role) => {
-    const newInvite: WorldInvite = {
-      id: crypto.randomUUID(),
-      worldId,
-      email,
-      role,
-      invitedBy: 'user-1', // In real app, get from auth
-      invitedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-    };
-    set(s => ({ invites: [newInvite, ...s.invites] }));
+  inviteMember: async (worldId, email, role) => {
+    await fetch(`/api/worlds/${worldId}/invites`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, role }),
+    }).catch(() => {});
   },
   
   updateMemberRole: (worldId, memberId, role) =>

@@ -11,14 +11,14 @@ const pool = new Pool({
 
 async function testDatabaseServiceDirect() {
   try {
-    console.log('🔍 Testing WorldWeaver Database Service (Direct Connection)...\n')
+    console.log('dY"? Testing WorldWeaver Database Service (Direct Connection)...\n')
     
     const client = await pool.connect()
     
     // Test basic connection
     const result = await client.query('SELECT NOW() as current_time')
-    console.log('✅ Database connection successful!')
-    console.log('📅 Current time:', result.rows[0].current_time)
+    console.log('�o. Database connection successful!')
+    console.log('dY". Current time:', result.rows[0].current_time)
     console.log('')
     
     // Test tables exist
@@ -29,13 +29,13 @@ async function testDatabaseServiceDirect() {
       ORDER BY table_name
     `)
     
-    console.log('📋 Tables found:', tables.rows.length)
+    console.log('dY"< Tables found:', tables.rows.length)
     tables.rows.forEach(row => console.log(`  - ${row.table_name}`))
     console.log('')
     
     // Test system templates
     const templates = await client.query('SELECT name, category, fields FROM templates WHERE is_system = true ORDER BY name')
-    console.log('🎨 System Templates:', templates.rows.length)
+    console.log('dYZ" System Templates:', templates.rows.length)
     templates.rows.forEach(row => {
       const fields = Array.isArray(row.fields) ? row.fields : []
       console.log(`  - ${row.name} (${row.category}) - ${fields.length} fields`)
@@ -44,24 +44,24 @@ async function testDatabaseServiceDirect() {
     
     // Test users
     const users = await client.query('SELECT email, email_confirmed FROM auth_users')
-    console.log('👥 Users in database:', users.rows.length)
+    console.log('dY`� Users in database:', users.rows.length)
     users.rows.forEach(row => console.log(`  - ${row.email} (confirmed: ${row.email_confirmed})`))
     console.log('')
     
     // Test profiles
     const profiles = await client.query('SELECT email, full_name FROM profiles')
-    console.log('👤 Profiles created:', profiles.rows.length)
+    console.log('dY`\u000f Profiles created:', profiles.rows.length)
     profiles.rows.forEach(row => console.log(`  - ${row.email} (${row.full_name || 'No name'})`))
     console.log('')
     
     client.release()
     await pool.end()
     
-    console.log('🎉 Database service test completed successfully!')
+    console.log('dYZ% Database service test completed successfully!')
     console.log('')
-    console.log('🚀 Database is ready for WorldWeaver development!')
+    console.log('dYs? Database is ready for WorldWeaver development!')
     console.log('')
-    console.log('📝 Available Operations:')
+    console.log('dY"? Available Operations:')
     console.log('  - User management (create, get, update)')
     console.log('  - Profile management')
     console.log('  - World operations (create, list, get)')
@@ -70,9 +70,10 @@ async function testDatabaseServiceDirect() {
     console.log('  - Database utilities and stats')
     
   } catch (error) {
-    console.error('❌ Database service test failed:', error)
+    console.error('�?O Database service test failed:', error)
     process.exit(1)
   }
 }
 
 testDatabaseServiceDirect()
+

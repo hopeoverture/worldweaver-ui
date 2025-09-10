@@ -1,5 +1,8 @@
 # Phase 1: Database & Authentication Foundation - Environment Setup Guide
 
+> Status: Legacy/Appendix
+> This document contains legacy content (including NextAuth) and may be partially outdated. For the current setup, see `README.md`, `.env.example`/`.env.local.example`, and `SUPABASE_AUTH_SETUP.md`.
+
 **Project:** WorldWeaver UI - Phase 1 Implementation  
 **Version:** 0.2.0  
 **Last Updated:** September 5, 2025

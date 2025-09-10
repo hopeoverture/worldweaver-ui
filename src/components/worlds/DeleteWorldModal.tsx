@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { useStore } from '@/lib/store';
+import { useDeleteWorld } from '@/hooks/mutations/useDeleteWorld';
+import { logError } from '@/lib/logging';
 
 export interface DeleteWorldModalProps {
   worldId: string | null;
@@ -11,7 +12,7 @@ export interface DeleteWorldModalProps {
 }
 
 export function DeleteWorldModal({ worldId, worldName, onClose }: DeleteWorldModalProps) {
-  const { deleteWorld } = useStore();
+  const deleteWorld = useDeleteWorld();
   const [isDeleting, setIsDeleting] = React.useState(false);
 
   const handleDelete = async () => {
@@ -19,10 +20,15 @@ export function DeleteWorldModal({ worldId, worldName, onClose }: DeleteWorldMod
     
     setIsDeleting(true);
     try {
-      deleteWorld(worldId);
+      await deleteWorld.mutateAsync(worldId);
       onClose();
     } catch (error) {
-      console.error('Failed to delete world:', error);
+      logError('Failed to delete world', error as Error, {
+        worldId,
+        action: 'delete_world',
+        component: 'DeleteWorldModal',
+        metadata: { worldName }
+      });
     } finally {
       setIsDeleting(false);
     }
