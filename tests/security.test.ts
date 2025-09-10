@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeHtml, sanitizeText, validateJsonField, sanitizeTemplateField, sanitizeUrl } from './security';
+import { sanitizeHtml, sanitizeText, validateJsonField, sanitizeTemplateField, sanitizeUrl } from '../src/lib/security';
 
 describe('Security Utilities', () => {
   describe('sanitizeHtml', () => {
@@ -158,3 +158,4 @@ describe('Security Utilities', () => {
     });
   });
 });
+

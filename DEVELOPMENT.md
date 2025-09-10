@@ -1,4 +1,4 @@
-# WorldWeaver UI - Development Documentation
+﻿# WorldWeaver UI - Development Documentation
 
 > Note: Portions of this document may be outdated or contain encoding artifacts. For the authoritative quickstart and environment details, see `README.md` and `SUPABASE_AUTH_SETUP.md`.
 
@@ -7,7 +7,7 @@
 **Build Status:** Active Development  
 **Latest Changes:** Complete Supabase authentication integration, protected API routes, authenticated user sessions, and fixed store authentication context
 
-## 🚀 Project Overview
+## ðŸš€ Project Overview
 
 WorldWeaver is a sophisticated world-building application designed for creative professionals, writers, and game developers. It provides a comprehensive platform for creating, organizing, and managing fictional worlds with entities, relationships, and custom templates.
 
@@ -21,7 +21,7 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **Local Database:** PostgreSQL integration for persistent data storage
 - **Comprehensive Creation Workflows:** Multi-step wizards for worlds, entities, templates, and relationships
 
-## 🛠️ Technology Stack
+## ðŸ› ï¸ Technology Stack
 
 ### Core Framework
 - **Next.js 15.5.2** - React framework with App Router and API routes
@@ -52,7 +52,7 @@ WorldWeaver is a sophisticated world-building application designed for creative 
 - **ESLint 9** - Code linting with Next.js configuration
 - **Vitest** - Testing framework (configured but not extensively used yet)
 
-## 🗄️ Database Architecture
+## ðŸ—„ï¸ Database Architecture
 
 ### Complete Supabase Integration
 - **Production Database** - Deployed to Supabase project: `rkjtxcavocbhhwuywduj`
@@ -108,7 +108,7 @@ interface AuthContextType {
 
 ### Supabase Service Layer
 ```typescript
-// src/lib/supabase/client.ts
+// src/lib/supabase/browser.ts
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -160,110 +160,110 @@ type Actions = {
 - **Authentication:** Supabase Auth with email/password
 - **Environment:** Production Supabase instance with full schema
 
-## 📁 Project Structure
+## ðŸ“ Project Structure
 
 ```
 worldweaver-ui/
-├── src/
-│   ├── app/                     # Next.js App Router pages
-│   │   ├── api/                 # Next.js API routes
-│   │   │   └── worlds/          # World CRUD endpoints
-│   │   │       ├── route.ts     # GET all worlds, POST new world
-│   │   │       └── [id]/route.ts # GET, PUT, DELETE by ID
-│   │   ├── page.tsx            # Dashboard/Home page with async loading
-│   │   ├── layout.tsx          # Root layout with providers
-│   │   ├── globals.css         # Global styles and Tailwind
-│   │   ├── favicon.ico         # Application favicon
-│   │   ├── settings/           # Settings page
-│   │   │   └── page.tsx        # Settings implementation
-│   │   ├── profile/            # Profile page
-│   │   │   └── page.tsx        # User profile management
-│   │   └── world/[id]/         # Dynamic world pages
-│   │       └── page.tsx        # Individual world view
-│   ├── components/             # Reusable React components
-│   │   ├── ui/                 # Base UI components
-│   │   │   ├── Button.tsx      # Primary action button
-│   │   │   ├── Card.tsx        # Container component
-│   │   │   ├── CommandPalette.tsx # Quick action interface
-│   │   │   ├── EmptyState.tsx  # Empty state placeholder
-│   │   │   ├── Input.tsx       # Form input component
-│   │   │   ├── Kbd.tsx         # Keyboard shortcut display
-│   │   │   ├── Modal.tsx       # Overlay modal dialog
-│   │   │   ├── Select.tsx      # Dropdown selection
-│   │   │   ├── Spinner.tsx     # Loading indicator
-│   │   │   ├── Tabs.tsx        # Tabbed interface
-│   │   │   ├── Textarea.tsx    # Multi-line text input
-│   │   │   └── Toggle.tsx      # Toggle switch
-│   │   ├── dashboard/          # Dashboard-specific components
-│   │   │   ├── TabNav.tsx      # Dashboard navigation tabs
-│   │   │   └── WorldContextBar.tsx # World context info
-│   │   ├── entities/           # Entity management components
-│   │   │   ├── EntityCard.tsx  # Entity display card
-│   │   │   ├── EntityGrid.tsx  # Entity grid layout
-│   │   │   ├── EntityDetailModal.tsx # Entity view/edit modal
-│   │   │   └── CreateEntityModal/ # Multi-step entity creation
-│   │   │       ├── CreateEntityModal.tsx # Main modal component
-│   │   │       ├── FieldControls.tsx    # Dynamic field inputs
-│   │   │       ├── LinkEditor.tsx       # Entity relationship linking
-│   │   │       ├── StepChooseTemplate.tsx # Template selection
-│   │   │       └── StepFillForm.tsx     # Field completion
-│   │   ├── folders/            # Folder management components
-│   │   │   ├── FolderCard.tsx  # Folder display card
-│   │   │   └── FolderGrid.tsx  # Folder grid layout
-│   │   ├── templates/          # Template management components
-│   │   │   ├── TemplateCard.tsx # Template display card
-│   │   │   ├── TemplateEditor.tsx # Template editing interface
-│   │   │   └── TemplateGrid.tsx # Template grid layout
-│   │   ├── worlds/             # World management components
-│   │   │   ├── CreateWorldModal.tsx # 15-field world creation
-│   │   │   ├── NewWorldModal.tsx    # Simple world creation
-│   │   │   ├── WorldCard.tsx        # World display card
-│   │   │   ├── WorldEditModal.tsx   # World editing interface
-│   │   │   └── WorldGrid.tsx        # World grid layout
-│   │   ├── relationships/      # Relationship visualization
-│   │   │   ├── CreateRelationshipModal.tsx # Relationship creation
-│   │   │   ├── RelationshipGraph.tsx       # Visual mapping
-│   │   │   └── RelationshipTable.tsx       # Tabular view
-│   │   └── header/             # Application header
-│   │       └── AppHeader.tsx   # Main application header
-│   └── lib/                    # Utilities and configuration
-│       ├── types.ts           # TypeScript type definitions
-│       ├── store.ts           # Zustand async state management
-│       ├── mockData.ts        # Development seed data
-│       ├── formSchemas.ts     # Form validation schemas
-│       ├── coreTemplates.ts   # Core template definitions
-│       ├── utils.ts           # Utility functions
-│       ├── database/          # Database layer
-│       │   └── local.ts       # PostgreSQL database service
-│       └── services/          # Service adapters
-│           └── worldService.ts # World operations adapter
-├── scripts/                   # Development scripts
-│   ├── test-local-db.js      # Database connection test
-│   └── test-database-service.ts # Service layer test
-├── public/                    # Static assets
-│   ├── file.svg              # File icon
-│   ├── globe.svg             # Globe icon
-│   ├── next.svg              # Next.js logo
-│   ├── vercel.svg            # Vercel logo
-│   └── window.svg            # Window icon
-├── local_database_schema.sql  # Complete PostgreSQL schema
-├── fix_templates.sql         # Template installation script
-├── .env.local                # Local environment variables
-├── .env.local.example        # Environment template
-├── package.json               # Dependencies and scripts
-├── tailwind.config.ts         # Tailwind CSS configuration
-├── postcss.config.js          # PostCSS configuration
-├── postcss.config.mjs         # PostCSS ES module config
-├── next.config.ts             # Next.js configuration
-├── next-env.d.ts              # Next.js TypeScript definitions
-├── tsconfig.json              # TypeScript configuration
-├── eslint.config.mjs          # ESLint configuration
-├── README.md                  # Project documentation
-├── DEVELOPMENT.md             # Development documentation
-└── GEMINI.md                  # Additional documentation
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ app/                     # Next.js App Router pages
+â”‚   â”‚   â”œâ”€â”€ api/                 # Next.js API routes
+â”‚   â”‚   â”‚   â””â”€â”€ worlds/          # World CRUD endpoints
+â”‚   â”‚   â”‚       â”œâ”€â”€ route.ts     # GET all worlds, POST new world
+â”‚   â”‚   â”‚       â””â”€â”€ [id]/route.ts # GET, PUT, DELETE by ID
+â”‚   â”‚   â”œâ”€â”€ page.tsx            # Dashboard/Home page with async loading
+â”‚   â”‚   â”œâ”€â”€ layout.tsx          # Root layout with providers
+â”‚   â”‚   â”œâ”€â”€ globals.css         # Global styles and Tailwind
+â”‚   â”‚   â”œâ”€â”€ favicon.ico         # Application favicon
+â”‚   â”‚   â”œâ”€â”€ settings/           # Settings page
+â”‚   â”‚   â”‚   â””â”€â”€ page.tsx        # Settings implementation
+â”‚   â”‚   â”œâ”€â”€ profile/            # Profile page
+â”‚   â”‚   â”‚   â””â”€â”€ page.tsx        # User profile management
+â”‚   â”‚   â””â”€â”€ world/[id]/         # Dynamic world pages
+â”‚   â”‚       â””â”€â”€ page.tsx        # Individual world view
+â”‚   â”œâ”€â”€ components/             # Reusable React components
+â”‚   â”‚   â”œâ”€â”€ ui/                 # Base UI components
+â”‚   â”‚   â”‚   â”œâ”€â”€ Button.tsx      # Primary action button
+â”‚   â”‚   â”‚   â”œâ”€â”€ Card.tsx        # Container component
+â”‚   â”‚   â”‚   â”œâ”€â”€ CommandPalette.tsx # Quick action interface
+â”‚   â”‚   â”‚   â”œâ”€â”€ EmptyState.tsx  # Empty state placeholder
+â”‚   â”‚   â”‚   â”œâ”€â”€ Input.tsx       # Form input component
+â”‚   â”‚   â”‚   â”œâ”€â”€ Kbd.tsx         # Keyboard shortcut display
+â”‚   â”‚   â”‚   â”œâ”€â”€ Modal.tsx       # Overlay modal dialog
+â”‚   â”‚   â”‚   â”œâ”€â”€ Select.tsx      # Dropdown selection
+â”‚   â”‚   â”‚   â”œâ”€â”€ Spinner.tsx     # Loading indicator
+â”‚   â”‚   â”‚   â”œâ”€â”€ Tabs.tsx        # Tabbed interface
+â”‚   â”‚   â”‚   â”œâ”€â”€ Textarea.tsx    # Multi-line text input
+â”‚   â”‚   â”‚   â””â”€â”€ Toggle.tsx      # Toggle switch
+â”‚   â”‚   â”œâ”€â”€ dashboard/          # Dashboard-specific components
+â”‚   â”‚   â”‚   â”œâ”€â”€ TabNav.tsx      # Dashboard navigation tabs
+â”‚   â”‚   â”‚   â””â”€â”€ WorldContextBar.tsx # World context info
+â”‚   â”‚   â”œâ”€â”€ entities/           # Entity management components
+â”‚   â”‚   â”‚   â”œâ”€â”€ EntityCard.tsx  # Entity display card
+â”‚   â”‚   â”‚   â”œâ”€â”€ EntityGrid.tsx  # Entity grid layout
+â”‚   â”‚   â”‚   â”œâ”€â”€ EntityDetailModal.tsx # Entity view/edit modal
+â”‚   â”‚   â”‚   â””â”€â”€ CreateEntityModal/ # Multi-step entity creation
+â”‚   â”‚   â”‚       â”œâ”€â”€ CreateEntityModal.tsx # Main modal component
+â”‚   â”‚   â”‚       â”œâ”€â”€ FieldControls.tsx    # Dynamic field inputs
+â”‚   â”‚   â”‚       â”œâ”€â”€ LinkEditor.tsx       # Entity relationship linking
+â”‚   â”‚   â”‚       â”œâ”€â”€ StepChooseTemplate.tsx # Template selection
+â”‚   â”‚   â”‚       â””â”€â”€ StepFillForm.tsx     # Field completion
+â”‚   â”‚   â”œâ”€â”€ folders/            # Folder management components
+â”‚   â”‚   â”‚   â”œâ”€â”€ FolderCard.tsx  # Folder display card
+â”‚   â”‚   â”‚   â””â”€â”€ FolderGrid.tsx  # Folder grid layout
+â”‚   â”‚   â”œâ”€â”€ templates/          # Template management components
+â”‚   â”‚   â”‚   â”œâ”€â”€ TemplateCard.tsx # Template display card
+â”‚   â”‚   â”‚   â”œâ”€â”€ TemplateEditor.tsx # Template editing interface
+â”‚   â”‚   â”‚   â””â”€â”€ TemplateGrid.tsx # Template grid layout
+â”‚   â”‚   â”œâ”€â”€ worlds/             # World management components
+â”‚   â”‚   â”‚   â”œâ”€â”€ CreateWorldModal.tsx # 15-field world creation
+â”‚   â”‚   â”‚   â”œâ”€â”€ NewWorldModal.tsx    # Simple world creation
+â”‚   â”‚   â”‚   â”œâ”€â”€ WorldCard.tsx        # World display card
+â”‚   â”‚   â”‚   â”œâ”€â”€ WorldEditModal.tsx   # World editing interface
+â”‚   â”‚   â”‚   â””â”€â”€ WorldGrid.tsx        # World grid layout
+â”‚   â”‚   â”œâ”€â”€ relationships/      # Relationship visualization
+â”‚   â”‚   â”‚   â”œâ”€â”€ CreateRelationshipModal.tsx # Relationship creation
+â”‚   â”‚   â”‚   â”œâ”€â”€ RelationshipGraph.tsx       # Visual mapping
+â”‚   â”‚   â”‚   â””â”€â”€ RelationshipTable.tsx       # Tabular view
+â”‚   â”‚   â””â”€â”€ header/             # Application header
+â”‚   â”‚       â””â”€â”€ AppHeader.tsx   # Main application header
+â”‚   â””â”€â”€ lib/                    # Utilities and configuration
+â”‚       â”œâ”€â”€ types.ts           # TypeScript type definitions
+â”‚       â”œâ”€â”€ store.ts           # Zustand async state management
+â”‚       â”œâ”€â”€ mockData.ts        # Development seed data
+â”‚       â”œâ”€â”€ formSchemas.ts     # Form validation schemas
+â”‚       â”œâ”€â”€ coreTemplates.ts   # Core template definitions
+â”‚       â”œâ”€â”€ utils.ts           # Utility functions
+â”‚       â”œâ”€â”€ database/          # Database layer
+â”‚       â”‚   â””â”€â”€ local.ts       # PostgreSQL database service
+â”‚       â””â”€â”€ services/          # Service adapters
+â”‚           â””â”€â”€ worldService.ts # World operations adapter
+â”œâ”€â”€ scripts/                   # Development scripts
+â”‚   â”œâ”€â”€ test-local-db.js      # Database connection test
+â”‚   â””â”€â”€ test-database-service.ts # Service layer test
+â”œâ”€â”€ public/                    # Static assets
+â”‚   â”œâ”€â”€ file.svg              # File icon
+â”‚   â”œâ”€â”€ globe.svg             # Globe icon
+â”‚   â”œâ”€â”€ next.svg              # Next.js logo
+â”‚   â”œâ”€â”€ vercel.svg            # Vercel logo
+â”‚   â””â”€â”€ window.svg            # Window icon
+â”œâ”€â”€ local_database_schema.sql  # Complete PostgreSQL schema
+â”œâ”€â”€ fix_templates.sql         # Template installation script
+â”œâ”€â”€ .env.local                # Local environment variables
+â”œâ”€â”€ .env.local.example        # Environment template
+â”œâ”€â”€ package.json               # Dependencies and scripts
+â”œâ”€â”€ tailwind.config.ts         # Tailwind CSS configuration
+â”œâ”€â”€ postcss.config.js          # PostCSS configuration
+â”œâ”€â”€ postcss.config.mjs         # PostCSS ES module config
+â”œâ”€â”€ next.config.ts             # Next.js configuration
+â”œâ”€â”€ next-env.d.ts              # Next.js TypeScript definitions
+â”œâ”€â”€ tsconfig.json              # TypeScript configuration
+â”œâ”€â”€ eslint.config.mjs          # ESLint configuration
+â”œâ”€â”€ README.md                  # Project documentation
+â”œâ”€â”€ DEVELOPMENT.md             # Development documentation
+â””â”€â”€ GEMINI.md                  # Additional documentation
 ```
 
-## 🎯 Core Data Models
+## ðŸŽ¯ Core Data Models
 
 ### World
 ```typescript
@@ -356,7 +356,7 @@ type Folder = {
 - **API-First Approach** - All database operations go through protected API routes
 - **Authenticated Sessions** - User ID automatically retrieved from Supabase session
 - **RLS Security** - Row Level Security ensures users only see their own data
-- Unauthenticated � protected routes return 401 (no mock fallback)
+- Unauthenticated — protected routes return 401 (no mock fallback)
 - **Type Safety** - Auto-generated TypeScript types from live database schema
 
 ### Prerequisites
@@ -426,17 +426,17 @@ How to apply:
 
 ### New API routes
 - Worlds (REST):
-  - `GET /api/worlds/[id]` – fetch a world if user has access
-  - `PUT /api/worlds/[id]` – update (owner only); body: `{ name, description, isPublic, isArchived }`
-  - `DELETE /api/worlds/[id]` – delete (owner only)
+  - `GET /api/worlds/[id]` â€“ fetch a world if user has access
+  - `PUT /api/worlds/[id]` â€“ update (owner only); body: `{ name, description, isPublic, isArchived }`
+  - `DELETE /api/worlds/[id]` â€“ delete (owner only)
 - Invites:
-  - `POST /api/worlds/[id]/invites` – create invite (owner/admin). Body: `{ email, role: 'viewer'|'editor'|'admin', expiresInDays }`
-  - `POST /api/invites/accept` – accept invite. Body: `{ token }`
-  - Page: `/invite/accept?token=...` – simple client page to accept via link (user must be logged in with invited email).
+  - `POST /api/worlds/[id]/invites` â€“ create invite (owner/admin). Body: `{ email, role: 'viewer'|'editor'|'admin', expiresInDays }`
+  - `POST /api/invites/accept` â€“ accept invite. Body: `{ token }`
+  - Page: `/invite/accept?token=...` â€“ simple client page to accept via link (user must be logged in with invited email).
 
 ### Supabase types
 - App now uses `src/lib/supabase/types.generated.ts` as the type source.
-- To regenerate from Supabase Dashboard: API → Types → copy TS → replace file contents.
+- To regenerate from Supabase Dashboard: API â†’ Types â†’ copy TS â†’ replace file contents.
 - Optional Supabase CLI example:
   - `SUPABASE_ACCESS_TOKEN=... npx supabase gen types typescript --project-id <project-ref> --schema public > src/lib/supabase/types.generated.ts`
 
@@ -454,7 +454,7 @@ How to apply:
 # Create/edit/delete worlds as authenticated user
 ```
 
-## 🎨 UI Component Library
+## ðŸŽ¨ UI Component Library
 
 ### Base Components (`/src/components/ui/`)
 - **Button** (`Button.tsx`) - Primary action button with variants
@@ -491,39 +491,39 @@ How to apply:
 - **TemplateGrid** (`/src/components/templates/TemplateGrid.tsx`) - Grid layout for template cards
 - **FolderGrid** (`/src/components/folders/FolderGrid.tsx`) - Grid layout for folder cards
 
-## 🌟 Key Features Implemented
+## ðŸŒŸ Key Features Implemented
 
-### 1. Complete Supabase Authentication ✅
+### 1. Complete Supabase Authentication âœ…
 - **User Registration & Login** - Full authentication flows with Supabase Auth
 - **Protected API Routes** - Server-side authentication verification on all endpoints
 - **User Profile Management** - Profile creation, editing, and display name management
 - **Authentication Context** - React context provider for global auth state
 - **Session Persistence** - Automatic session management across page reloads
 - **Middleware Protection** - Next.js middleware for route-based authentication
-- Unauthenticated — protected routes return 401 (no mock fallback)
+- Unauthenticated â€” protected routes return 401 (no mock fallback)
 
-### 2. Production Database Integration ✅
+### 2. Production Database Integration âœ…
 - **Supabase Production Database** - Cloud-hosted PostgreSQL with complete schema
 - **Row Level Security** - User-scoped data access with RLS policies on all tables
 - **Auto-Generated Types** - TypeScript types generated from live database schema
 - **Protected World Operations** - Full CRUD operations for authenticated users only
 - **Database Service Layer** - Clean abstraction for Supabase operations
 
-### 3. Authenticated Store Architecture ✅
+### 3. Authenticated Store Architecture âœ…
 - **Zustand Store with Authentication** - State management using authenticated user context
 - **API Integration** - Store methods call protected API endpoints
 - **Automatic User Context** - User ID retrieved from authenticated sessions
 - **Error Handling & Loading States** - User-friendly feedback for async operations
-- Unauthenticated — protected routes return 401 (no mock fallback)
+- Unauthenticated â€” protected routes return 401 (no mock fallback)
 - **Type-Safe Operations** - TypeScript support throughout store operations
 
-### 4. Enhanced Creation Button Hover Effects ✅
+### 4. Enhanced Creation Button Hover Effects âœ…
 - **Unified Design Language** - All creation buttons share consistent interactive patterns
 - **Color-Coded Actions** - Each creation type has distinctive gradients:
-  - 🌍 **New World** - Blue/purple gradient (world-level actions)
-  - 👥 **Create Entity** - Green/blue gradient (entity-level actions)
-  - 📋 **Create Template** - Amber/orange gradient (template-level actions)
-  - 🔗 **Create Relationship** - Purple/pink gradient (relationship-level actions)
+  - ðŸŒ **New World** - Blue/purple gradient (world-level actions)
+  - ðŸ‘¥ **Create Entity** - Green/blue gradient (entity-level actions)
+  - ðŸ“‹ **Create Template** - Amber/orange gradient (template-level actions)
+  - ðŸ”— **Create Relationship** - Purple/pink gradient (relationship-level actions)
 - **Premium Animations** - Scale transforms, elevation effects, rotating icons, gradient overlays
 - **Enhanced Shadows** - Color-matched glows (blue, green, amber, purple shadows)
 - **Smooth Transitions** - 300ms coordinated animations across all elements
@@ -743,21 +743,21 @@ How to apply:
 - **Permission System** - Owner/Admin/Editor/Viewer roles with granular permission matrix
 - **Professional UI Design** - Enhanced tables, modals, and interactive elements with proper dark mode support
 
-## ⚠️ Known Issues & Technical Debt
+## âš ï¸ Known Issues & Technical Debt
 
-### Current Status ✅
+### Current Status âœ…
 - **Complete Authentication Integration** - Supabase Auth fully operational with protected routes
 - **Production Database Connected** - All world operations use authenticated database access
 - **Clean Store Architecture** - Store methods properly use authenticated user context
 - **Type Safety** - Auto-generated types from live database schema
 
 ### Partial Integration Status
-- **Worlds**: ✅ Fully integrated with Supabase
-- **Authentication**: ✅ Complete Supabase Auth integration  
-- **Templates**: ⚠️ System templates loaded, custom templates still use mock data
-- **Entities**: ⚠️ Still using mock data, needs API routes and database integration
-- **Folders**: ⚠️ Still using mock data, needs API routes and database integration
-- **Relationships**: ⚠️ Still using mock data, needs API routes and database integration
+- **Worlds**: âœ… Fully integrated with Supabase
+- **Authentication**: âœ… Complete Supabase Auth integration  
+- **Templates**: âš ï¸ System templates loaded, custom templates still use mock data
+- **Entities**: âš ï¸ Still using mock data, needs API routes and database integration
+- **Folders**: âš ï¸ Still using mock data, needs API routes and database integration
+- **Relationships**: âš ï¸ Still using mock data, needs API routes and database integration
 
 ### Next Steps for Complete Integration
 1. **Create Entity API Routes** - `/api/entities` following same pattern as worlds
@@ -773,7 +773,7 @@ How to apply:
 4. **Relationship System** - Implement relationship mapping with database persistence
 5. **Performance Optimization** - Implement caching and query optimization
 
-## 🚧 Development Priorities
+## ðŸš§ Development Priorities
 
 ### Immediate (Next Steps)
 1. **Complete Entity Integration** - Create `/api/entities` routes with Supabase integration
@@ -803,7 +803,7 @@ How to apply:
 4. **Advanced Analytics** - Usage metrics and world-building insights
 5. **Enterprise Features** - Team management and advanced collaboration tools
 
-## 📋 API Development Workflow
+## ðŸ“‹ API Development Workflow
 
 ### Step-by-Step Database Integration
 ```bash
@@ -880,7 +880,7 @@ pg_dump --data-only worldweaver_dev > production_data.sql
 # Deploy to Supabase using DATABASE_SCHEMA.md
 ```
 
-## 📋 Component Interface Reference
+## ðŸ“‹ Component Interface Reference
 
 ### Critical Interface Notes
 Always use these exact prop names to maintain TypeScript compliance:
@@ -907,7 +907,7 @@ Always use these exact prop names to maintain TypeScript compliance:
 />
 ```
 
-## 🔍 Debugging & Development Tips
+## ðŸ” Debugging & Development Tips
 
 ### Common Issues
 1. **TypeScript Errors** - Always check component interfaces before using props
@@ -922,13 +922,13 @@ Always use these exact prop names to maintain TypeScript compliance:
 4. Create UI components with proper prop types
 5. Test with mock data before real implementation
 
-## 📞 Support & Resources
+## ðŸ“ž Support & Resources
 
 ### Key Files for Reference
 - **`/src/app/api/worlds/route.ts`** - Authenticated worlds API endpoint (GET all, POST new)
 - **`/src/app/api/worlds/[id]/route.ts`** - Individual world operations (GET, PUT, DELETE) with auth
 - **`/src/contexts/AuthContext.tsx`** - Complete authentication context provider
-- **`/src/lib/supabase/client.ts`** - Supabase client configuration
+- **`/src/lib/supabase/browser.ts`** - Supabase client configuration
 - **`/src/lib/services/supabaseWorldService.ts`** - Database operations using Supabase
 - **`/src/lib/store.ts`** - Authenticated Zustand store with API integration
 - **`/middleware.ts`** - Authentication middleware for route protection
@@ -956,4 +956,5 @@ Always use these exact prop names to maintain TypeScript compliance:
 ---
 
 **Note:** This documentation reflects the current state as of September 6, 2025, including the completed Supabase authentication integration with protected API routes. The application now has a fully functional authentication system with user-scoped data access and is ready for expanding the remaining entities to use the same authenticated database integration pattern.
+
 

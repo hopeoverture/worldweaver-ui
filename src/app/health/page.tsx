@@ -68,11 +68,12 @@ export default function HealthPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'healthy': return '✅';
-      case 'degraded': return '⚠️';
-      case 'unhealthy': return '❌';
-      default: return '❓';
+      case 'healthy': return '?';
+      case 'degraded': return '??';
+      case 'unhealthy': return '?';
+      default: return '??';
     }
+  }
   };
 
   if (loading) {
