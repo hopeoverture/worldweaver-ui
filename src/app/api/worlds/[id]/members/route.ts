@@ -1,79 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { z } from 'zod'
+import {
+  apiSuccess,
+  apiAuthRequired,
+  apiError,
+  withApiErrorHandling,
+  parseRequestBody,
+  generateRequestId,
+} from '@/lib/api-utils'
+import { API_ERROR_CODES } from '@/lib/api-types'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    const members = await worldService.getWorldMembers(params.id, user.id)
-    return NextResponse.json({ members })
-  } catch (error) {
-    console.error('Error fetching members:', error)
-    return NextResponse.json({ error: 'Failed to fetch members' }, { status: 500 })
+export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  if (authError || !user) {
+    return apiAuthRequired()
   }
-}
 
-export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+  const { unifiedService: worldService } = await import('@/lib/services')
+  const members = await worldService.getWorldMembers(params.id, user.id)
+  return NextResponse.json({ members }, { headers: { 'X-Request-ID': requestId } })
+})
 
-    const schema = z.object({
-      memberId: z.string().uuid(),
-      role: z.enum(['owner', 'admin', 'editor', 'viewer']),
-    })
-
-    let body: z.infer<typeof schema>
-    try {
-      const json = await req.json()
-      body = schema.parse(json)
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ error: 'Invalid request body', issues: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    const updatedMember = await worldService.updateMemberRole(params.id, body.memberId, body.role, user.id)
-    return NextResponse.json({ member: updatedMember })
-  } catch (error) {
-    console.error('Error updating member role:', error)
-    return NextResponse.json({ error: 'Failed to update member role' }, { status: 500 })
+export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  if (authError || !user) {
+    return apiAuthRequired()
   }
-}
 
-export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+  const schema = z.object({
+    memberId: z.string().uuid(),
+    role: z.enum(['owner', 'admin', 'editor', 'viewer']),
+  })
 
-    const { searchParams } = new URL(req.url)
-    const memberId = searchParams.get('memberId')
-    
-    if (!memberId) {
-      return NextResponse.json({ error: 'memberId query parameter required' }, { status: 400 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    await worldService.removeMember(params.id, memberId, user.id)
-    return NextResponse.json({ ok: true })
-  } catch (error) {
-    console.error('Error removing member:', error)
-    return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 })
+  const bodyResult = await parseRequestBody(req, schema)
+  if ('error' in bodyResult) {
+    return bodyResult.error
   }
-}
+  const body = bodyResult
+
+  const { unifiedService: worldService } = await import('@/lib/services')
+  const member = await worldService.updateMemberRole(params.id, body.memberId, body.role, user.id)
+  return NextResponse.json({ member }, { headers: { 'X-Request-ID': requestId } })
+})
+
+export const DELETE = withApiErrorHandling(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  if (authError || !user) {
+    return apiAuthRequired()
+  }
+
+  const { searchParams } = new URL(req.url)
+  const memberId = searchParams.get('memberId')
+  if (!memberId) {
+    return NextResponse.json({ error: 'memberId query parameter required' }, { status: 400 })
+  }
+
+  const { unifiedService: worldService } = await import('@/lib/services')
+  await worldService.removeMember(params.id, memberId, user.id)
+  return NextResponse.json({ ok: true }, { headers: { 'X-Request-ID': requestId } })
+})

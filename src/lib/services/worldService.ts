@@ -1,19 +1,38 @@
-import { supabaseWorldService } from './supabaseWorldService';
-import { World, Entity, Template, Folder, TemplateField } from '../types';
-
 /**
- * World Service - Adapter layer between React components and database
- * Provides a consistent API for world-related operations regardless of backend
+ * World Service - Focused on world CRUD operations
  */
+
+import type { Database } from '../supabase/types.generated';
+import { World } from '../types';
+import { createClient as createServerSupabaseClient } from '../supabase/server';
+import { adaptWorldFromDatabase, adaptWorldToDatabase, isValidWorld } from '../adapters';
+import { logError } from '../logging';
+
 export class WorldService {
   /**
    * Get all worlds for the current user
    */
   async getUserWorlds(userId: string): Promise<World[]> {
     try {
-      return await supabaseWorldService.getUserWorlds(userId);
+      const supabase = await createServerSupabaseClient();
+      const { data: worlds, error } = await supabase
+        .from('worlds')
+        .select(`
+          *,
+          entities(count),
+          world_members(count)
+        `)
+        .eq('is_archived', false)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        logError('Supabase error fetching worlds', error, { action: 'getUserWorlds', userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return worlds?.map(world => adaptWorldFromDatabase(world)) || [];
     } catch (error) {
-      console.error('Error fetching user worlds:', error);
+      logError('Error fetching user worlds', error as Error, { action: 'getUserWorlds', userId });
       throw new Error('Failed to fetch worlds');
     }
   }
@@ -23,9 +42,33 @@ export class WorldService {
    */
   async getWorldById(worldId: string, userId: string): Promise<World | null> {
     try {
-      return await supabaseWorldService.getWorldById(worldId, userId);
+      const supabase = await createServerSupabaseClient();
+      const { data: world, error } = await supabase
+        .from('worlds')
+        .select(`
+          *,
+          entities(count)
+        `)
+        .eq('id', worldId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // Not found
+        }
+        logError('Supabase error fetching world', error, { action: 'getWorldById', worldId, userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data from database', new Error('World validation failed'), { worldId, userId });
+        throw new Error('Invalid world data');
+      }
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error fetching world:', error);
+      logError('Error fetching world', error as Error, { action: 'getWorldById', worldId, userId });
       throw new Error('Failed to fetch world');
     }
   }
@@ -39,11 +82,43 @@ export class WorldService {
     isPublic?: boolean;
   }, userId: string): Promise<World> {
     try {
-      return await supabaseWorldService.createWorld(data, userId);
+      const supabase = await createServerSupabaseClient();
+      const { data: authData, error: authErr } = await supabase.auth.getUser();
+      
+      if (authErr || !authData?.user) {
+        logError('createWorld: missing server auth user', authErr || new Error('No auth user'), { action: 'createWorld', userId });
+        throw new Error('Not authenticated (server)');
+      }
+      
+      const ownerId = authData.user.id;
+      const { data: world, error } = await supabase
+        .from('worlds')
+        .insert({
+          name: data.name,
+          description: data.description || '',
+          owner_id: ownerId,
+          is_public: data.isPublic || false,
+          is_archived: false,
+          settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
+        })
+        .select()
+        .single();
+
+      if (error) {
+        logError('Supabase error creating world', error, { action: 'createWorld', userId, metadata: { worldData: data } });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data after creation', new Error('World validation failed'), { worldId: world.id, userId });
+        throw new Error('Invalid world data after creation');
+      }
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error creating world:', error);
-      // Preserve underlying database error message for the API route to surface in dev
-      throw (error as Error);
+      logError('Error creating world', error as Error, { action: 'createWorld', userId, metadata: { worldData: data } });
+      throw error instanceof Error ? error : new Error('Unknown error creating world');
     }
   }
 
@@ -52,9 +127,31 @@ export class WorldService {
    */
   async updateWorld(worldId: string, data: Partial<World>, userId: string): Promise<World> {
     try {
-      return await supabaseWorldService.updateWorld(worldId, data, userId);
+      const supabase = await createServerSupabaseClient();
+      const updateData = adaptWorldToDatabase(data);
+
+      const { data: world, error } = await supabase
+        .from('worlds')
+        .update(updateData)
+        .eq('id', worldId)
+        .eq('owner_id', userId) // Only owner can update
+        .select()
+        .single();
+
+      if (error) {
+        logError('Supabase error updating world', error, { action: 'updateWorld', worldId, userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data after update', new Error('World validation failed'), { worldId, userId });
+        throw new Error('Invalid world data after update');
+      }
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error updating world:', error);
+      logError('Error updating world', error as Error, { action: 'updateWorld', worldId, userId });
       throw new Error('Failed to update world');
     }
   }
@@ -64,9 +161,19 @@ export class WorldService {
    */
   async deleteWorld(worldId: string, userId: string): Promise<void> {
     try {
-      await supabaseWorldService.deleteWorld(worldId, userId);
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
+        .from('worlds')
+        .delete()
+        .eq('id', worldId)
+        .eq('owner_id', userId); // Only owner can delete
+
+      if (error) {
+        logError('Supabase error deleting world', error, { action: 'deleteWorld', worldId, userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
     } catch (error) {
-      console.error('Error deleting world:', error);
+      logError('Error deleting world', error as Error, { action: 'deleteWorld', worldId, userId });
       throw new Error('Failed to delete world');
     }
   }
@@ -76,252 +183,180 @@ export class WorldService {
    */
   async archiveWorld(worldId: string, userId: string, archived: boolean = true): Promise<void> {
     try {
-      await supabaseWorldService.archiveWorld(worldId, userId, archived);
+      const supabase = await createServerSupabaseClient();
+      const { error } = await supabase
+        .from('worlds')
+        .update({ is_archived: archived })
+        .eq('id', worldId)
+        .eq('owner_id', userId); // Only owner can archive
+
+      if (error) {
+        logError('Supabase error archiving world', error, { action: 'archiveWorld', worldId, userId, metadata: { archived } });
+        throw new Error(`Database error: ${error.message}`);
+      }
     } catch (error) {
-      console.error('Error archiving world:', error);
+      logError('Error archiving world', error as Error, { action: 'archiveWorld', worldId, userId, metadata: { archived } });
       throw new Error('Failed to archive world');
     }
   }
 
   /**
-   * Get entities for a world
+   * Check if user has access to a world without fetching full world data
+   * Optimized for N+1 query prevention
    */
-  async getWorldEntities(worldId: string, userId: string): Promise<Entity[]> {
+  async hasWorldAccess(worldId: string, userId: string): Promise<boolean> {
     try {
-      return await supabaseWorldService.getWorldEntities(worldId, userId);
+      const supabase = await createServerSupabaseClient();
+      const { data: world, error } = await supabase
+        .from('worlds')
+        .select('id')
+        .or(`owner_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
+        .eq('id', worldId)
+        .single();
+
+      if (error) {
+        if ((error as any).code === 'PGRST116') return false; // Not found
+        logError('Supabase error checking world access', error, { action: 'hasWorldAccess', worldId, userId });
+        return false;
+      }
+
+      return !!world;
     } catch (error) {
-      console.error('Error fetching world entities:', error);
-      throw new Error('Failed to fetch entities');
+      logError('Error checking world access', error as Error, { action: 'hasWorldAccess', worldId, userId });
+      return false;
     }
   }
 
   /**
-   * Create a new entity in a world
+   * Get world access info for multiple worlds efficiently
+   * Returns a Map of worldId -> hasAccess for bulk operations
    */
-  async createEntity(worldId: string, data: {
-    templateId?: string;
-    folderId?: string;
-    name: string;
-    fields: Record<string, unknown>;
-    tags?: string[];
-  }, userId: string): Promise<Entity> {
-    try {
-      return await supabaseWorldService.createEntity(worldId, data, userId);
-    } catch (error) {
-      console.error('Error creating entity:', error);
-      throw new Error('Failed to create entity');
-    }
-  }
+  async getWorldAccessBulk(worldIds: string[], userId: string): Promise<Map<string, boolean>> {
+    if (worldIds.length === 0) return new Map();
 
-  /** Get a single entity by ID */
-  async getEntityById(entityId: string, userId: string): Promise<Entity | null> {
     try {
-      return await supabaseWorldService.getEntityById(entityId, userId)
-    } catch (error) {
-      console.error('Error fetching entity:', error)
-      throw new Error('Failed to fetch entity')
-    }
-  }
+      const supabase = await createServerSupabaseClient();
+      const { data: worlds, error } = await supabase
+        .from('worlds')
+        .select('id')
+        .or(`owner_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
+        .in('id', worldIds);
 
-  /** Update an entity */
-  async updateEntity(entityId: string, data: Partial<Entity>, userId: string): Promise<Entity> {
-    try {
-      // Map domain partial to storage schema fields
-      const mapped: any = {}
-      if (data.name !== undefined) mapped.name = data.name
-      if (data.templateId !== undefined) mapped.templateId = data.templateId ?? null
-      if (data.folderId !== undefined) mapped.folderId = data.folderId ?? null
-      if (data.fields !== undefined) mapped.fields = data.fields
-      if (data.tags !== undefined) mapped.tags = data.tags ?? null
-      return await supabaseWorldService.updateEntity(entityId, mapped, userId)
-    } catch (error) {
-      console.error('Error updating entity:', error)
-      throw new Error('Failed to update entity')
-    }
-  }
+      if (error) {
+        logError('Supabase error in bulk world access check', error, { action: 'getWorldAccessBulk', worldIds, userId });
+        return new Map();
+      }
 
-  /** Delete an entity */
-  async deleteEntity(entityId: string, userId: string): Promise<void> {
-    try {
-      await supabaseWorldService.deleteEntity(entityId, userId)
+      const accessMap = new Map<string, boolean>();
+      // Initialize all as false
+      worldIds.forEach(id => accessMap.set(id, false));
+      // Set accessible worlds to true
+      worlds?.forEach(world => accessMap.set(world.id, true));
+      
+      return accessMap;
     } catch (error) {
-      console.error('Error deleting entity:', error)
-      throw new Error('Failed to delete entity')
+      logError('Error in bulk world access check', error as Error, { action: 'getWorldAccessBulk', worldIds, userId });
+      return new Map();
     }
   }
 
   /**
-   * Get templates for a world (including system templates)
+   * Get relationships for a world (moved from old service, optimized)
    */
-  async getWorldTemplates(worldId: string): Promise<Template[]> {
+  async getWorldRelationships(worldId: string, userId: string): Promise<Array<{
+    id: string;
+    worldId: string;
+    from: string;
+    to: string;
+    label: string;
+    description?: string | null;
+    metadata?: any | null;
+    updatedAt?: string;
+  }>> {
     try {
-      return await supabaseWorldService.getWorldTemplates(worldId);
+      // Use optimized access check
+      const hasAccess = await this.hasWorldAccess(worldId, userId);
+      if (!hasAccess) throw new Error('World not found or access denied');
+
+      const supabase = await createServerSupabaseClient();
+      const { data: rows, error } = await supabase
+        .from('relationships')
+        .select('*')
+        .eq('world_id', worldId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        logError('Supabase error fetching relationships', error, { action: 'getWorldRelationships', worldId, userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return rows?.map(row => ({
+        id: row.id,
+        worldId: row.world_id,
+        from: row.from_entity_id,
+        to: row.to_entity_id,
+        label: row.relationship_type, // Map relationship_type to label
+        description: row.description,
+        metadata: row.metadata,
+        updatedAt: row.updated_at,
+      })) || [];
     } catch (error) {
-      console.error('Error fetching world templates:', error);
-      throw new Error('Failed to fetch templates');
+      logError('Error fetching world relationships', error as Error, { action: 'getWorldRelationships', worldId, userId });
+      throw new Error('Failed to fetch relationships');
     }
   }
 
   /**
-   * Get system templates (available to all worlds)
+   * Create a relationship between entities
    */
-  async getSystemTemplates(): Promise<Template[]> {
-    try {
-      return await supabaseWorldService.getSystemTemplates();
-    } catch (error) {
-      console.error('Error fetching system templates:', error);
-      throw new Error('Failed to fetch system templates');
-    }
-  }
-
-  /**
-   * Get folders for a world
-   */
-  async getWorldFolders(worldId: string, userId: string): Promise<Folder[]> {
-    try {
-      return await supabaseWorldService.getWorldFolders(worldId, userId);
-    } catch (error) {
-      console.error('Error fetching world folders:', error);
-      throw new Error('Failed to fetch folders');
-    }
-  }
-
-  /** Create a folder */
-  async createFolder(worldId: string, data: { name: string; description?: string; color?: string }, userId: string): Promise<Folder> {
-    try {
-      return await supabaseWorldService.createFolder(worldId, data, userId)
-    } catch (error) {
-      console.error('Error creating folder:', error)
-      throw new Error('Failed to create folder')
-    }
-  }
-
-  /** Update a folder */
-  async updateFolder(folderId: string, data: { name?: string; description?: string; color?: string | null }, userId: string): Promise<Folder> {
-    try {
-      return await supabaseWorldService.updateFolder(folderId, data, userId)
-    } catch (error) {
-      console.error('Error updating folder:', error)
-      throw new Error('Failed to update folder')
-    }
-  }
-
-  /** Delete a folder */
-  async deleteFolder(folderId: string, userId: string): Promise<void> {
-    try {
-      await supabaseWorldService.deleteFolder(folderId, userId)
-    } catch (error) {
-      console.error('Error deleting folder:', error)
-      throw new Error('Failed to delete folder')
-    }
-  }
-
-  /** Create a new template */
-  async createTemplate(worldId: string, data: {
-    name: string;
-    description?: string;
-    icon?: string;
-    category?: string;
-    fields: TemplateField[];
-  }): Promise<Template> {
-    try {
-      return await supabaseWorldService.createTemplate(worldId, data);
-    } catch (error) {
-      console.error('Error creating template:', error);
-      throw new Error('Failed to create template');
-    }
-  }
-
-  /** Update a template */
-  async updateTemplate(templateId: string, data: Partial<Template>, userId: string): Promise<Template> {
-    try {
-      return await supabaseWorldService.updateTemplate(templateId, data, userId);
-    } catch (error) {
-      console.error('Error updating template:', error);
-      throw new Error('Failed to update template');
-    }
-  }
-
-  /** Delete a template */
-  async deleteTemplate(templateId: string, userId: string): Promise<void> {
-    try {
-      await supabaseWorldService.deleteTemplate(templateId, userId);
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      throw new Error('Failed to delete template');
-    }
-  }
-
-  // Relationships
-  async getWorldRelationships(worldId: string, userId: string) {
-    try {
-      return await supabaseWorldService.getWorldRelationships(worldId, userId)
-    } catch (error) {
-      console.error('Error fetching relationships:', error)
-      throw new Error('Failed to fetch relationships')
-    }
-  }
-
   async createRelationship(
     worldId: string,
-    data: { fromEntityId: string; toEntityId: string; label: string; description?: string | null; metadata?: Record<string, unknown> | null },
-    userId: string,
-  ) {
+    data: {
+      fromEntityId: string;
+      toEntityId: string;
+      label: string;
+      description: string | null;
+      metadata: any | null;
+    },
+    userId: string
+  ): Promise<any> {
     try {
-      return await supabaseWorldService.createRelationship(worldId, data as any, userId)
-    } catch (error) {
-      console.error('Error creating relationship:', error)
-      throw new Error('Failed to create relationship')
-    }
-  }
+      // Use optimized access check
+      const hasAccess = await this.hasWorldAccess(worldId, userId);
+      if (!hasAccess) throw new Error('World not found or access denied');
 
-  async updateRelationship(
-    relationshipId: string,
-    data: { label?: string; description?: string | null; metadata?: Record<string, unknown> | null },
-    userId: string,
-  ) {
-    try {
-      return await supabaseWorldService.updateRelationship(relationshipId, data as any, userId)
-    } catch (error) {
-      console.error('Error updating relationship:', error)
-      throw new Error('Failed to update relationship')
-    }
-  }
+      const supabase = await createServerSupabaseClient();
+      const { data: row, error } = await supabase
+        .from('relationships')
+        .insert({
+          world_id: worldId,
+          from_entity_id: data.fromEntityId,
+          to_entity_id: data.toEntityId,
+          relationship_type: data.label, // Map label to relationship_type
+          description: data.description,
+          metadata: data.metadata,
+        })
+        .select('*')
+        .single();
 
-  async deleteRelationship(relationshipId: string, userId: string): Promise<void> {
-    try {
-      await supabaseWorldService.deleteRelationship(relationshipId, userId)
-    } catch (error) {
-      console.error('Error deleting relationship:', error)
-      throw new Error('Failed to delete relationship')
-    }
-  }
+      if (error) {
+        logError('Supabase error creating relationship', error, { action: 'createRelationship', worldId, userId });
+        throw new Error(`Database error: ${error.message}`);
+      }
 
-  // Members
-  async getWorldMembers(worldId: string, userId: string) {
-    try {
-      return await supabaseWorldService.getWorldMembers(worldId, userId)
+      return {
+        id: row.id,
+        worldId: row.world_id,
+        from: row.from_entity_id,
+        to: row.to_entity_id,
+        label: row.relationship_type, // Map relationship_type to label
+        description: row.description,
+        metadata: row.metadata,
+        updatedAt: row.updated_at,
+      };
     } catch (error) {
-      console.error('Error fetching members:', error)
-      throw new Error('Failed to fetch members')
-    }
-  }
-
-  async updateMemberRole(worldId: string, memberId: string, role: string, userId: string) {
-    try {
-      return await supabaseWorldService.updateMemberRole(worldId, memberId, role, userId)
-    } catch (error) {
-      console.error('Error updating member role:', error)
-      throw new Error('Failed to update member role')
-    }
-  }
-
-  async removeMember(worldId: string, memberId: string, userId: string) {
-    try {
-      return await supabaseWorldService.removeMember(worldId, memberId, userId)
-    } catch (error) {
-      console.error('Error removing member:', error)
-      throw new Error('Failed to remove member')
+      logError('Error creating relationship', error as Error, { action: 'createRelationship', worldId, userId });
+      throw new Error('Failed to create relationship');
     }
   }
 }

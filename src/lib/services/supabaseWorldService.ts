@@ -1,6 +1,20 @@
 import type { Database } from '../supabase/types.generated';
 import { World, Entity, Template, TemplateField, Json } from '../types';
 import { createClient as createServerSupabaseClient } from '../supabase/server';
+import { logDatabaseError, logAuditEvent } from '../logging';
+import { 
+  adaptWorldFromDatabase, 
+  adaptWorldToDatabase,
+  adaptEntityFromDatabase,
+  adaptEntityToDatabase,
+  adaptTemplateFromDatabase,
+  adaptTemplateToDatabase,
+  adaptFolderFromDatabase,
+  adaptFolderToDatabase,
+  isValidWorld,
+  isValidEntity 
+} from '../adapters';
+import { logError } from '../logging';
 // Use domain Json type for serialization
 
 /**
@@ -24,24 +38,13 @@ export class SupabaseWorldService {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase error fetching worlds:', error);
+        logError('Supabase error fetching worlds', error, { action: 'getUserWorlds', userId });
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return worlds?.map(world => ({
-        id: world.id,
-        name: world.name,
-        summary: world.description || '',
-        entityCount: world.entities?.length || 0,
-        updatedAt: world.updated_at,
-        isArchived: world.is_archived || false,
-        archivedAt: world.is_archived ? world.updated_at : undefined,
-        coverImage: undefined, // Not in current schema
-        isPublic: world.is_public || false,
-        settings: (world.settings as Record<string, Json>) || {}
-      })) || [];
+      return worlds?.map(world => adaptWorldFromDatabase(world)) || [];
     } catch (error) {
-      console.error('Error fetching user worlds:', error);
+      logError('Error fetching user worlds', error as Error, { action: 'getUserWorlds', userId });
       throw new Error('Failed to fetch worlds');
     }
   }
@@ -65,24 +68,19 @@ export class SupabaseWorldService {
         if (error.code === 'PGRST116') {
           return null; // Not found
         }
-        console.error('Supabase error fetching world:', error);
+        logError('Supabase error fetching world', error, { action: 'getWorldById', worldId, userId });
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return {
-        id: world.id,
-        name: world.name,
-        summary: world.description || '',
-        entityCount: world.entities?.length || 0,
-        updatedAt: world.updated_at,
-        isArchived: world.is_archived || false,
-        archivedAt: world.is_archived ? world.updated_at : undefined,
-        coverImage: undefined, // Not in current schema
-        isPublic: world.is_public || false,
-        settings: (world.settings as Record<string, Json>) || {}
-      };
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data from database', new Error('World validation failed'), { worldId, userId });
+        throw new Error('Invalid world data');
+      }
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error fetching world:', error);
+      logError('Error fetching world', error as Error, { action: 'getWorldById', worldId, userId });
       throw new Error('Failed to fetch world');
     }
   }
@@ -100,42 +98,58 @@ export class SupabaseWorldService {
       // Ensure server client has an authenticated user context (RLS)
       const { data: authData, error: authErr } = await supabase.auth.getUser()
       if (authErr || !authData?.user) {
-        console.error('createWorld: missing server auth user', authErr)
-        throw new Error('Not authenticated (server)')
+        logError('createWorld: missing server auth user', authErr || new Error('No auth user'), { action: 'createWorld', userId });
+        throw new Error('Not authenticated (server)');
       }
-      const ownerId = authData.user.id
+      const ownerId = authData.user.id;
+      const insertData = adaptWorldToDatabase({
+        name: data.name,
+        summary: data.description || '',
+        isPublic: data.isPublic || false,
+        isArchived: false,
+        settings: {}
+      });
+      
       const { data: world, error } = await supabase
         .from('worlds')
         .insert({
-          name: data.name,
+          name: data.name, // Required field
           description: data.description || '',
           owner_id: ownerId,
           is_public: data.isPublic || false,
           is_archived: false,
-          settings: {} as Json
+          settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
         })
         .select()
         .single();
 
       if (error) {
-        console.error('Supabase error creating world:', error);
+        logError('Supabase error creating world', error, { action: 'createWorld', userId, metadata: { worldData: data } });
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return {
-        id: world.id,
-        name: world.name,
-        summary: world.description || '',
-        entityCount: 0,
-        updatedAt: world.updated_at,
-        isArchived: false,
-        coverImage: undefined, // Not in current schema
-        isPublic: world.is_public || false,
-        settings: (world.settings as Record<string, any>) || {}
-      };
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data after creation', new Error('World validation failed'), { worldId: world.id, userId });
+        throw new Error('Invalid world data after creation');
+      }
+
+      // Audit log for world creation
+      logAuditEvent('world_created', {
+        userId,
+        worldId: adaptedWorld.id,
+        action: 'create_world',
+        metadata: {
+          worldName: adaptedWorld.name,
+          isPublic: adaptedWorld.isPublic,
+          description: adaptedWorld.description
+        }
+      });
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error creating world:', error)
-      throw (error as Error)
+      logError('Error creating world', error as Error, { action: 'createWorld', userId, metadata: { worldData: data } });
+      throw error instanceof Error ? error : new Error('Unknown error creating world');
     }
   }
 
@@ -145,12 +159,7 @@ export class SupabaseWorldService {
   async updateWorld(worldId: string, data: Partial<World>, userId: string): Promise<World> {
     try {
       const supabase = await createServerSupabaseClient()
-      const updateData: any = {};
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.summary !== undefined) updateData.description = data.summary;
-      if (data.isPublic !== undefined) updateData.is_public = data.isPublic;
-      if (data.isArchived !== undefined) updateData.is_archived = data.isArchived;
-      if (data.settings !== undefined) updateData.settings = data.settings as Json;
+      const updateData = adaptWorldToDatabase(data);
 
       const { data: world, error } = await supabase
         .from('worlds')
@@ -161,24 +170,19 @@ export class SupabaseWorldService {
         .single();
 
       if (error) {
-        console.error('Supabase error updating world:', error);
+        logError('Supabase error updating world', error, { action: 'updateWorld', worldId, userId });
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return {
-        id: world.id,
-        name: world.name,
-        summary: world.description || '',
-        entityCount: 0, // We'd need another query to get this
-        updatedAt: world.updated_at,
-        isArchived: world.is_archived || false,
-        archivedAt: world.is_archived ? world.updated_at : undefined,
-        coverImage: undefined, // Not in current schema
-        isPublic: world.is_public || false,
-        settings: (world.settings as Record<string, any>) || {}
-      };
+      const adaptedWorld = adaptWorldFromDatabase(world);
+      if (!isValidWorld(adaptedWorld)) {
+        logError('Invalid world data after update', new Error('World validation failed'), { worldId, userId });
+        throw new Error('Invalid world data after update');
+      }
+      
+      return adaptedWorld;
     } catch (error) {
-      console.error('Error updating world:', error);
+      logError('Error updating world', error as Error, { action: 'updateWorld', worldId, userId });
       throw new Error('Failed to update world');
     }
   }
@@ -189,6 +193,15 @@ export class SupabaseWorldService {
   async deleteWorld(worldId: string, userId: string): Promise<void> {
     try {
       const supabase = await createServerSupabaseClient()
+      
+      // Get world details before deletion for audit logging
+      const { data: worldData } = await supabase
+        .from('worlds')
+        .select('name, description, is_public')
+        .eq('id', worldId)
+        .eq('owner_id', userId)
+        .single();
+      
       const { error } = await supabase
         .from('worlds')
         .delete()
@@ -196,11 +209,24 @@ export class SupabaseWorldService {
         .eq('owner_id', userId); // Only owner can delete
 
       if (error) {
-        console.error('Supabase error deleting world:', error);
+        logDatabaseError('Supabase error deleting world', error as Error, { worldId, action: 'delete_world' });
         throw new Error(`Database error: ${error.message}`);
       }
+
+      // Audit log for world deletion
+      logAuditEvent('world_deleted', {
+        userId,
+        worldId,
+        action: 'delete_world',
+        metadata: {
+          worldName: worldData?.name || 'Unknown',
+          description: worldData?.description,
+          isPublic: worldData?.is_public,
+          deletedAt: new Date().toISOString()
+        }
+      });
     } catch (error) {
-      console.error('Error deleting world:', error);
+      logDatabaseError('Error deleting world', error as Error, { worldId, action: 'delete_world' });
       throw new Error('Failed to delete world');
     }
   }
@@ -218,11 +244,11 @@ export class SupabaseWorldService {
         .eq('owner_id', userId); // Only owner can archive
 
       if (error) {
-        console.error('Supabase error archiving world:', error);
+        logDatabaseError('Supabase error archiving world', error as Error, { worldId, action: 'archive_world' });
         throw new Error(`Database error: ${error.message}`);
       }
     } catch (error) {
-      console.error('Error archiving world:', error);
+      logDatabaseError('Error archiving world', error as Error, { worldId, action: 'archive_world' });
       throw new Error('Failed to archive world');
     }
   }
@@ -249,26 +275,19 @@ export class SupabaseWorldService {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('Supabase error fetching entities:', error);
+        logDatabaseError('Supabase error fetching entities', error as Error, { worldId, action: 'fetch_entities' });
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return entities?.map(entity => ({
-        id: entity.id,
-        worldId: entity.world_id,
-        folderId: entity.folder_id || undefined,
-        templateId: entity.template_id || undefined,
-        name: entity.name,
-        summary: '', // Entities don't have description in current schema
-        fields: (entity.data as Record<string, unknown>) || {},
-        links: [], // Will be populated by relationship service
-        updatedAt: entity.updated_at,
-        tags: entity.tags || [],
-        templateName: entity.templates?.name || undefined,
-        templateCategory: entity.templates?.category || undefined
-      })) || [];
+      return entities?.map(entity => {
+        const adaptedEntity = adaptEntityFromDatabase(entity);
+        if (!isValidEntity(adaptedEntity)) {
+          logError('Invalid entity data from database', new Error('Entity validation failed'), { entityId: entity.id, worldId });
+        }
+        return adaptedEntity;
+      }).filter(isValidEntity) || [];
     } catch (error) {
-      console.error('Error fetching world entities:', error);
+      logError('Error fetching world entities', error as Error, { action: 'getWorldEntities', worldId, userId });
       throw new Error('Failed to fetch entities');
     }
   }
@@ -282,42 +301,43 @@ export class SupabaseWorldService {
     name: string;
     fields: Record<string, unknown>;
     tags?: string[];
+    [key: string]: any; // Allow custom fields
   }, userId: string): Promise<Entity> {
     // Access check by fetching world
     const world = await this.getWorldById(worldId, userId)
     if (!world) throw new Error('World not found or access denied')
 
-    const supabase = await createServerSupabaseClient()
+    const supabase = await createServerSupabaseClient();
+    
+    // Merge custom fields with regular fields for data JSONB column
+    const { templateId, folderId, name, fields, tags, ...customFields } = data;
+    const allCustomFields = { ...(fields || {}), ...customFields };
+    
     const { data: row, error } = await supabase
       .from('entities')
       .insert({
         world_id: worldId,
-        template_id: data.templateId || null,
-        folder_id: data.folderId || null,
-        name: data.name,
-        data: (data.fields ?? {}) as Json,
-        tags: data.tags || [],
+        template_id: templateId || null,
+        folder_id: folderId || null,
+        name: name,
+        data: allCustomFields as Database['public']['Tables']['entities']['Row']['data'],
+        tags: tags || [],
       })
       .select('*')
-      .single()
+      .single();
 
     if (error) {
-      console.error('Supabase error creating entity:', error)
-      throw new Error(`Database error: ${error.message}`)
+      logError('Supabase error creating entity', error, { action: 'createEntity', worldId, userId, metadata: { entityData: data } });
+      throw new Error(`Database error: ${error.message}`);
     }
 
-    return {
-      id: row.id,
-      worldId: row.world_id,
-      folderId: row.folder_id || undefined,
-      templateId: row.template_id || undefined,
-      name: row.name,
-      summary: '',
-      fields: (row.data as Record<string, unknown>) || {},
-      links: [],
-      updatedAt: row.updated_at,
-      tags: row.tags || [],
+    const adaptedEntity = adaptEntityFromDatabase(row);
+    if (!isValidEntity(adaptedEntity)) {
+      logError('Invalid entity data after creation', new Error('Entity validation failed'), { entityId: row.id, worldId, userId });
+      throw new Error('Invalid entity data after creation');
     }
+    
+    return adaptedEntity;
   }
 
   /** Get a single entity by ID (with access check) */
@@ -330,27 +350,22 @@ export class SupabaseWorldService {
       .single()
 
     if (error) {
-      if ((error as any).code === 'PGRST116') return null
-      console.error('Supabase error fetching entity:', error)
-      throw new Error(`Database error: ${error.message}`)
+      if ((error as any).code === 'PGRST116') return null;
+      logError('Supabase error fetching entity', error, { action: 'getEntityById', entityId, userId });
+      throw new Error(`Database error: ${error.message}`);
     }
 
     // Access check via world
-    const world = await this.getWorldById(row.world_id, userId)
-    if (!world) return null
+    const world = await this.getWorldById(row.world_id, userId);
+    if (!world) return null;
 
-    return {
-      id: row.id,
-      worldId: row.world_id,
-      folderId: row.folder_id || undefined,
-      templateId: row.template_id || undefined,
-      name: row.name,
-      summary: '',
-      fields: (row.data as Record<string, unknown>) || {},
-      links: [],
-      updatedAt: row.updated_at,
-      tags: row.tags || [],
+    const adaptedEntity = adaptEntityFromDatabase(row);
+    if (!isValidEntity(adaptedEntity)) {
+      logError('Invalid entity data from database', new Error('Entity validation failed'), { entityId, userId });
+      throw new Error('Invalid entity data');
     }
+    
+    return adaptedEntity;
   }
 
   /** Update an entity by ID */
@@ -382,7 +397,7 @@ export class SupabaseWorldService {
       .single()
 
     if (error) {
-      console.error('Supabase error updating entity:', error)
+      logDatabaseError('Supabase error updating entity', error, { entityId, action: 'update_entity' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -413,7 +428,7 @@ export class SupabaseWorldService {
       .eq('id', entityId)
 
     if (error) {
-      console.error('Supabase error deleting entity:', error)
+      logDatabaseError('Supabase error deleting entity', error, { entityId, action: 'delete_entity' })
       throw new Error(`Database error: ${error.message}`)
     }
   }
@@ -443,7 +458,7 @@ export class SupabaseWorldService {
       .order('updated_at', { ascending: false })
 
     if (error) {
-      console.error('Supabase error fetching relationships:', error)
+      logDatabaseError('Supabase error fetching relationships', error, { worldId, action: 'fetch_relationships' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -464,7 +479,7 @@ export class SupabaseWorldService {
    */
   async createRelationship(
     worldId: string,
-    data: { fromEntityId: string; toEntityId: string; label: string; description?: string | null; metadata?: Json | null },
+    data: { fromEntityId: string; toEntityId: string; label: string; description?: string | null; metadata?: Json | null; [key: string]: any },
     userId: string,
   ): Promise<{
     id: string;
@@ -492,7 +507,7 @@ export class SupabaseWorldService {
       .eq('relationship_type', data.label)
       .limit(1)
     if (findErr) {
-      console.error('Supabase error pre-checking relationship:', findErr)
+      logDatabaseError('Supabase error pre-checking relationship', findErr, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'precheck_relationship' })
       throw new Error(`Database error: ${findErr.message}`)
     }
     if (existingRows && existingRows.length > 0) {
@@ -509,6 +524,13 @@ export class SupabaseWorldService {
       }
     }
 
+    // Persist all provided custom fields in metadata JSONB
+    const customFields = { ...((data.metadata ?? {}) as Record<string, unknown>) };
+    for (const key of Object.keys(data)) {
+      if (!['fromEntityId', 'toEntityId', 'label', 'description', 'metadata'].includes(key)) {
+        customFields[key] = data[key];
+      }
+    }
     const { data: row, error } = await supabase
       .from('relationships')
       .insert({
@@ -517,13 +539,13 @@ export class SupabaseWorldService {
         to_entity_id: data.toEntityId,
         relationship_type: data.label,
         description: data.description ?? null,
-        metadata: (data.metadata ?? null) as Json | null,
+        metadata: customFields as Json,
       })
       .select('*')
       .single()
 
     if (error) {
-      console.error('Supabase error creating relationship:', error)
+      logDatabaseError('Supabase error creating relationship', error, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'create_relationship' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -544,7 +566,7 @@ export class SupabaseWorldService {
    */
   async updateRelationship(
     relationshipId: string,
-    data: { label?: string; description?: string | null; metadata?: Json | null },
+    data: { label?: string; description?: string | null; metadata?: Json | null; [key: string]: any },
     userId: string,
   ): Promise<{ id: string; worldId: string; from: string; to: string; label: string; description?: string | null; metadata?: Json | null }> {
     const supabase = await createServerSupabaseClient()
@@ -556,17 +578,24 @@ export class SupabaseWorldService {
       .eq('id', relationshipId)
       .single()
     if (fetchErr) {
-      console.error('Supabase error fetching relationship:', fetchErr)
+      logDatabaseError('Supabase error fetching relationship', fetchErr, { relationshipId, action: 'fetch_relationship' })
       throw new Error(`Database error: ${fetchErr.message}`)
     }
 
     const world = await this.getWorldById(current.world_id, userId)
     if (!world) throw new Error('Relationship not found or access denied')
 
+    // Persist all provided custom fields in metadata JSONB
+    const customFields = { ...((data.metadata ?? {}) as Record<string, unknown>) };
+    for (const key of Object.keys(data)) {
+      if (!['label', 'description', 'metadata'].includes(key)) {
+        customFields[key] = data[key];
+      }
+    }
     const patch: any = {}
     if (data.label !== undefined) patch.relationship_type = data.label
     if (data.description !== undefined) patch.description = data.description
-    if (data.metadata !== undefined) patch.metadata = data.metadata as Json | null
+    patch.metadata = customFields as Json
 
     const { data: row, error } = await supabase
       .from('relationships')
@@ -575,7 +604,7 @@ export class SupabaseWorldService {
       .select('*')
       .single()
     if (error) {
-      console.error('Supabase error updating relationship:', error)
+      logDatabaseError('Supabase error updating relationship', error, { relationshipId, action: 'update_relationship' })
       throw new Error(`Database error: ${error.message}`)
     }
     return {
@@ -600,7 +629,7 @@ export class SupabaseWorldService {
       .eq('id', relationshipId)
       .single()
     if (fetchErr) {
-      console.error('Supabase error fetching relationship:', fetchErr)
+      logDatabaseError('Supabase error fetching relationship for delete', fetchErr, { relationshipId, action: 'fetch_relationship_for_delete' })
       throw new Error(`Database error: ${fetchErr.message}`)
     }
     const world = await this.getWorldById(current.world_id, userId)
@@ -611,7 +640,7 @@ export class SupabaseWorldService {
       .delete()
       .eq('id', relationshipId)
     if (error) {
-      console.error('Supabase error deleting relationship:', error)
+      logDatabaseError('Supabase error deleting relationship', error, { relationshipId, action: 'delete_relationship' })
       throw new Error(`Database error: ${error.message}`)
     }
   }
@@ -635,7 +664,7 @@ export class SupabaseWorldService {
         .order('name');
 
       if (error) {
-        console.error('Supabase error fetching templates:', error);
+        logDatabaseError('Supabase error fetching templates', error, { worldId, action: 'fetch_world_templates' });
         throw new Error(`Database error: ${error.message}`);
       }
 
@@ -675,7 +704,7 @@ export class SupabaseWorldService {
       
       return result;
     } catch (error) {
-      console.error('Error fetching world templates:', error);
+      logDatabaseError('Error fetching world templates', error as Error, { worldId, action: 'fetch_world_templates' });
       throw new Error('Failed to fetch templates');
     }
   }
@@ -693,7 +722,7 @@ export class SupabaseWorldService {
         .order('name');
 
       if (error) {
-        console.error('Supabase error fetching system templates:', error);
+        logDatabaseError('Supabase error fetching system templates', error, { action: 'fetch_system_templates' });
         throw new Error(`Database error: ${error.message}`);
       }
 
@@ -709,7 +738,7 @@ export class SupabaseWorldService {
         isSystem: true
       })) || [];
     } catch (error) {
-      console.error('Error fetching system templates:', error);
+      logDatabaseError('Error fetching system templates', error as Error, { action: 'fetch_system_templates' });
       throw new Error('Failed to fetch system templates');
     }
   }
@@ -721,8 +750,16 @@ export class SupabaseWorldService {
     icon?: string;
     category?: string;
     fields: TemplateField[];
+    [key: string]: any;
   }): Promise<Template> {
     const supabase = await createServerSupabaseClient()
+    // Persist all provided custom fields in fields JSONB
+  const customFields: Record<string, unknown> = Array.isArray(data.fields) ? { ...data.fields } : {};
+    for (const key of Object.keys(data)) {
+      if (!['name', 'description', 'icon', 'category', 'fields'].includes(key)) {
+        customFields[key] = data[key];
+      }
+    }
     const { data: row, error } = await supabase
       .from('templates')
       .insert({
@@ -731,13 +768,13 @@ export class SupabaseWorldService {
         description: data.description || '',
         icon: data.icon || 'file-text',
         category: data.category || 'general',
-        fields: ((data.fields ?? []) as unknown) as Json,
+        fields: (customFields as unknown) as Json,
         is_system: false,
       })
       .select('*')
       .single()
     if (error) {
-      console.error('Supabase error creating template:', error)
+      logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, action: 'create_template' })
       throw new Error(`Database error: ${error.message}`)
     }
     return {
@@ -763,7 +800,7 @@ export class SupabaseWorldService {
       .eq('id', templateId)
       .single()
     if (fetchErr) {
-      console.error('Supabase error fetching template:', fetchErr)
+      logDatabaseError('Supabase error fetching template', fetchErr, { templateId, action: 'fetch_template' })
       throw new Error(`Database error: ${fetchErr.message}`)
     }
 
@@ -779,13 +816,19 @@ export class SupabaseWorldService {
       isSystem: row.is_system || false,
     })
 
-    // Build patch from incoming data
+    // Persist all provided custom fields in fields JSONB
+  const customFields: Record<string, unknown> = Array.isArray((data as any).fields) ? { ...(data as any).fields } : {};
+    for (const key of Object.keys(data)) {
+      if (!['name', 'description', 'icon', 'category', 'fields'].includes(key)) {
+        customFields[key] = (data as any)[key];
+      }
+    }
     const patch: Partial<{ name: string; description?: string | null; icon?: string | null; category?: string | null; fields?: Json }> = {}
     if (data.name !== undefined) patch.name = data.name
     if (data.description !== undefined) patch.description = data.description
     if (data.icon !== undefined) patch.icon = data.icon
     if (data.category !== undefined) patch.category = data.category
-    if ((data as Partial<Template>).fields !== undefined) patch.fields = (data as any).fields as unknown as Json
+    if ((data as Partial<Template>).fields !== undefined) patch.fields = (customFields as unknown) as Json
 
     // If editing a system template, create or update a world-specific override
     if (current.is_system) {
@@ -808,7 +851,7 @@ export class SupabaseWorldService {
         .eq('name', data.name ?? current.name)
         .limit(1)
       if (ovErr) {
-        console.error('Supabase error finding template override:', ovErr)
+        logDatabaseError('Supabase error finding template override', ovErr, { templateId, worldId, action: 'find_template_override' })
         throw new Error(`Database error: ${ovErr.message}`)
       }
 
@@ -822,7 +865,7 @@ export class SupabaseWorldService {
           .select('*')
           .single()
         if (error) {
-          console.error('Supabase error updating template override:', error)
+          logDatabaseError('Supabase error updating template override', error, { templateId, worldId, action: 'update_template_override' })
           throw new Error(`Database error: ${error.message}`)
         }
         return mapRow(row)
@@ -844,7 +887,7 @@ export class SupabaseWorldService {
         .select('*')
         .single()
       if (insErr) {
-        console.error('Supabase error creating template override:', insErr)
+        logDatabaseError('Supabase error creating template override', insErr, { templateId, worldId, action: 'create_template_override' })
         throw new Error(`Database error: ${insErr.message}`)
       }
       return mapRow(ins)
@@ -866,7 +909,7 @@ export class SupabaseWorldService {
       .select('*')
       .single()
     if (error) {
-      console.error('Supabase error updating template:', error)
+      logDatabaseError('Supabase error updating template', error, { templateId, action: 'update_template' })
       throw new Error(`Database error: ${error.message}`)
     }
     return mapRow(row)
@@ -883,7 +926,7 @@ export class SupabaseWorldService {
       .eq('id', templateId)
       .single()
     if (fetchErr) {
-      console.error('Supabase error fetching template for delete:', fetchErr)
+      logDatabaseError('Supabase error fetching template for delete', fetchErr, { templateId, action: 'fetch_template_for_delete' })
       throw new Error(`Database error: ${fetchErr.message}`)
     }
     if (current.is_system) {
@@ -904,7 +947,7 @@ export class SupabaseWorldService {
       .delete()
       .eq('id', templateId)
     if (error) {
-      console.error('Supabase error deleting template:', error)
+      logDatabaseError('Supabase error deleting template', error, { templateId, action: 'delete_template' })
       throw new Error(`Database error: ${error.message}`)
     }
   }
@@ -926,7 +969,7 @@ export class SupabaseWorldService {
         .order('updated_at', { ascending: false })
 
       if (error) {
-        console.error('Supabase error fetching folders:', error)
+        logDatabaseError('Supabase error fetching folders', error, { worldId, action: 'fetch_folders' })
         throw new Error(`Database error: ${error.message}`)
       }
 
@@ -942,18 +985,25 @@ export class SupabaseWorldService {
         count: Array.isArray(f.entities) ? f.entities.length : (typeof f.entities === 'number' ? f.entities : 0),
       }))
     } catch (error) {
-      console.error('Error fetching world folders:', error)
+      logDatabaseError('Error fetching world folders', error as Error, { worldId, action: 'fetch_world_folders' })
       throw new Error('Failed to fetch folders')
     }
   }
 
   /** Create a folder in a world */
-  async createFolder(worldId: string, data: { name: string; description?: string; color?: string }, userId: string): Promise<import('../types').Folder> {
+  async createFolder(worldId: string, data: { name: string; description?: string; color?: string; [key: string]: unknown }, userId: string): Promise<import('../types').Folder> {
     // Access check
     const world = await this.getWorldById(worldId, userId)
     if (!world) throw new Error('World not found or access denied')
 
     const supabase = await createServerSupabaseClient()
+    // Persist all provided custom fields in data JSONB
+  const customFields: Record<string, unknown> = {};
+    for (const key of Object.keys(data)) {
+      if (!['name', 'description', 'color'].includes(key)) {
+        customFields[key] = data[key];
+      }
+    }
     const { data: row, error } = await supabase
       .from('folders')
       .insert({
@@ -961,12 +1011,13 @@ export class SupabaseWorldService {
         name: data.name,
         description: data.description || '',
         color: data.color || null,
+        data: customFields as Json,
       })
       .select('*')
       .single()
 
     if (error) {
-      console.error('Supabase error creating folder:', error)
+      logDatabaseError('Supabase error creating folder', error, { worldId, folderName: data.name, action: 'create_folder' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -992,7 +1043,7 @@ export class SupabaseWorldService {
 
     if (error) {
       if ((error as any).code === 'PGRST116') return null
-      console.error('Supabase error fetching folder:', error)
+      logDatabaseError('Supabase error fetching folder', error, { folderId, action: 'fetch_folder' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -1029,7 +1080,7 @@ export class SupabaseWorldService {
       .select('*')
       .single()
     if (error) {
-      console.error('Supabase error updating folder:', error)
+      logDatabaseError('Supabase error updating folder', error, { folderId, action: 'update_folder' })
       throw new Error(`Database error: ${error.message}`)
     }
 
@@ -1057,7 +1108,7 @@ export class SupabaseWorldService {
       .eq('id', folderId)
 
     if (error) {
-      console.error('Supabase error deleting folder:', error)
+      logDatabaseError('Supabase error deleting folder', error, { folderId, action: 'delete_folder' })
       throw new Error(`Database error: ${error.message}`)
     }
   }
@@ -1084,7 +1135,7 @@ export class SupabaseWorldService {
         .single();
 
       if (worldError) {
-        console.error('Supabase error fetching world owner:', worldError);
+        logDatabaseError('Supabase error fetching world owner', worldError, { worldId, action: 'fetch_world_owner' });
         throw new Error(`Database error: ${worldError.message}`);
       }
 
@@ -1122,7 +1173,7 @@ export class SupabaseWorldService {
 
       return [];
     } catch (error) {
-      console.error('Error fetching world members:', error);
+      logDatabaseError('Error fetching world members', error as Error, { worldId, action: 'fetch_world_members' });
       throw new Error('Failed to fetch members');
     }
   }
@@ -1166,6 +1217,14 @@ export class SupabaseWorldService {
         throw new Error('Invalid role specified');
       }
 
+      // Get current member data for audit logging
+      const { data: currentMember } = await supabase
+        .from('world_members')
+        .select('role, user_id, profiles(email, full_name)')
+        .eq('id', memberId)
+        .eq('world_id', worldId)
+        .single();
+
       // Update the member role
       const { data: updatedMember, error } = await supabase
         .from('world_members')
@@ -1182,7 +1241,7 @@ export class SupabaseWorldService {
         .single();
 
       if (error) {
-        console.error('Supabase error updating member role:', error);
+        logDatabaseError('Supabase error updating member role', error, { worldId, userId, role: role, action: 'update_member_role' });
         throw new Error(`Database error: ${error.message}`);
       }
 
@@ -1192,6 +1251,23 @@ export class SupabaseWorldService {
         .select('id, email, full_name, avatar_url')
         .eq('id', updatedMember.user_id)
         .single();
+
+      // Audit log for member role change
+      logAuditEvent('member_role_updated', {
+        userId,
+        worldId,
+        targetUserId: updatedMember.user_id,
+        targetEmail: profileData?.email || (currentMember as any)?.profiles?.email || '',
+        action: 'update_member_role',
+        previousValue: currentMember?.role,
+        newValue: role,
+        metadata: {
+          memberId,
+          targetUserName: profileData?.full_name || (currentMember as any)?.profiles?.full_name || 'Unknown User',
+          worldName: world.name,
+          updatedBy: userId
+        }
+      });
 
       return {
         id: updatedMember.id,
@@ -1206,7 +1282,7 @@ export class SupabaseWorldService {
         permissions: {}
       };
     } catch (error) {
-      console.error('Error updating member role:', error);
+      logDatabaseError('Error updating member role', error as Error, { worldId, userId, role: role, action: 'update_member_role' });
       throw new Error('Failed to update member role');
     }
   }
@@ -1249,6 +1325,14 @@ export class SupabaseWorldService {
         throw new Error('Cannot remove the world owner');
       }
 
+      // Get member details before removal for audit logging
+      const { data: memberToRemove } = await supabase
+        .from('world_members')
+        .select('user_id, role, profiles(email, full_name)')
+        .eq('id', memberId)
+        .eq('world_id', worldId)
+        .single();
+
       // Remove the member
       const { error } = await supabase
         .from('world_members')
@@ -1257,11 +1341,30 @@ export class SupabaseWorldService {
         .eq('world_id', worldId);
 
       if (error) {
-        console.error('Supabase error removing member:', error);
+        logDatabaseError('Supabase error removing member', error, { worldId, userId, action: 'remove_member' });
         throw new Error(`Database error: ${error.message}`);
       }
+
+      // Audit log for member removal
+      if (memberToRemove) {
+        logAuditEvent('member_removed', {
+          userId,
+          worldId,
+          targetUserId: memberToRemove.user_id,
+          targetEmail: (memberToRemove as any)?.profiles?.email || '',
+          action: 'remove_member',
+          metadata: {
+            memberId,
+            targetUserName: (memberToRemove as any)?.profiles?.full_name || 'Unknown User',
+            memberRole: memberToRemove.role,
+            worldName: world.name,
+            removedBy: userId,
+            removedAt: new Date().toISOString()
+          }
+        });
+      }
     } catch (error) {
-      console.error('Error removing member:', error);
+      logDatabaseError('Error removing member', error as Error, { worldId, userId, action: 'remove_member' });
       throw new Error('Failed to remove member');
     }
   }

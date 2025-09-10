@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { logError } from '@/lib/logging';
 
 interface WorldEditModalProps {
   isOpen: boolean;
@@ -142,7 +143,12 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
       });
       onClose();
     } catch (error) {
-      console.error('Error updating world:', error);
+      logError('Error updating world', error as Error, {
+        worldId,
+        action: 'update_world',
+        component: 'WorldEditModal',
+        metadata: { worldName: formData.name }
+      });
     } finally {
       setIsSubmitting(false);
     }

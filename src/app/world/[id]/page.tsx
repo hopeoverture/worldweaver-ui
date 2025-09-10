@@ -1,39 +1,48 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useParams } from 'next/navigation';
-import { useStore } from '@/lib/store';
+// Removed useStore - now using TanStack Query hooks exclusively
 import { useWorld } from '@/hooks/query/useWorld';
 import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
+import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
 import { WorldContextBar } from '@/components/dashboard/WorldContextBar';
 import { TabNav } from '@/components/dashboard/TabNav';
-import { FolderGrid } from '@/components/folders/FolderGrid';
-import { EntityGrid } from '@/components/entities/EntityGrid';
-import { TemplateGrid } from '@/components/templates/TemplateGrid';
 import { useDeleteTemplate } from '@/hooks/mutations/useDeleteTemplate';
-import { RelationshipGraph } from '@/components/relationships/RelationshipGraph';
-import { RelationshipTable } from '@/components/relationships/RelationshipTable';
-import { MembershipTab } from '@/components/membership/MembershipTab';
-import { CreateRelationshipModal } from '@/components/relationships/CreateRelationshipModal';
-import { CreateEntityModal } from '@/components/entities/CreateEntityModal/CreateEntityModal';
-import { CreateFolderModal } from '@/components/folders/CreateFolderModal';
-import { CreateTemplateModal } from '@/components/templates/CreateTemplateModal';
 import { TabItem } from '@/components/ui/Tabs';
 import { useUpdateFolder } from '@/hooks/mutations/useUpdateFolder';
 import { useDeleteFolder } from '@/hooks/mutations/useDeleteFolder';
 import { useToast } from '@/components/ui/ToastProvider';
-import { EditFolderModal } from '@/components/folders/EditFolderModal';
 import type { Entity, Template, Folder } from '@/lib/types';
+
+// Lazy-loaded components for better performance
+import { 
+  LazyEntityGrid,
+  LazyTemplateGrid, 
+  LazyFolderGrid,
+  LazyRelationshipGraph,
+  LazyRelationshipTable,
+  LazyMembershipTab,
+  LazyCreateEntityModal,
+  LazyCreateTemplateModal,
+  LazyCreateFolderModal,
+  LazyCreateRelationshipModal,
+  LazyEditFolderModal,
+  LazyComponentLoader,
+  SkeletonLoader
+} from '@/components/lazy';
 
 export default function WorldDashboard() {
   const { id: worldId } = useParams();
-  const { relationships, updateTemplate, deleteTemplate } = useStore();
+  // Note: relationships would come from a useRelationships hook when implemented
+  // updateTemplate and deleteTemplate are handled by mutation hooks
   const strWorldId = String(worldId);
   const { data: world, isLoading, error } = useWorld(strWorldId);
   const { data: remoteEntities = [] as Entity[] } = useWorldEntities(strWorldId);
   const { data: remoteTemplates = [] as Template[] } = useWorldTemplates(strWorldId);
   const { data: remoteFolders = [] as Folder[] } = useWorldFolders(strWorldId);
+  const { data: relationships = [] } = useWorldRelationships(strWorldId);
   
   const [activeTab, setActiveTab] = useState('entities');
   const deleteTemplateMut = useDeleteTemplate(strWorldId);
@@ -138,18 +147,22 @@ export default function WorldDashboard() {
               <button onClick={() => setSelectedFolder(null)} className="mb-4 text-sm text-brand-600 hover:underline">
                 &larr; Back to folders
               </button>
-              <EntityGrid entities={entitiesInFolder} onCreateEntity={() => setCreateEntityModalOpen(true)} />
+              <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
+                <LazyEntityGrid entities={entitiesInFolder} onCreateEntity={() => setCreateEntityModalOpen(true)} />
+              </Suspense>
             </>
           ) : (
             <div className="space-y-8">
               {/* Folder Grid */}
               {entityFolders.length > 0 ? (
-                <FolderGrid
-                  folders={entityFolders}
-                  onFolderClick={setSelectedFolder}
-                  onRename={handleFolderRename}
-                  onDelete={handleFolderDelete}
-                />
+                <Suspense fallback={<SkeletonLoader type="folders" message="Loading folders..." />}>
+                  <LazyFolderGrid
+                    folders={entityFolders}
+                    onFolderClick={setSelectedFolder}
+                    onRename={handleFolderRename}
+                    onDelete={handleFolderDelete}
+                  />
+                </Suspense>
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-neutral-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-700">
                   <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,7 +195,9 @@ export default function WorldDashboard() {
                       {ungroupedEntities.length} {ungroupedEntities.length === 1 ? 'entity' : 'entities'}
                     </span>
                   </div>
-                  <EntityGrid entities={ungroupedEntities} onCreateEntity={() => setCreateEntityModalOpen(true)} />
+                  <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
+                    <LazyEntityGrid entities={ungroupedEntities} onCreateEntity={() => setCreateEntityModalOpen(true)} />
+                  </Suspense>
                 </div>
               )}
               
@@ -242,22 +257,26 @@ export default function WorldDashboard() {
               <button onClick={() => setSelectedFolder(null)} className="mb-4 text-sm text-brand-600 hover:underline">
                 &larr; Back to folders
               </button>
-                  <TemplateGrid 
-                    templates={templatesInFolder}
-                    onDelete={handleTemplateDelete}
-                    onCreateTemplate={() => setCreateTemplateModalOpen(true)}
-                  />
+                  <Suspense fallback={<SkeletonLoader type="templates" message="Loading templates..." />}>
+                    <LazyTemplateGrid 
+                      templates={templatesInFolder}
+                      onDelete={handleTemplateDelete}
+                      onCreateTemplate={() => setCreateTemplateModalOpen(true)}
+                    />
+                  </Suspense>
             </>
           ) : (
             <div className="space-y-8">
               {/* Template Folder Grid */}
               {templateFolders.length > 0 ? (
-                <FolderGrid
-                  folders={templateFolders}
-                  onFolderClick={setSelectedFolder}
-                  onRename={handleFolderRename}
-                  onDelete={handleFolderDelete}
-                />
+                <Suspense fallback={<SkeletonLoader type="folders" message="Loading template folders..." />}>
+                  <LazyFolderGrid
+                    folders={templateFolders}
+                    onFolderClick={setSelectedFolder}
+                    onRename={handleFolderRename}
+                    onDelete={handleFolderDelete}
+                  />
+                </Suspense>
               ) : (
                 <div className="text-center py-8 bg-gray-50 dark:bg-neutral-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-neutral-700">
                   <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -290,11 +309,13 @@ export default function WorldDashboard() {
                       {ungroupedTemplates.length} {ungroupedTemplates.length === 1 ? 'template' : 'templates'}
                     </span>
                   </div>
-                  <TemplateGrid 
-                    templates={ungroupedTemplates}
-                    onDelete={handleTemplateDelete}
-                    onCreateTemplate={() => setCreateTemplateModalOpen(true)}
-                  />
+                  <Suspense fallback={<LazyComponentLoader message="Loading templates..." />}>
+                    <LazyTemplateGrid 
+                      templates={ungroupedTemplates}
+                      onDelete={handleTemplateDelete}
+                      onCreateTemplate={() => setCreateTemplateModalOpen(true)}
+                    />
+                  </Suspense>
                 </div>
               )}
               
@@ -340,7 +361,7 @@ export default function WorldDashboard() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
         </svg>
       ),
-      count: relationships.filter(r => r.worldId === worldId).length,
+      count: relationships.length,
       render: (
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -358,9 +379,13 @@ export default function WorldDashboard() {
               </button>
             </div>
           </div>
-          <RelationshipGraph />
+          <Suspense fallback={<SkeletonLoader type="relationships" message="Loading relationships..." />}>
+            <LazyRelationshipGraph />
+          </Suspense>
           <div className="mt-8">
-            <RelationshipTable />
+            <Suspense fallback={<SkeletonLoader type="relationships" message="Loading relationship table..." />}>
+              <LazyRelationshipTable />
+            </Suspense>
           </div>
         </div>
       ),
@@ -374,7 +399,11 @@ export default function WorldDashboard() {
         </svg>
       ),
       count: 4, // In real app, get from members count
-      render: <MembershipTab world={world} />,
+      render: (
+        <Suspense fallback={<SkeletonLoader type="membership" message="Loading members..." />}>
+          <LazyMembershipTab world={world} />
+        </Suspense>
+      ),
     },
   ];
 
@@ -389,32 +418,42 @@ export default function WorldDashboard() {
           setActiveTab(key);
         }}
       />
-      <CreateEntityModal
-        open={isCreateEntityModalOpen}
-        worldId={world.id}
-        onClose={() => setCreateEntityModalOpen(false)}
-      />
-      <CreateFolderModal
-        open={isCreateFolderModalOpen}
-        worldId={world.id}
-        folderType={folderType}
-        onClose={() => setCreateFolderModalOpen(false)}
-      />
-      <CreateTemplateModal
-        open={isCreateTemplateModalOpen}
-        worldId={world.id}
-        onClose={() => setCreateTemplateModalOpen(false)}
-      />
-      <CreateRelationshipModal
-        isOpen={isCreateRelationshipModalOpen}
-        worldId={world.id}
-        onClose={() => setCreateRelationshipModalOpen(false)}
-      />
-      <EditFolderModal
-        open={isEditOpen}
-        folder={editFolder}
-        onClose={() => { setEditOpen(false); setEditFolder(null); }}
-      />
+      <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
+        <LazyCreateEntityModal
+          open={isCreateEntityModalOpen}
+          worldId={world.id}
+          onClose={() => setCreateEntityModalOpen(false)}
+        />
+      </Suspense>
+      <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
+        <LazyCreateFolderModal
+          open={isCreateFolderModalOpen}
+          worldId={world.id}
+          folderType={folderType}
+          onClose={() => setCreateFolderModalOpen(false)}
+        />
+      </Suspense>
+      <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
+        <LazyCreateTemplateModal
+          open={isCreateTemplateModalOpen}
+          worldId={world.id}
+          onClose={() => setCreateTemplateModalOpen(false)}
+        />
+      </Suspense>
+      <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
+        <LazyCreateRelationshipModal
+          isOpen={isCreateRelationshipModalOpen}
+          worldId={world.id}
+          onClose={() => setCreateRelationshipModalOpen(false)}
+        />
+      </Suspense>
+      <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
+        <LazyEditFolderModal
+          open={isEditOpen}
+          folder={editFolder}
+          onClose={() => { setEditOpen(false); setEditFolder(null); }}
+        />
+      </Suspense>
     </main>
   );
 }

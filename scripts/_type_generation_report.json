@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-09-10T00:52:13.572Z",
+  "success": true,
+  "typesGenerated": {
+    "file": "src/lib/generated-types.ts",
+    "size": 3501,
+    "tables": [
+      "profiles",
+      "worlds",
+      "world_members",
+      "folders",
+      "templates",
+      "entities",
+      "relationships",
+      "world_bans",
+      "world_invites",
+      "activity_logs",
+      "world_files"
+    ],
+    "enums": [
+      "world_member_role"
+    ],
+    "functions": [
+      "accept_world_invite",
+      "user_has_world_access"
+    ]
+  },
+  "existingTypes": [
+    {
+      "file": "src/lib/types.ts",
+      "exists": true,
+      "size": 3536
+    },
+    {
+      "file": "src/lib/database.types.ts",
+      "exists": false
+    },
+    {
+      "file": "src/lib/supabase-types.ts",
+      "exists": false
+    },
+    {
+      "file": "types/supabase.ts",
+      "exists": false
+    },
+    {
+      "file": "types/database.ts",
+      "exists": false
+    }
+  ],
+  "recommendations": [
+    "Consider using `supabase gen types typescript` for more accurate type generation",
+    "Found existing type files: src/lib/types.ts - consider consolidating",
+    "Update imports in service files to use generated types",
+    "Add type exports to src/lib/types.ts for consistent usage"
+  ]
+}

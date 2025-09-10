@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
+import { safeConsoleError } from '@/lib/logging'
 import { z } from 'zod'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    const entities = await worldService.getWorldEntities(params.id, user.id)
+    const { entityService } = await import('@/lib/services/entityService')
+    const entities = await entityService.getWorldEntities(params.id, user.id)
     return NextResponse.json({ entities })
   } catch (error) {
-    console.error('Error fetching entities:', error)
+    safeConsoleError('Error fetching entities', error as Error, { action: 'GET_entities', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to fetch entities' }, { status: 500 })
   }
 }
@@ -22,9 +26,12 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -48,8 +55,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    const entity = await worldService.createEntity(params.id, {
+    const { entityService } = await import('@/lib/services/entityService')
+    const entity = await entityService.createEntity(params.id, {
       name: body.name,
       templateId: body.templateId,
       folderId: body.folderId || undefined,
@@ -59,7 +66,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ entity })
   } catch (error) {
-    console.error('Error creating entity:', error)
+    safeConsoleError('Error creating entity', error as Error, { action: 'POST_entities', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to create entity' }, { status: 500 })
   }
 }

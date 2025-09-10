@@ -19,9 +19,9 @@ ALTER TABLE public.worlds
   ADD COLUMN IF NOT EXISTS aesthetic_direction TEXT;
 
 -- Optional: lightweight indexes for common filters (uncomment if needed)
--- CREATE INDEX IF NOT EXISTS idx_worlds_overall_tone ON public.worlds (overall_tone);
--- CREATE INDEX IF NOT EXISTS idx_worlds_audience_rating ON public.worlds (audience_rating);
--- CREATE INDEX IF NOT EXISTS idx_worlds_scope_scale ON public.worlds (scope_scale);
+CREATE INDEX IF NOT EXISTS idx_worlds_overall_tone ON public.worlds (overall_tone);
+CREATE INDEX IF NOT EXISTS idx_worlds_audience_rating ON public.worlds (audience_rating);
+CREATE INDEX IF NOT EXISTS idx_worlds_scope_scale ON public.worlds (scope_scale);
 
 COMMENT ON COLUMN public.worlds.logline IS 'One-line premise for the world';
 COMMENT ON COLUMN public.worlds.genre_blend IS 'Primary genres associated with the world';

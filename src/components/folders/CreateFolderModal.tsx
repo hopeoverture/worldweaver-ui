@@ -8,6 +8,7 @@ import { Select } from '../ui/Select';
 import { folderColorOptions } from './folderColors';
 import { useCreateFolder } from '@/hooks/mutations/useCreateFolder';
 import { useToast } from '@/components/ui/ToastProvider';
+import { logError } from '@/lib/logging';
 
 interface CreateFolderModalProps {
   open: boolean;
@@ -43,7 +44,12 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
       setFormData({ name: '', description: '', color: 'blue' });
       onClose();
     } catch (error) {
-      console.error('Error creating folder:', error);
+      logError('Error creating folder', error as Error, { 
+        worldId, 
+        action: 'create_folder',
+        component: 'CreateFolderModal',
+        metadata: { folderType, folderName: formData.name.trim() }
+      });
       toast({ title: 'Failed to create folder', description: String((error as Error)?.message || error), variant: 'error' });
     } finally {
       setIsSubmitting(false);

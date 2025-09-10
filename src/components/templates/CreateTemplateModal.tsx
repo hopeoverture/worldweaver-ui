@@ -8,6 +8,7 @@ import { useStore } from '@/lib/store';
 import { useCreateTemplate } from '@/hooks/mutations/useCreateTemplate';
 import { TemplateField, FieldType } from '@/lib/types';
 import { useToast } from '@/components/ui/ToastProvider';
+import { logError } from '@/lib/logging';
 
 interface CreateTemplateModalProps {
   open: boolean;
@@ -65,7 +66,12 @@ export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateMo
       onClose();
       toast({ title: 'Template created', description: `“${formData.name.trim()}”`, variant: 'success' });
     } catch (error) {
-      console.error('Error creating template:', error);
+      logError('Error creating template', error as Error, {
+        worldId,
+        action: 'create_template',
+        component: 'CreateTemplateModal',
+        metadata: { templateName: formData.name.trim() }
+      });
       toast({ title: 'Failed to create template', description: String((error as Error)?.message || error), variant: 'error' });
     } finally {
       setIsSubmitting(false);

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { World, Folder, Template, Entity, Link, RelationshipRow, ID, WorldMember, WorldInvite, MemberRole } from './types';
+import { logError } from './logging';
 
 type State = {
   worlds: World[];
@@ -76,7 +77,10 @@ export const useStore = create<State & Actions>((set, get) => ({
       const { worlds } = await response.json();
       set({ worlds, isLoading: false });
     } catch (error) {
-      console.error('Failed to load worlds:', error);
+      logError('Failed to load worlds', error as Error, {
+        action: 'load_worlds',
+        component: 'store'
+      });
       set({ isLoading: false, error: error instanceof Error ? error.message : 'Failed to load worlds' });
     }
   },
@@ -120,7 +124,12 @@ export const useStore = create<State & Actions>((set, get) => ({
         isLoading: false
       }));
     } catch (error) {
-      console.error('Failed to update world:', error);
+      logError('Failed to update world', error as Error, {
+        worldId: id,
+        action: 'update_world',
+        component: 'store',
+        metadata: { patch }
+      });
       set({ 
         error: error instanceof Error ? error.message : 'Failed to update world',
         isLoading: false 
@@ -155,7 +164,11 @@ export const useStore = create<State & Actions>((set, get) => ({
         isLoading: false
       }));
     } catch (error) {
-      console.error('Failed to delete world:', error);
+      logError('Failed to delete world', error as Error, {
+        worldId: id,
+        action: 'delete_world',
+        component: 'store'
+      });
       set({ 
         error: error instanceof Error ? error.message : 'Failed to delete world',
         isLoading: false 

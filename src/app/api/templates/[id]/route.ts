@@ -1,60 +1,70 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { z } from 'zod'
+import { 
+  apiSuccess, 
+  apiAuthRequired,
+  parseRequestBody,
+  withApiErrorHandling,
+  generateRequestId
+} from '@/lib/api-utils'
+import { TemplateResponse } from '@/lib/api-types'
 
-export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
+const updateTemplateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(5000).optional(),
+  icon: z.string().optional(),
+  category: z.string().optional(),
+  fields: z.array(z.any()).optional(),
+  // If editing a system template, provide worldId to create/update a world-specific override
+  worldId: z.string().uuid().optional(),
+})
 
-    const schema = z.object({
-      name: z.string().min(1).max(200).optional(),
-      description: z.string().max(5000).optional(),
-      icon: z.string().optional(),
-      category: z.string().optional(),
-      fields: z.array(z.any()).optional(),
-      // If editing a system template, provide worldId to create/update a world-specific override
-      worldId: z.string().uuid().optional(),
-    })
-
-    let body: z.infer<typeof schema>
-    try {
-      const json = await req.json()
-      body = schema.parse(json)
-    } catch (e) {
-      if (e instanceof z.ZodError) {
-        return NextResponse.json({ error: 'Invalid request body', issues: e.issues }, { status: 400 })
-      }
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    const template = await worldService.updateTemplate(params.id, body as any, user.id)
-    return NextResponse.json({ template })
-  } catch (error) {
-    console.error('Error updating template:', error)
-    return NextResponse.json({ error: 'Failed to update template' }, { status: 500 })
+export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse<TemplateResponse>> => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  
+  if (authError || !user) {
+    return apiAuthRequired()
   }
-}
 
-export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
-
-    const { worldService } = await import('@/lib/services/worldService')
-    await worldService.deleteTemplate(params.id, user.id)
-    return NextResponse.json({ ok: true })
-  } catch (error) {
-    console.error('Error deleting template:', error)
-    return NextResponse.json({ error: 'Failed to delete template' }, { status: 500 })
+  const result = await parseRequestBody(req, updateTemplateSchema)
+  if ('error' in result) {
+    return result.error
   }
-}
+
+  const { unifiedService: worldService } = await import('@/lib/services')
+  const template = await worldService.updateTemplate(params.id, result as any, user.id)
+  
+  // Map template to API response format
+  const responseData = {
+    id: template.id,
+    name: template.name,
+    description: template.description ?? undefined,
+    fields: Array.isArray(template.fields) ? template.fields : [],
+    isSystem: template.isSystem ?? false,
+    worldId: template.worldId ?? undefined,
+    createdAt: new Date().toISOString(), // TODO: Get from database
+    updatedAt: new Date().toISOString(), // TODO: Get from database
+  }
+  
+  return apiSuccess(responseData, { 'X-Request-ID': requestId })
+})
+
+export const DELETE = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }) => {
+  const requestId = generateRequestId()
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  
+  if (authError || !user) {
+    return apiAuthRequired()
+  }
+
+  const { unifiedService: worldService } = await import('@/lib/services')
+  await worldService.deleteTemplate(params.id, user.id)
+  
+  return apiSuccess({ ok: true }, { 'X-Request-ID': requestId })
+})
 
 export const dynamic = 'force-dynamic'

@@ -4,6 +4,7 @@ import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { sanitizeTemplateField, validateJsonField } from '@/lib/security';
+import { logError } from '@/lib/logging';
 import { LinkEditor } from './LinkEditor';
 import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
@@ -108,7 +109,13 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
         links: formData.links,
       });
     } catch (error) {
-      console.error('Error saving entity:', error);
+      logError('Error saving entity', error as Error, {
+        worldId,
+        templateId: template.id,
+        action: 'save_entity',
+        component: 'StepFillForm',
+        metadata: { entityName: formData.name.trim(), folderId: formData.folderId }
+      });
       setErrors({ submit: 'Failed to save entity. Please try again.' });
     } finally {
       setIsSubmitting(false);

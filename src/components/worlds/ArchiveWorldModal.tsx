@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { logError } from '@/lib/logging';
 
 export interface ArchiveWorldModalProps {
   worldId: string | null;
@@ -23,7 +24,12 @@ export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onCl
       await updateWorld.mutateAsync({ isArchived: !isArchived });
       onClose();
     } catch (error) {
-      console.error('Failed to archive/unarchive world:', error);
+      logError('Failed to archive/unarchive world', error as Error, {
+        worldId,
+        action: isArchived ? 'unarchive_world' : 'archive_world',
+        component: 'ArchiveWorldModal',
+        metadata: { worldName, isArchived }
+      });
     } finally {
       setIsProcessing(false);
     }

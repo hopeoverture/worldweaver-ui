@@ -8,6 +8,7 @@ import { StepChooseTemplate } from './StepChooseTemplate';
 import { StepFillForm } from './StepFillForm';
 import { Entity, Template } from '@/lib/types';
 import { useToast } from '@/components/ui/ToastProvider';
+import { logError } from '@/lib/logging';
 
 interface CreateEntityModalProps {
   open: boolean;
@@ -55,7 +56,13 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
       toast({ title: 'Entity created', description: entityData.name, variant: 'success' });
       handleClose();
     } catch (error) {
-      console.error('Error creating entity:', error);
+      logError('Error creating entity', error as Error, {
+        worldId,
+        templateId: entityData.templateId,
+        action: 'create_entity',
+        component: 'CreateEntityModal',
+        metadata: { entityName: entityData.name, folderId: entityData.folderId }
+      });
       toast({ title: 'Failed to create entity', description: String((error as Error)?.message || error), variant: 'error' });
       throw error; // let StepFillForm handle its own inline error display
     } finally {

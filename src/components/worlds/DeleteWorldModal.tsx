@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { useDeleteWorld } from '@/hooks/mutations/useDeleteWorld';
+import { logError } from '@/lib/logging';
 
 export interface DeleteWorldModalProps {
   worldId: string | null;
@@ -22,7 +23,12 @@ export function DeleteWorldModal({ worldId, worldName, onClose }: DeleteWorldMod
       await deleteWorld.mutateAsync(worldId);
       onClose();
     } catch (error) {
-      console.error('Failed to delete world:', error);
+      logError('Failed to delete world', error as Error, {
+        worldId,
+        action: 'delete_world',
+        component: 'DeleteWorldModal',
+        metadata: { worldName }
+      });
     } finally {
       setIsDeleting(false);
     }

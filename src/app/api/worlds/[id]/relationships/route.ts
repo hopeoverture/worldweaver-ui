@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
+import { safeConsoleError } from '@/lib/logging'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -16,15 +20,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const relationships = await worldService.getWorldRelationships(params.id, user.id)
     return NextResponse.json({ relationships })
   } catch (error) {
-    console.error('Error fetching relationships:', error)
+    safeConsoleError('Error fetching relationships', error as Error, { action: 'GET_relationships', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to fetch relationships' }, { status: 500 })
   }
 }
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -63,7 +70,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ relationship: rel })
   } catch (error) {
-    console.error('Error creating relationship:', error)
+    safeConsoleError('Error creating relationship', error as Error, { action: 'POST_relationships', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to create relationship' }, { status: 500 })
   }
 }

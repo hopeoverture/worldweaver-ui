@@ -8,6 +8,14 @@ type Patch = Partial<{
   description: string;
   isPublic: boolean;
   isArchived: boolean;
+  // Extended fields for world settings
+  inviteLinkEnabled: boolean;
+  inviteLinkRole: string;
+  inviteLinkExpires: string;
+  inviteLinkMaxUses: number;
+  seatLimit: number;
+  // Allow any other settings
+  [key: string]: any;
 }>;
 
 export function useUpdateWorld(worldId: string) {

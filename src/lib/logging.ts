@@ -7,7 +7,11 @@ export interface LogContext {
   userId?: string;
   worldId?: string;
   entityId?: string;
+  entityIds?: string[]; // For bulk operations
+  folderId?: string;
+  worldIds?: string[]; // For bulk world access checks
   templateId?: string;
+  templateName?: string;
   action?: string;
   component?: string;
   endpoint?: string;
@@ -15,6 +19,12 @@ export interface LogContext {
   timestamp?: string;
   sessionId?: string;
   metadata?: Record<string, unknown>;
+  key?: string; // For rate limiting
+  fromEntityId?: string; // For relationships
+  toEntityId?: string; // For relationships
+  relationshipId?: string; // For relationship operations
+  folderName?: string; // For folder operations
+  role?: string; // For member role operations
 }
 
 export interface LogEntry {
@@ -236,6 +246,31 @@ export function logUserAction(action: string, context?: LogContext): void {
   logInfo(`User action: ${action}`, {
     ...context,
     action: `user_${action}`
+  });
+}
+
+/**
+ * Audit logger for sensitive operations
+ * These logs should be treated as security events and monitored closely
+ */
+export function logAuditEvent(action: string, context?: LogContext & {
+  targetUserId?: string;
+  targetEmail?: string;
+  previousValue?: unknown;
+  newValue?: unknown;
+  ipAddress?: string;
+  userAgent?: string;
+}): void {
+  logInfo(`AUDIT: ${action}`, {
+    ...context,
+    action: `audit_${action}`,
+    // Mark as audit event for filtering/monitoring
+    metadata: {
+      ...context?.metadata,
+      isAuditEvent: true,
+      timestamp: new Date().toISOString(),
+      severity: 'high'
+    }
   });
 }
 

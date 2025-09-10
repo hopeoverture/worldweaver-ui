@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server'
 import { ZodError } from 'zod'
+import { logError } from './logging'
 import { 
   ApiResponse, 
   ApiError, 
@@ -166,7 +167,9 @@ export function apiInternalError(
   details?: Record<string, unknown>
 ): NextResponse<ApiResponse<never>> {
   // Log the error for debugging (don't expose internal details to client)
-  console.error('API Internal Error:', { message, details })
+  try {
+    logError('API Internal Error', new Error(message), { action: 'api_internal_error', metadata: details })
+  } catch {}
   
   return apiError(
     API_ERROR_CODES.INTERNAL_SERVER_ERROR,
@@ -180,7 +183,9 @@ export function apiInternalError(
 export function apiDatabaseError(
   operation: string = 'database operation'
 ): NextResponse<ApiResponse<never>> {
-  console.error(`Database error during ${operation}`)
+  try {
+    logError('Database error', new Error(`Database error during ${operation}`), { action: 'api_database_error', metadata: { operation } })
+  } catch {}
   
   return apiError(
     API_ERROR_CODES.DATABASE_ERROR,
@@ -198,7 +203,9 @@ export function withApiErrorHandling<T extends any[], R>(
     try {
       return await handler(...args)
     } catch (error) {
-      console.error('Unhandled API error:', error)
+      try {
+        logError('Unhandled API error', error as Error, { action: 'api_unhandled' })
+      } catch {}
       
       if (error instanceof ZodError) {
         return apiValidationError(error)

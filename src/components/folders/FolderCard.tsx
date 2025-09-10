@@ -1,11 +1,20 @@
 'use client';
+import { memo } from 'react';
 import { Folder } from '@/lib/types';
 import { useStore } from '@/lib/store';
+import { itemCardAnimation, gradientOverlay, iconBackgroundTransition } from '@/lib/animation-utils';
 
+/**
+ * FolderCard component for displaying folder information
+ */
 interface FolderCardProps {
+  /** The folder data to display */
   folder: Folder;
+  /** Click handler for folder interaction */
   onClick: () => void;
+  /** Optional handler for renaming the folder */
   onRename?: (folder: Folder) => void;
+  /** Optional handler for deleting the folder */
   onDelete?: (folder: Folder) => void;
 }
 
@@ -60,7 +69,7 @@ const colorClasses = {
   }
 };
 
-export function FolderCard({ folder, onClick, onRename, onDelete }: FolderCardProps) {
+function FolderCardComponent({ folder, onClick, onRename, onDelete }: FolderCardProps) {
   const { entities, templates } = useStore();
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
 
@@ -69,14 +78,22 @@ export function FolderCard({ folder, onClick, onRename, onDelete }: FolderCardPr
     ? entities.filter(e => e.folderId === folder.id).length
     : templates.filter(t => t.folderId === folder.id).length;
 
+  // Get animation utilities
+  const folderGradient = gradientOverlay({ 
+    from: colors.gradient,
+    to: 'to-transparent',
+    darkFrom: colors.gradient
+  });
+  const iconStyles = iconBackgroundTransition(colors);
+
   return (
     <button
       onClick={onClick}
       data-testid="folder-card"
-      className="group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 text-left w-full"
+      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card text-left w-full p-6 ${itemCardAnimation()}`}
     >
       {/* Gradient overlay for visual interest */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+      <div className={folderGradient.className} style={folderGradient.style} />
       
       <div className="relative">
         {(onRename || onDelete) && (
@@ -102,13 +119,13 @@ export function FolderCard({ folder, onClick, onRename, onDelete }: FolderCardPr
           </div>
         )}
         <div className="flex items-center gap-3 mb-2">
-          <div className={`p-2 rounded-lg ${colors.iconBg} transition-colors`}>
+          <div className={`p-2 rounded-lg ${iconStyles.iconBg}`}>
             <svg className={`h-5 w-5 ${colors.iconColor}`} fill="currentColor" viewBox="0 0 24 24">
               <path d="M10 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2h-8l-2-2z"/>
             </svg>
           </div>
           <div>
-            <h3 className={`font-semibold text-gray-900 dark:text-gray-100 ${colors.textHover} transition-colors`}>{folder.name}</h3>
+            <h3 className={`font-semibold text-gray-900 dark:text-gray-100 ${iconStyles.textHover}`}>{folder.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">{dynamicCount} items</p>
           </div>
         </div>
@@ -121,3 +138,6 @@ export function FolderCard({ folder, onClick, onRename, onDelete }: FolderCardPr
     </button>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const FolderCard = memo(FolderCardComponent);

@@ -1,3 +1,19 @@
+// Re-export generated database types
+export * from './generated-types';
+export type { DatabaseTable, DatabaseFunction } from './generated-types';
+export { DATABASE_TABLES, DATABASE_FUNCTIONS } from './generated-types';
+
+export type WorldInvite = {
+  id: ID;
+  worldId: ID;
+  email: string;
+  role: MemberRole;
+  invitedBy: ID; // user ID
+  invitedAt: string; // ISO
+  expiresAt: string; // ISO
+  acceptedAt?: string; // ISO
+  revokedAt?: string; // ISO
+};
 export type ID = string;
 
 export type Json =
@@ -26,7 +42,7 @@ export type World = {
   inviteLinkRole?: MemberRole;
   inviteLinkExpires?: string; // ISO
   inviteLinkMaxUses?: number;
-};
+}
 
 export type MemberRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
@@ -52,20 +68,12 @@ export type WorldMember = {
   role: MemberRole;
   joinedAt: string; // ISO
   lastActiveAt: string; // ISO
-  invitedBy?: ID; // user ID
-};
-
-export type WorldInvite = {
-  id: ID;
-  worldId: ID;
-  email: string;
-  role: MemberRole;
-  invitedBy: ID; // user ID
   invitedAt: string; // ISO
   expiresAt: string; // ISO
   acceptedAt?: string; // ISO
   revokedAt?: string; // ISO
-};
+  };
+// Removed stray closing brace
 
 export type JoinRequest = {
   id: ID;
@@ -78,7 +86,7 @@ export type JoinRequest = {
   approvedAt?: string; // ISO
   declinedAt?: string; // ISO
   approvedBy?: ID; // user ID
-};
+}
 
 export type WorldBan = {
   id: ID;
@@ -89,10 +97,11 @@ export type WorldBan = {
   bannedBy: ID; // user ID
   bannedAt: string; // ISO
   unbannedAt?: string; // ISO
-};
+}
 
 export type FolderKind = 'entities' | 'templates';
 
+// Folder type with custom fields
 export type Folder = {
   id: ID;
   worldId: ID;
@@ -101,6 +110,18 @@ export type Folder = {
   kind: FolderKind;
   color?: string;
   count: number;
+  data?: Record<string, unknown>; // Custom fields
+};
+
+// Profile type with custom fields
+export type Profile = {
+  id: ID;
+  email: string;
+  fullName?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  data?: Record<string, unknown>; // Custom fields
 };
 
 export type FieldType =

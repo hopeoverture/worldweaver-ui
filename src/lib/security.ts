@@ -152,17 +152,20 @@ export function sanitizeTemplateField(fieldType: string, value: unknown): unknow
 
 /**
  * Security headers configuration for middleware
+ * NOTE: CSP is now generated dynamically with nonces in middleware.ts
  */
 export const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // TODO: Remove unsafe-* in production
-    "style-src 'self' 'unsafe-inline'",
+    // NOTE: This static config is kept for compatibility but middleware.ts generates dynamic nonce-based CSP
+    "script-src 'self' 'strict-dynamic'",
+    "style-src 'self' https://fonts.googleapis.com",
     "img-src 'self' data: https:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
     "frame-ancestors 'none'",
-    "base-uri 'self'"
+    "base-uri 'self'",
+    "object-src 'none'"
   ].join('; '),
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',

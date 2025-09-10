@@ -10,7 +10,7 @@ export function useWorlds() {
       const res = await fetch("/api/worlds", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load worlds");
       const body = await res.json();
-      return body.worlds as World[];
+      return body.worlds ?? [];
     },
   });
 }

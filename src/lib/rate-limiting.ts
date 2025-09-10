@@ -7,6 +7,7 @@
 
 import { NextRequest } from 'next/server'
 import crypto from 'crypto'
+import { logError } from './logging'
 
 // Rate limit configuration interface
 export interface RateLimitConfig {
@@ -115,7 +116,7 @@ class KVStorage implements RateLimitStorage {
       const data = await this.kv.get(key)
       return data || null
     } catch (error) {
-      console.error('KV get error:', error)
+      logError('KV get error', error as Error, { action: 'kv_get', key })
       return null
     }
   }
@@ -126,7 +127,7 @@ class KVStorage implements RateLimitStorage {
     try {
       await this.kv.setex(key, ttlSeconds, JSON.stringify(value))
     } catch (error) {
-      console.error('KV set error:', error)
+      logError('KV set error', error as Error, { action: 'kv_set', key })
     }
   }
 
@@ -149,7 +150,7 @@ class KVStorage implements RateLimitStorage {
       
       return { count, resetTime }
     } catch (error) {
-      console.error('KV increment error:', error)
+      logError('KV increment error', error as Error, { action: 'kv_increment', key })
       throw error
     }
   }
@@ -303,7 +304,7 @@ export class RateLimitService {
         retryAfter
       }
     } catch (error) {
-      console.error('Rate limit check error:', error)
+      logError('Rate limit check error', error as Error, { action: 'rate_limit_check', endpoint: req.nextUrl.pathname })
       // On error, allow the request (fail open)
       return null
     }

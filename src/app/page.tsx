@@ -9,6 +9,7 @@ import { DeleteWorldModal } from '@/components/worlds/DeleteWorldModal';
 import { ArchiveWorldModal } from '@/components/worlds/ArchiveWorldModal';
 import { Button } from '@/components/ui/Button';
 import { useKeyboardShortcuts } from '@/components/ui/KeyboardShortcuts';
+import type { World } from '@/lib/types';
 
 export default function WorldsPage() {
   const router = useRouter();
@@ -24,11 +25,11 @@ export default function WorldsPage() {
   // setTimeout(() => setErrorDismissed(true), 5000);
 
   // Filter worlds based on archived status
-  const filteredWorlds = worlds.filter(world => 
+  const filteredWorlds = worlds.filter((world: World) => 
     showArchived ? world.isArchived : !world.isArchived
   );
   
-  const archivedCount = worlds.filter(world => world.isArchived).length;
+  const archivedCount = worlds.filter((world: World) => world.isArchived).length;
 
   const handleNewWorld = () => {
     setIsModalOpen(true);
@@ -179,7 +180,7 @@ export default function WorldsPage() {
           {deleteWorldId && (
             <DeleteWorldModal
               worldId={deleteWorldId}
-              worldName={worlds.find(w => w.id === deleteWorldId)?.name}
+              worldName={worlds.find((w: World) => w.id === deleteWorldId)?.name}
               onClose={handleCloseDeleteModal}
             />
           )}
@@ -187,8 +188,8 @@ export default function WorldsPage() {
           {archiveWorldId && (
             <ArchiveWorldModal
               worldId={archiveWorldId}
-              worldName={worlds.find(w => w.id === archiveWorldId)?.name}
-              isArchived={worlds.find(w => w.id === archiveWorldId)?.isArchived}
+              worldName={worlds.find((w: World) => w.id === archiveWorldId)?.name}
+              isArchived={worlds.find((w: World) => w.id === archiveWorldId)?.isArchived}
               onClose={handleCloseArchiveModal}
             />
           )}

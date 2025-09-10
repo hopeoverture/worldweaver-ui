@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/types.generated'
 import { createCoreTemplates } from '@/lib/coreTemplates'
+import { logApiError } from '@/lib/logging'
 
 /**
  * Admin seeder for Core (system) Templates
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       .eq('is_system', true)
 
     if (fetchErr) {
-      console.error('Failed fetching existing templates:', fetchErr)
+      logApiError('/api/admin/seed-core-templates', fetchErr, { action: 'fetch_existing_templates' })
       return NextResponse.json(
         { error: `Fetch existing failed: ${fetchErr.message}` },
         { status: 500 }
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
           .eq('id', id)
 
         if (updateErr) {
-          console.error(`Update failed for ${p.name}:`, updateErr)
+          logApiError('/api/admin/seed-core-templates', updateErr, { action: 'update_template', templateName: p.name })
           return NextResponse.json(
             { error: `Update failed for ${p.name}: ${updateErr.message}` },
             { status: 500 }
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (insertErr) {
-          console.error(`Insert failed for ${p.name}:`, insertErr)
+          logApiError('/api/admin/seed-core-templates', insertErr, { action: 'insert_template', templateName: p.name })
           return NextResponse.json(
             { error: `Insert failed for ${p.name}: ${insertErr.message}` },
             { status: 500 }
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (error) {
-    console.error('Seeder error:', error)
+    logApiError('/api/admin/seed-core-templates', error as Error, { action: 'seed_core_templates' })
     return NextResponse.json(
       { error: 'Unexpected error', detail: String((error as Error)?.message || error) },
       { status: 500 }

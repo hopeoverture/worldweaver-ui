@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { World, WorldMember, WorldInvite, MemberRole, RolePermissions } from '@/lib/types';
-import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -14,6 +13,7 @@ import { useCreateInvite } from '@/hooks/mutations/useCreateInvite';
 import { useRevokeInvite } from '@/hooks/mutations/useRevokeInvite';
 import { useWorldMembers } from '@/hooks/query/useWorldMembers';
 import { useUpdateMemberRole, useRemoveMember } from '@/hooks/mutations/useMembers';
+import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
 
 type MembershipTabProps = {
   world: World;
@@ -55,7 +55,8 @@ export function MembershipTab({ world }: MembershipTabProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<WorldMember | null>(null);
   
-  const { updateWorldSettings, transferOwnership } = useStore();
+  const updateWorldMutation = useUpdateWorld(world.id);
+  // TODO: transferOwnership would need a dedicated mutation hook
 
   // Use real API hooks instead of store
   const { data: members = [], isLoading: membersLoading } = useWorldMembers(world.id);
@@ -87,7 +88,8 @@ export function MembershipTab({ world }: MembershipTabProps) {
 
   const handleTransferOwnership = (newOwnerId: string) => {
     if (confirm('Are you sure you want to transfer ownership? You will become an admin.')) {
-      transferOwnership(world.id, newOwnerId);
+      // TODO: Implement transferOwnership mutation
+      console.log('Transfer ownership to:', newOwnerId);
       setShowTransferModal(false);
     }
   };
@@ -501,7 +503,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                 <Input
                   type="number"
                   value={world.seatLimit || ''}
-                  onChange={(e) => updateWorldSettings(world.id, { 
+                  onChange={(e) => updateWorldMutation.mutate({ 
                     seatLimit: e.target.value ? parseInt(e.target.value) : undefined 
                   })}
                   placeholder="Unlimited"
@@ -524,7 +526,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                   </div>
                   <Toggle
                     pressed={world.inviteLinkEnabled || false}
-                    onClick={() => updateWorldSettings(world.id, { inviteLinkEnabled: !world.inviteLinkEnabled })}
+                    onClick={() => updateWorldMutation.mutate({ inviteLinkEnabled: !world.inviteLinkEnabled })}
                   />
                 </div>
 
@@ -536,7 +538,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       </label>
                       <Select
                         value={world.inviteLinkRole || 'viewer'}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkRole: e.target.value as MemberRole 
                         })}
                         className="max-w-xs"
@@ -554,7 +556,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       <Input
                         type="number"
                         value={world.inviteLinkMaxUses || ''}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkMaxUses: e.target.value ? parseInt(e.target.value) : undefined 
                         })}
                         placeholder="Unlimited"
@@ -572,7 +574,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       <Input
                         type="datetime-local"
                         value={world.inviteLinkExpires ? new Date(world.inviteLinkExpires).toISOString().slice(0, 16) : ''}
-                        onChange={(e) => updateWorldSettings(world.id, { 
+                        onChange={(e) => updateWorldMutation.mutate({ 
                           inviteLinkExpires: e.target.value ? new Date(e.target.value).toISOString() : undefined 
                         })}
                         className="max-w-xs"

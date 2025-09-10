@@ -179,6 +179,31 @@ export type TemplatesListResponse = ApiResponse<{
   }>
 }>
 
+// Relationship API Responses
+export type RelationshipResponse = ApiResponse<{
+  id: string
+  worldId: string
+  fromEntityId: string
+  toEntityId: string
+  label: string
+  description?: string
+  metadata?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}>
+
+export type RelationshipsListResponse = ApiResponse<{
+  relationships: Array<{
+    id: string
+    fromEntityId: string
+    toEntityId: string
+    label: string
+    description?: string
+    metadata?: Record<string, unknown>
+    updatedAt: string
+  }>
+}>
+
 // Folder API Responses
 export type FolderResponse = ApiResponse<{
   id: string
@@ -221,31 +246,6 @@ export type InvitesListResponse = ApiResponse<{
     status: 'pending' | 'accepted' | 'expired' | 'revoked'
     expiresAt?: string
     createdAt: string
-  }>
-}>
-
-// Relationship API Responses
-export type RelationshipResponse = ApiResponse<{
-  id: string
-  worldId: string
-  fromEntityId: string
-  toEntityId: string
-  type: string
-  description?: string
-  strength?: number
-  createdAt: string
-  updatedAt: string
-}>
-
-export type RelationshipsListResponse = ApiResponse<{
-  relationships: Array<{
-    id: string
-    fromEntityId: string
-    toEntityId: string
-    type: string
-    description?: string
-    strength?: number
-    updatedAt: string
   }>
 }>
 

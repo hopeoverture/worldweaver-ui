@@ -10,6 +10,7 @@ import {
   generateRequestId
 } from '@/lib/api-utils'
 import { EntityResponse } from '@/lib/api-types'
+import { logApiError } from '@/lib/logging'
 
 export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse<EntityResponse>> => {
   const requestId = generateRequestId()
@@ -20,8 +21,8 @@ export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params:
     return apiAuthRequired()
   }
 
-  const { worldService } = await import('@/lib/services/worldService')
-  const entity = await worldService.getEntityById(params.id, user.id)
+  const { entityService } = await import('@/lib/services/entityService')
+  const entity = await entityService.getEntityById(params.id, user.id)
   
   if (!entity) {
     return apiNotFound('Entity')
@@ -31,12 +32,13 @@ export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params:
 })
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
 
     const schema = z.object({
       name: z.string().min(1).max(200).optional(),
@@ -57,8 +59,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    const updated = await worldService.updateEntity(
+    const { entityService } = await import('@/lib/services/entityService')
+    const updated = await entityService.updateEntity(
       params.id,
       {
         name: body.name,
@@ -71,24 +73,25 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     )
     return NextResponse.json({ entity: updated })
   } catch (error) {
-    console.error('Error updating entity:', error)
+    logApiError('/api/entities/[id] PUT', error as Error, { entityId: params.id, userId: user.id })
     return NextResponse.json({ error: 'Failed to update entity' }, { status: 500 })
   }
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
+  const { user, error: authError } = await getServerAuth()
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+  }
+  
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
-    }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    await worldService.deleteEntity(params.id, user.id)
+    const { entityService } = await import('@/lib/services/entityService')
+    await entityService.deleteEntity(params.id, user.id)
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Error deleting entity:', error)
+    logApiError('/api/entities/[id] DELETE', error as Error, { entityId: params.id, userId: user.id })
     return NextResponse.json({ error: 'Failed to delete entity' }, { status: 500 })
   }
 }

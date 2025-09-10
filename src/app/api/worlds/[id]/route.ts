@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { World } from '@/lib/types'
 import { getServerAuth } from '@/lib/auth/server'
+import { safeConsoleError } from '@/lib/logging'
 import { z } from 'zod'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -18,15 +22,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     }
     return NextResponse.json({ world })
   } catch (error) {
-    console.error('Error fetching world by id:', error)
+    safeConsoleError('Error fetching world by id', error as Error, { action: 'GET_world', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to fetch world' }, { status: 500 })
   }
 }
 
 export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -66,15 +73,18 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     const updated = await worldService.updateWorld(params.id, data, user.id)
     return NextResponse.json({ world: updated })
   } catch (error) {
-    console.error('Error updating world:', error)
+    safeConsoleError('Error updating world', error as Error, { action: 'PUT_world', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to update world' }, { status: 500 })
   }
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  let params: { id: string } | undefined
+  let user: any
   try {
-    const params = await ctx.params
-    const { user, error: authError } = await getServerAuth()
+    params = await ctx.params
+    const { user: authUser, error: authError } = await getServerAuth()
+    user = authUser
     if (authError || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -83,7 +93,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     await worldService.deleteWorld(params.id, user.id)
     return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Error deleting world:', error)
+    safeConsoleError('Error deleting world', error as Error, { action: 'DELETE_world', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to delete world' }, { status: 500 })
   }
 }

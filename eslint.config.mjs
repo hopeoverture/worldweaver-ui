@@ -21,7 +21,10 @@ export default [
       'build',
       'coverage',
       'scripts/**',
-      'test-connection.mjs',
+      'test-*.js',
+      'test-*.mjs',
+      'check-*.js',
+      'validate-*.js',
       // Generated types – keep out of lint
       'src/lib/supabase/types.generated.ts',
     ],

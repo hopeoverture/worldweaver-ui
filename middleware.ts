@@ -1,8 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limiting'
+import { randomBytes } from 'crypto'
 
-function applySecurityHeaders(res: NextResponse): void {
+function generateNonce(): string {
+  return randomBytes(16).toString('base64')
+}
+
+function applySecurityHeaders(res: NextResponse, request?: NextRequest): void {
   res.headers.set('X-Frame-Options', 'DENY')
   res.headers.set('X-Content-Type-Options', 'nosniff')
   res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
@@ -10,16 +15,32 @@ function applySecurityHeaders(res: NextResponse): void {
   res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
   
-  // Enhanced CSP for XSS prevention
+  // Generate nonces for this request
+  const scriptNonce = generateNonce()
+  const styleNonce = generateNonce()
+  
+  // Set nonces in headers for Next.js to use
+  res.headers.set('x-nonce-script', scriptNonce)
+  res.headers.set('x-nonce-style', styleNonce)
+  
+  // Enhanced CSP without unsafe-inline (production-ready)
+  const isDev = process.env.NODE_ENV === 'development'
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // TODO: Remove unsafe-* in production
-    "style-src 'self' 'unsafe-inline'",
+    // Scripts: strict nonce-based in production, allow unsafe in dev for HMR
+    isDev 
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' data:"
+      : `script-src 'self' 'nonce-${scriptNonce}' 'strict-dynamic'`,
+    // Styles: nonce-based with fallback for external stylesheets
+    isDev
+      ? "style-src 'self' 'unsafe-inline'"
+      : `style-src 'self' 'nonce-${styleNonce}' https://fonts.googleapis.com`,
     "img-src 'self' data: https:",
-    "font-src 'self'",
+    "font-src 'self' https://fonts.gstatic.com",
     "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
     "frame-ancestors 'none'",
-    "base-uri 'self'"
+    "base-uri 'self'",
+    "object-src 'none'"
   ].join('; ')
   
   res.headers.set('Content-Security-Policy', csp)

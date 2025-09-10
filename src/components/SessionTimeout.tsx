@@ -135,7 +135,7 @@ export function SessionTimeoutProvider({ children }: SessionTimeoutProps) {
   const extendSession = async () => {
     // Force token refresh
     try {
-      const { data: { session: newSession }, error } = await (await import('@/lib/supabase/client')).createClient().auth.getSession()
+      const { data: { session: newSession }, error } = await (await import('@/lib/supabase/browser')).createClient().auth.getSession()
       
       if (error) {
         logAuthError('session_extend_failed', error, { action: 'extend_session' })

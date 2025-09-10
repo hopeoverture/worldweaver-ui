@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
-import { buildWorldFilePath, sanitizeFilename } from '@/lib/storage/paths'
+import { buildWorldFilePath } from '@/lib/storage/paths'
+import { validateFileUpload, checkUploadRateLimit } from '@/lib/security/fileUpload'
+import { logAuditEvent, logError } from '@/lib/logging'
 
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
+  const worldId = params.id
+  let user: any = null
+  
   try {
-    const params = await ctx.params
-    const worldId = params.id
-
-    const { user, error: authError } = await getServerAuth()
-    if (authError || !user) {
+    const auth = await getServerAuth()
+    user = auth.user
+    
+    if (auth.error || !user) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+    }
+
+    // Check rate limits
+    const rateLimit = await checkUploadRateLimit(user.id)
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ 
+        error: 'Rate limit exceeded', 
+        message: rateLimit.message 
+      }, { status: 429 })
     }
 
     const form = await req.formData()
@@ -18,11 +32,27 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Missing file (form field: file)' }, { status: 400 })
     }
 
+    // Validate file security
+    const validation = await validateFileUpload(file, {
+      userId: user.id,
+      worldId,
+      ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined,
+      userAgent: req.headers.get('user-agent') || undefined,
+    })
+
+    if (!validation.isValid) {
+      return NextResponse.json({ 
+        error: 'File validation failed',
+        details: validation.errors,
+        warnings: validation.warnings
+      }, { status: 400 })
+    }
+
     const kind = (req.nextUrl?.searchParams?.get('kind') || 'uploads')
-    const filename = sanitizeFilename(file.name || 'file')
+    const filename = validation.sanitizedName
     const filePath = buildWorldFilePath(worldId, filename, { kind })
     const fileSize = file.size || undefined
-    const mimeType = (file as any).type || 'application/octet-stream'
+    const mimeType = file.type || 'application/octet-stream'
 
     // Insert metadata first so storage RLS insert policy passes
     const { createClient } = await import('@/lib/supabase/server')
@@ -55,8 +85,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (upErr) {
       // Rollback metadata if upload fails (best-effort; ignore any error)
       await supabase.from('world_files').delete().eq('id', meta.id)
+      
+      logError('File upload to storage failed', upErr, {
+        userId: user.id,
+        worldId,
+        action: 'file_upload_storage_error',
+        metadata: { filename, filePath, fileSize }
+      })
+      
       return NextResponse.json({ error: upErr.message }, { status: 400 })
     }
+
+    // Audit log for successful file upload
+    logAuditEvent('file_uploaded', {
+      userId: user.id,
+      worldId,
+      action: 'file_upload_success',
+      metadata: {
+        fileId: meta.id,
+        filename: validation.sanitizedName,
+        originalFilename: file.name,
+        filePath,
+        fileSize,
+        mimeType,
+        detectedType: validation.detectedType,
+        warnings: validation.warnings.length > 0 ? validation.warnings : undefined,
+      }
+    })
 
     return NextResponse.json({
       ok: true,
@@ -69,8 +124,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         mimeType,
         createdAt: meta.created_at,
       },
+      warnings: validation.warnings.length > 0 ? validation.warnings : undefined,
     })
   } catch (err) {
+    logError('File upload unexpected error', err as Error, {
+      userId: user?.id,
+      worldId,
+      action: 'file_upload_error'
+    })
+    
     return NextResponse.json({ error: 'Unexpected error', detail: String((err as Error)?.message || err) }, { status: 500 })
   }
 }
