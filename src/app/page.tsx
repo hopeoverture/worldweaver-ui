@@ -14,7 +14,6 @@ export default function WorldsPage() {
   const router = useRouter();
   const { 
     worlds, 
-    entities, 
     isLoading, 
     error,
     loadUserWorlds,

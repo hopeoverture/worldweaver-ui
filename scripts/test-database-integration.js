@@ -4,7 +4,7 @@
  * Simple test to verify database operations are working
  */
 
-const { localDb } = require('../src/lib/database/local');
+const { localDb } = await import('../src/lib/database/local');
 
 async function testDatabaseIntegration() {
   console.log('🧪 Testing Database Integration...\n');

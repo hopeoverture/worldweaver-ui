@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: worldweaver_user
+      POSTGRES_PASSWORD: worldweaver_pass
+      POSTGRES_DB: worldweaver_dev
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./local_database_schema.sql:/docker-entrypoint-initdb.d/local_database_schema.sql:ro
+      - ./fix_templates.sql:/docker-entrypoint-initdb.d/fix_templates.sql:ro
+    ports:
+      - "5432:5432"
+
+volumes:
+  db_data:

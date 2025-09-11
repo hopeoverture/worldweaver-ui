@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { Entity, Template, Folder, TemplateField, Link } from '@/lib/types';
+import { Entity, TemplateField } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { formatDate } from '@/lib/utils';
 
@@ -16,7 +16,7 @@ interface EntityDetailModalProps {
 }
 
 export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
-  const { templates, folders, entities, links, updateEntity, addLink, removeLink } = useStore();
+  const { templates, folders, entities, links, updateEntity, removeLink } = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,8 +30,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   // Get entity links (relationships)
   const entityLinks = entity ? links.filter(l => l.fromEntityId === entity.id || l.toEntityId === entity.id) : [];
   
-  // Get other entities in the same world for linking
-  const worldEntities = entity ? entities.filter(e => e.worldId === entity.worldId && e.id !== entity.id) : [];
+  // (previously computed other entities - removed unused variable)
 
   useEffect(() => {
     if (entity) {
@@ -90,7 +89,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     setErrors({});
   };
 
-  const handleFieldChange = (fieldId: string, value: any) => {
+  const handleFieldChange = (fieldId: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       fields: {

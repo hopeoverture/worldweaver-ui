@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -62,11 +61,7 @@ const toneOptions = [
   'Melancholic', 'Satirical', 'Epic', 'Intimate'
 ];
 
-const themeOptions = [
-  'Survival', 'Found Family', 'Power Corrupts', 'Destiny vs. Choice', 
-  'Nature vs. Industry', 'Coming of Age', 'Redemption', 'Sacrifice', 
-  'Identity', 'Freedom', 'Justice', 'Love', 'Betrayal', 'Legacy'
-];
+// themeOptions removed (unused)
 
 const audienceOptions = [
   'All Ages', 'Teen', 'Mature', 'Young Adult', 'Adult'
@@ -166,7 +161,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const handleSubmit = () => {
     if (validateStep(currentStep)) {
       // Create world with basic info, detailed data can be stored in a separate field
-      const newWorld = addWorld({
+  addWorld({
         name: formData.name,
         summary: formData.logline,
         // Store detailed world data in a future extended format

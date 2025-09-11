@@ -425,7 +425,7 @@ export default function ProfilePage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Show World Count</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Display the number of worlds you've created on your profile</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Display the number of worlds you have created on your profile</p>
                     </div>
                     <input
                       type="checkbox"

@@ -1,17 +1,26 @@
 import { Pool } from 'pg'
 
 // Create connection pool with fallback connection string
+// Create connection pool using DATABASE_URL env var.
+// Fail fast and clearly if it's missing so credentials aren't accidentally stored in code.
 const getConnectionString = () => {
-  return process.env.DATABASE_URL || 'postgresql://worldweaver_user:worldweaver2025!@localhost:5432/worldweaver_dev'
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      'DATABASE_URL is not set. Set DATABASE_URL in your environment (see .env.example). Do NOT commit credentials to source control.'
+    );
+  }
+  return url;
 }
 
 const pool = new Pool({
   connectionString: getConnectionString(),
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // In production, allow SSL but don't require strict cert validation by default.
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
 })
 
 export class LocalDatabaseService {
-  async query(text: string, params?: any[]) {
+  async query(text: string, params?: unknown[]) {
     const client = await pool.connect()
     try {
       const result = await client.query(text, params)
@@ -61,8 +70,9 @@ export class LocalDatabaseService {
     return result.rows[0]
   }
 
-  async updateProfile(userId: string, data: any) {
-    const { full_name, username, bio, website, avatar_url } = data
+  async updateProfile(userId: string, data: unknown) {
+    const d = data as { full_name?: string; username?: string; bio?: string; website?: string; avatar_url?: string }
+    const { full_name, username, bio, website, avatar_url } = d
     const result = await this.query(
       `UPDATE profiles 
        SET full_name = COALESCE($2, full_name),
@@ -121,8 +131,9 @@ export class LocalDatabaseService {
     return result.rows[0]
   }
 
-  async updateWorld(worldId: string, data: any) {
-    const { name, description, is_public, is_archived, cover_image, settings } = data
+  async updateWorld(worldId: string, data: unknown) {
+    const d = data as { name?: string; description?: string; is_public?: boolean; is_archived?: boolean; cover_image?: string; settings?: unknown }
+    const { name, description, is_public, is_archived, cover_image, settings } = d
     const result = await this.query(
       `UPDATE worlds 
        SET name = COALESCE($2, name),
@@ -173,7 +184,7 @@ export class LocalDatabaseService {
 
   async getAllTemplates(worldId?: string) {
     let query = 'SELECT * FROM templates WHERE is_system = true'
-    let params: any[] = []
+    let params: unknown[] = []
     
     if (worldId) {
       query += ' OR world_id = $1'
@@ -190,8 +201,9 @@ export class LocalDatabaseService {
   // Entity Operations
   // ================================
 
-  async createEntity(data: any) {
-    const { name, description, template_id, world_id, folder_id, entity_data, image_url, tags, created_by } = data
+  async createEntity(data: unknown) {
+    const d = data as { name: string; description?: string; template_id?: string; world_id: string; folder_id?: string; entity_data?: unknown; image_url?: string; tags?: string[]; created_by?: string }
+    const { name, description, template_id, world_id, folder_id, entity_data, image_url, tags, created_by } = d
     const result = await this.query(
       `INSERT INTO entities (name, description, template_id, world_id, folder_id, data, image_url, tags, created_by) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
@@ -284,7 +296,7 @@ export interface World {
   owner_id: string
   is_public: boolean
   is_archived: boolean
-  settings: any
+  settings: unknown
   created_at: string
   updated_at: string
   entity_count?: number
@@ -297,7 +309,7 @@ export interface Template {
   description?: string
   icon?: string
   category?: string
-  fields: any[]
+  fields: unknown[]
   is_system: boolean
   world_id?: string
   created_by?: string
@@ -312,7 +324,7 @@ export interface Entity {
   template_id?: string
   world_id: string
   folder_id?: string
-  data: any
+  data: unknown
   image_url?: string
   tags?: string[]
   is_archived: boolean
@@ -321,5 +333,5 @@ export interface Entity {
   updated_at: string
   template_name?: string
   template_category?: string
-  template_fields?: any[]
+  template_fields?: unknown[]
 }

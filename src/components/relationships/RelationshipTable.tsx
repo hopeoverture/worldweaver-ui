@@ -1,5 +1,4 @@
-'use client';
-import { RelationshipRow } from '@/lib/types';
+ 'use client';
 import { useStore } from '@/lib/store';
 
 export function RelationshipTable() {

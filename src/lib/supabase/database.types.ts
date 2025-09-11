@@ -45,7 +45,7 @@ export interface Database {
           owner_id: string
           is_public: boolean
           is_archived: boolean
-          settings: any
+          settings: unknown
           created_at: string
           updated_at: string
         }
@@ -57,7 +57,7 @@ export interface Database {
           owner_id: string
           is_public?: boolean
           is_archived?: boolean
-          settings?: any
+          settings?: unknown
           created_at?: string
           updated_at?: string
         }
@@ -69,7 +69,7 @@ export interface Database {
           owner_id?: string
           is_public?: boolean
           is_archived?: boolean
-          settings?: any
+          settings?: unknown
           created_at?: string
           updated_at?: string
         }
@@ -80,7 +80,7 @@ export interface Database {
           world_id: string
           user_id: string
           role: 'owner' | 'admin' | 'editor' | 'viewer'
-          permissions: any
+          permissions: unknown
           joined_at: string
         }
         Insert: {
@@ -88,7 +88,7 @@ export interface Database {
           world_id: string
           user_id: string
           role: 'owner' | 'admin' | 'editor' | 'viewer'
-          permissions?: any
+          permissions?: unknown
           joined_at?: string
         }
         Update: {
@@ -96,7 +96,7 @@ export interface Database {
           world_id?: string
           user_id?: string
           role?: 'owner' | 'admin' | 'editor' | 'viewer'
-          permissions?: any
+          permissions?: unknown
           joined_at?: string
         }
       }
@@ -142,7 +142,7 @@ export interface Database {
           description: string | null
           icon: string | null
           category: string | null
-          fields: any
+          fields: unknown
           is_system: boolean
           world_id: string | null
           created_by: string | null
@@ -155,7 +155,7 @@ export interface Database {
           description?: string | null
           icon?: string | null
           category?: string | null
-          fields?: any
+          fields?: unknown
           is_system?: boolean
           world_id?: string | null
           created_by?: string | null
@@ -168,7 +168,7 @@ export interface Database {
           description?: string | null
           icon?: string | null
           category?: string | null
-          fields?: any
+          fields?: unknown
           is_system?: boolean
           world_id?: string | null
           created_by?: string | null
@@ -184,7 +184,7 @@ export interface Database {
           template_id: string | null
           world_id: string
           folder_id: string | null
-          data: any
+          data: unknown
           image_url: string | null
           tags: string[] | null
           is_archived: boolean
@@ -199,7 +199,7 @@ export interface Database {
           template_id?: string | null
           world_id: string
           folder_id?: string | null
-          data?: any
+          data?: unknown
           image_url?: string | null
           tags?: string[] | null
           is_archived?: boolean
@@ -214,7 +214,7 @@ export interface Database {
           template_id?: string | null
           world_id?: string
           folder_id?: string | null
-          data?: any
+          data?: unknown
           image_url?: string | null
           tags?: string[] | null
           is_archived?: boolean
@@ -304,7 +304,7 @@ export interface Database {
           action: string
           entity_type: string | null
           entity_id: string | null
-          details: any
+          details: unknown
           created_at: string
         }
         Insert: {
@@ -314,7 +314,7 @@ export interface Database {
           action: string
           entity_type?: string | null
           entity_id?: string | null
-          details?: any
+          details?: unknown
           created_at?: string
         }
         Update: {
@@ -324,7 +324,7 @@ export interface Database {
           action?: string
           entity_type?: string | null
           entity_id?: string | null
-          details?: any
+          details?: unknown
           created_at?: string
         }
       }

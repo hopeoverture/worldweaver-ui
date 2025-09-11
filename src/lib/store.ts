@@ -4,7 +4,8 @@ import * as seed from './mockData';
 import { createCoreTemplates } from './coreTemplates';
 
 // Configuration
-const USE_API = true; // Use API routes for database operations
+// Use API routes for database operations. Set to true to enable DB-backed mode.
+const USE_API = true;
 const currentUserId = '550e8400-e29b-41d4-a716-446655440000'; // Test user ID
 
 type State = {
@@ -390,7 +391,6 @@ export const useStore = create<State & Actions>((set, get) => ({
   
   transferOwnership: (worldId, newOwnerId) =>
     set(s => {
-      const currentOwner = s.members.find(m => m.worldId === worldId && m.role === 'owner');
       return {
         members: s.members.map(m => {
           if (m.worldId === worldId) {

@@ -4,7 +4,6 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
-import { Select } from '../ui/Select';
 import { useStore } from '@/lib/store';
 
 interface CreateFolderModalProps {

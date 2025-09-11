@@ -6,15 +6,16 @@ import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
 
 interface TemplateCardProps {
   template: Template;
-  onEdit?: (template: Template) => void;
   onDelete?: (templateId: string) => void;
+  onEdit?: (template: Template) => void;
+  glow?: 'blue' | 'pink' | 'purple' | 'green' | 'amber';
 }
 
-export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, onDelete, glow }: TemplateCardProps) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // Check if this is a core template
-  const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any);
+  const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(String(template.name) as unknown as typeof CORE_TEMPLATE_NAMES[keyof typeof CORE_TEMPLATE_NAMES]);
 
   const handleCardClick = () => {
     setIsDetailModalOpen(true);
@@ -24,7 +25,7 @@ export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) 
     <>
       <div 
         onClick={handleCardClick}
-        className="group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer"
+        className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer ${glow ? `card-neon-${glow}` : ''}`}
       >
         {/* Gradient overlay for visual interest */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

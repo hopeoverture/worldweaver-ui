@@ -9,14 +9,16 @@ export interface WorldCardProps {
   entityCount: number; 
   updatedAt: string | Date;
   isArchived?: boolean;
+  glow?: 'blue' | 'pink' | 'purple' | 'green' | 'amber';
   onEnter: (id: string) => void; 
   onEdit: (id: string) => void;
   onArchive?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchived = false, onEnter, onEdit, onArchive, onDelete }: WorldCardProps) {
+export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchived = false, onEnter, onEdit, onArchive, onDelete, glow }: WorldCardProps) {
   const date = typeof updatedAt === 'string' ? new Date(updatedAt) : (updatedAt as Date);
+  const glowClass = glow ? `card-neon-${glow}` : '';
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -34,7 +36,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
   
   return (
     <article 
-      className='group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-2xl transition-all duration-500 p-6 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer overflow-hidden' 
+      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-2xl transition-all duration-500 p-6 hover:-translate-y-2 hover:scale-[1.02] cursor-pointer overflow-hidden ${glowClass}`} 
       data-testid='world-card' 
       aria-label={`World ${name}`}
       onClick={() => onEnter(id)}
@@ -186,6 +188,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
                 <Button
                   size="sm"
                   variant="outline"
+                  glow="purple"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(id);
@@ -196,6 +199,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
                 </Button>
                 <Button
                   size="sm"
+                  glow="blue"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEnter(id);
@@ -214,6 +218,7 @@ export function WorldCard({ id, name, summary, entityCount, updatedAt, isArchive
                   e.stopPropagation();
                   onArchive?.(id);
                 }}
+                glow="amber"
                 className="hover:scale-105 transition-transform duration-200 text-amber-600 border-amber-200 hover:bg-amber-50"
               >
                 Unarchive

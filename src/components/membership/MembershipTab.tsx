@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { World, WorldMember, WorldInvite, MemberRole, RolePermissions } from '@/lib/types';
+import Image from 'next/image';
+import { World, WorldMember, WorldInvite, MemberRole, RolePermissions, Permission } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -114,7 +115,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
         ].map(section => (
           <button
             key={section.key}
-            onClick={() => setActiveSection(section.key as any)}
+            onClick={() => setActiveSection(section.key as 'members' | 'invites' | 'settings')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeSection === section.key
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
@@ -210,12 +211,14 @@ export function MembershipTab({ world }: MembershipTabProps) {
                           <div className="relative">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
                               {member.avatar ? (
-                                <img 
-                                  src={member.avatar} 
-                                  alt={member.name}
-                                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-gray-700"
-                                />
-                              ) : (
+                                  <Image
+                                    src={member.avatar}
+                                    alt={member.name}
+                                    width={40}
+                                    height={40}
+                                    className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-gray-700"
+                                  />
+                                ) : (
                                 <span className="text-sm font-semibold text-white">
                                   {member.name.charAt(0).toUpperCase()}
                                 </span>
@@ -701,7 +704,7 @@ function PermissionsModal({ open, onClose, rolePermissions, permissionLabels }: 
                   <td className="py-4 px-6 font-medium text-gray-900 dark:text-gray-100">{label}</td>
                   {(['viewer', 'editor', 'admin', 'owner'] as MemberRole[]).map(role => (
                     <td key={role} className="py-4 px-4 text-center">
-                      {rolePermissions[role].includes(permission as any) ? (
+                      {rolePermissions[role].includes(permission as Permission) ? (
                         <div className="inline-flex items-center justify-center w-6 h-6 bg-green-100 dark:bg-green-900/30 rounded-full">
                           <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

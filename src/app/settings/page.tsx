@@ -7,8 +7,28 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Tabs, TabItem } from '@/components/ui/Tabs';
 import { Card } from '@/components/ui/Card';
 
+type Settings = {
+  appName: string;
+  language: string;
+  timezone: string;
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large' | 'extra-large';
+  compactMode: boolean;
+  animations: boolean;
+  autoSave: boolean;
+  autoSaveInterval: number;
+  backupEnabled: boolean;
+  backupFrequency: 'hourly' | 'daily' | 'weekly' | 'monthly';
+  analytics: boolean;
+  crashReporting: boolean;
+  betaFeatures: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  soundEffects: boolean;
+};
+
 export default function SettingsPage() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<Settings>({
     // General settings
     appName: 'WorldWeaver',
     language: 'en',
@@ -39,7 +59,7 @@ export default function SettingsPage() {
 
   const [activeTab, setActiveTab] = useState('general');
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
@@ -158,7 +178,7 @@ export default function SettingsPage() {
                 </label>
                 <Select
                   value={settings.theme}
-                  onChange={(e) => handleSettingChange('theme', e.target.value)}
+                  onChange={(e) => handleSettingChange('theme', e.target.value as 'light' | 'dark' | 'system')}
                 >
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
@@ -172,7 +192,7 @@ export default function SettingsPage() {
                 </label>
                 <Select
                   value={settings.fontSize}
-                  onChange={(e) => handleSettingChange('fontSize', e.target.value)}
+                  onChange={(e) => handleSettingChange('fontSize', e.target.value as 'small' | 'medium' | 'large' | 'extra-large')}
                 >
                   <option value="small">Small</option>
                   <option value="medium">Medium</option>
@@ -283,7 +303,7 @@ export default function SettingsPage() {
                   </label>
                   <Select
                     value={settings.backupFrequency}
-                    onChange={(e) => handleSettingChange('backupFrequency', e.target.value)}
+                    onChange={(e) => handleSettingChange('backupFrequency', e.target.value as 'hourly' | 'daily' | 'weekly' | 'monthly')}
                   >
                     <option value="hourly">Hourly</option>
                     <option value="daily">Daily</option>

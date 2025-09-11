@@ -19,7 +19,7 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
   const updateTemplate = useStore(state => state.updateTemplate);
 
   // Check if this is a core template
-  const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any);
+  const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(String(template.name) as unknown as typeof CORE_TEMPLATE_NAMES[keyof typeof CORE_TEMPLATE_NAMES]);
 
   const handleSave = (updatedTemplate: Template) => {
     updateTemplate(template.id, updatedTemplate);

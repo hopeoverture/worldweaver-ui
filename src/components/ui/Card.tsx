@@ -1,20 +1,21 @@
 'use client';
 import * as React from 'react';
 
-export const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement> & {
-    hover?: boolean;
-    interactive?: boolean;
-  }
->(({ className, hover = false, interactive = false, ...props }, ref) => {
+type CardProps = React.HTMLAttributes<HTMLDivElement> & {
+  hover?: boolean;
+  interactive?: boolean;
+  glow?: 'blue' | 'pink' | 'purple' | 'green' | 'amber';
+}
+
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, hover = false, interactive = false, glow, ...props }, ref) => {
   const baseClasses = "rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card p-6";
   const hoverClasses = hover || interactive ? "group relative hover:shadow-xl transition-all duration-300 hover:-translate-y-1" : "";
   const interactiveClasses = interactive ? "cursor-pointer" : "";
+  const glowClass = glow ? `card-neon-${glow}` : '';
   
   return (
     <div
-      className={`${baseClasses} ${hoverClasses} ${interactiveClasses} ${className || ''}`}
+      className={`${baseClasses} ${hoverClasses} ${interactiveClasses} ${glowClass} ${className || ''}`}
       ref={ref}
       {...props}
     >

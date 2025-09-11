@@ -31,6 +31,7 @@ export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate }: 
         <TemplateCard 
           key={template.id} 
           template={template} 
+          glow='purple'
           onEdit={onEdit}
           onDelete={onDelete}
         />

@@ -1,6 +1,5 @@
 'use client';
 import { Template } from '@/lib/types';
-import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 
 interface StepChooseTemplateProps {

@@ -18,7 +18,7 @@ import { TabItem } from '@/components/ui/Tabs';
 
 export default function WorldDashboard() {
   const { id: worldId } = useParams();
-  const { worlds, folders, entities, templates, relationships, updateTemplate, deleteTemplate } = useStore();
+  const { worlds, folders, entities, templates, relationships, deleteTemplate } = useStore();
   const [activeTab, setActiveTab] = useState('entities');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isCreateEntityModalOpen, setCreateEntityModalOpen] = useState(false);

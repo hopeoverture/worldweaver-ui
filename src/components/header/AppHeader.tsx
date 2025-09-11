@@ -36,7 +36,7 @@ export function AppHeader() {
         <nav className='flex items-center gap-3'>
           {/* Quick actions */}
           <div className='hidden sm:flex items-center gap-2'>
-            <Button variant='ghost' size='sm'>
+            <Button variant='ghost' size='sm' glow='pink'>
               <svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                 <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' />
               </svg>
@@ -44,7 +44,7 @@ export function AppHeader() {
             </Button>
             
             <Link href="/settings">
-              <Button variant='ghost' size='sm'>
+              <Button variant='ghost' size='sm' glow='blue'>
                 <svg className='h-4 w-4' fill='none' viewBox='0 0 24 24' stroke='currentColor'>
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' />
                   <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 12a3 3 0 11-6 0 3 3 0 616 0z' />
@@ -56,9 +56,9 @@ export function AppHeader() {
 
           {/* Profile menu */}
           <Link href="/profile">
-            <button className='group h-9 w-9 rounded-full bg-gradient-to-br from-brand-600 to-brand-700 hover:from-brand-700 hover:to-brand-800 hover:scale-110 hover:shadow-lg hover:shadow-brand-500/25 transition-all duration-200 shadow-md flex items-center justify-center text-white font-medium hover:-translate-y-0.5 hover:rotate-3 active:scale-95' aria-label='Profile menu'>
-              <span className='text-sm group-hover:scale-110 transition-transform duration-200'>WB</span>
-            </button>
+            <Button size='sm' glow='green' className='h-9 w-9 p-0 rounded-full flex items-center justify-center'>
+              <span className='text-sm'>WB</span>
+            </Button>
           </Link>
         </nav>
       </div>

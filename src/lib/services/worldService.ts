@@ -1,5 +1,5 @@
 import { localDb } from '../database/local';
-import { World, Entity, Template, Folder } from '../types';
+import { World, Entity, Template } from '../types';
 
 /**
  * World Service - Adapter layer between React components and database
@@ -34,9 +34,9 @@ export class WorldService {
   /**
    * Get a specific world by ID
    */
-  async getWorldById(worldId: string, userId: string): Promise<World | null> {
+  async getWorldById(worldId: string, _userId: string): Promise<World | null> {
     try {
-      const dbWorld = await localDb.getWorldById(worldId, userId);
+  const dbWorld = await localDb.getWorldById(worldId, _userId);
       
       if (!dbWorld) return null;
 
@@ -65,12 +65,12 @@ export class WorldService {
     name: string;
     description?: string;
     isPublic?: boolean;
-  }, userId: string): Promise<World> {
+  }, _userId: string): Promise<World> {
     try {
       const dbWorld = await localDb.createWorld(
         data.name,
         data.description || '',
-        userId
+        _userId
       );
 
       return {
@@ -93,7 +93,7 @@ export class WorldService {
   /**
    * Update a world
    */
-  async updateWorld(worldId: string, data: Partial<World>, userId: string): Promise<World> {
+  async updateWorld(worldId: string, data: Partial<World>): Promise<World> {
     try {
       const updateData = {
         name: data.name,

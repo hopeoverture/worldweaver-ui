@@ -9,7 +9,8 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang='en' className='scroll-smooth'>
+    // Force dark mode by default so UI appears dark as requested
+    <html lang='en' className='dark scroll-smooth'>
       <body 
         className='min-h-screen bg-gray-50 text-gray-900 dark:bg-neutral-950 dark:text-gray-100 antialiased selection:bg-brand-100 dark:selection:bg-brand-900/50'
         suppressHydrationWarning={true}

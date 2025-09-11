@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { LinkEditor } from './LinkEditor';
-import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
 
 interface StepFillFormProps {
@@ -19,7 +18,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
     name: '',
     summary: '',
     folderId: template.folderId || '', // Use template's folder as default
-    fields: {} as Record<string, any>,
+  fields: {} as Record<string, unknown>,
     links: [] as Link[]
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -28,7 +27,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
   // Get entity folders for this world
   const entityFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
 
-  const handleFieldChange = (fieldId: string, value: any) => {
+  const handleFieldChange = (fieldId: string, value: unknown) => {
     setFormData(prev => ({
       ...prev,
       fields: {
@@ -108,7 +107,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
         return (
           <input
             type="text"
-            value={value}
+            value={String(value || '')}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             className={baseClasses}
             placeholder={`Enter ${field.name.toLowerCase()}`}
@@ -118,7 +117,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
       case 'longText':
         return (
           <textarea
-            value={value}
+            value={String(value || '')}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             rows={3}
             className={baseClasses}
@@ -130,7 +129,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
         return (
           <input
             type="number"
-            value={value}
+            value={(typeof value === 'number' ? value : '') as unknown as number}
             onChange={(e) => handleFieldChange(field.id, e.target.valueAsNumber || '')}
             className={baseClasses}
             placeholder={`Enter ${field.name.toLowerCase()}`}
@@ -140,7 +139,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
       case 'select':
         return (
           <select
-            value={value}
+            value={String(value || '')}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             className={baseClasses}
           >
@@ -152,7 +151,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
         );
         
       case 'multiSelect':
-        const selectedValues = Array.isArray(value) ? value : [];
+  const selectedValues = Array.isArray(value) ? (value as string[]) : [];
         return (
           <div className="space-y-2">
             {field.options?.map(option => (
@@ -176,13 +175,13 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
         
       default:
         return (
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            className={baseClasses}
-            placeholder={`Enter ${field.name.toLowerCase()}`}
-          />
+            <input
+              type="text"
+              value={String(value || '')}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+              className={baseClasses}
+              placeholder={`Enter ${field.name.toLowerCase()}`}
+            />
         );
     }
   };

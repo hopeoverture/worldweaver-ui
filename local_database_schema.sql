@@ -7,14 +7,69 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ================================
+-- NEXTAUTH.JS TABLES
+-- ================================
+
+-- NextAuth.js Account table
+CREATE TABLE IF NOT EXISTS public.accounts (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  "userId" UUID NOT NULL,
+  type TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  "providerAccountId" TEXT NOT NULL,
+  refresh_token TEXT,
+  access_token TEXT,
+  expires_at INTEGER,
+  token_type TEXT,
+  scope TEXT,
+  id_token TEXT,
+  session_state TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(provider, "providerAccountId")
+);
+
+-- NextAuth.js Session table
+CREATE TABLE IF NOT EXISTS public.sessions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  "sessionToken" TEXT UNIQUE NOT NULL,
+  "userId" UUID NOT NULL,
+  expires TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- NextAuth.js VerificationToken table
+CREATE TABLE IF NOT EXISTS public.verification_tokens (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  identifier TEXT NOT NULL,
+  token TEXT UNIQUE NOT NULL,
+  expires TIMESTAMP WITH TIME ZONE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(identifier, token)
+);
+
+-- ================================
 -- USERS TABLE (Replaces Supabase auth.users)
 -- ================================
 
--- Local users table (simulates Supabase auth)
+-- Users table (compatible with NextAuth.js)
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT,
+  email TEXT UNIQUE NOT NULL,
+  "emailVerified" TIMESTAMP WITH TIME ZONE,
+  image TEXT,
+  password_hash TEXT, -- For credentials provider
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Legacy auth_users table for backward compatibility (will be migrated)
 CREATE TABLE IF NOT EXISTS public.auth_users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
-  password_hash TEXT, -- For local development only
+  password_hash TEXT,
   email_confirmed BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -174,6 +229,13 @@ CREATE INDEX IF NOT EXISTS idx_entities_tags ON public.entities USING GIN(tags);
 CREATE INDEX IF NOT EXISTS idx_relationships_from_entity_id ON public.relationships(from_entity_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_to_entity_id ON public.relationships(to_entity_id);
 
+-- NextAuth.js indexes
+CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts("userId");
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON public.sessions("userId");
+CREATE INDEX IF NOT EXISTS idx_sessions_token ON public.sessions("sessionToken");
+CREATE INDEX IF NOT EXISTS idx_verification_tokens_identifier ON public.verification_tokens(identifier);
+CREATE INDEX IF NOT EXISTS idx_verification_tokens_token ON public.verification_tokens(token);
+
 -- ================================
 -- FUNCTIONS
 -- ================================
@@ -216,6 +278,26 @@ CREATE TRIGGER handle_templates_updated_at BEFORE UPDATE ON public.templates
 
 CREATE TRIGGER handle_entities_updated_at BEFORE UPDATE ON public.entities
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+CREATE TRIGGER handle_users_updated_at BEFORE UPDATE ON public.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+CREATE TRIGGER handle_accounts_updated_at BEFORE UPDATE ON public.accounts
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+CREATE TRIGGER handle_sessions_updated_at BEFORE UPDATE ON public.sessions
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+-- ================================
+-- FOREIGN KEY CONSTRAINTS
+-- ================================
+
+-- Add foreign key constraints for NextAuth.js tables
+ALTER TABLE public.accounts ADD CONSTRAINT fk_accounts_user_id 
+  FOREIGN KEY ("userId") REFERENCES public.users(id) ON DELETE CASCADE;
+
+ALTER TABLE public.sessions ADD CONSTRAINT fk_sessions_user_id 
+  FOREIGN KEY ("userId") REFERENCES public.users(id) ON DELETE CASCADE;
 
 -- ================================
 -- SYSTEM TEMPLATES

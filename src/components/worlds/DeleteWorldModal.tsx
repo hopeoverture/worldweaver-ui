@@ -51,7 +51,7 @@ export function DeleteWorldModal({ worldId, worldName, onClose }: DeleteWorldMod
 
         <div className="mb-6">
           <p className="text-gray-700 dark:text-gray-300 mb-3">
-            Are you sure you want to permanently delete the world <strong>"{worldName}"</strong>?
+            Are you sure you want to permanently delete the world <strong>{worldName}</strong>?
           </p>
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-4">
             <div className="flex items-start gap-2">

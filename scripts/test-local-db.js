@@ -1,4 +1,4 @@
-const { Pool } = require('pg')
+const { Pool } = await import('pg').then(m => m.default || m)
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://worldweaver_user:worldweaver2025!@localhost:5432/worldweaver_dev'

@@ -12,7 +12,7 @@ export type World = {
   isArchived?: boolean;
   archivedAt?: string; // ISO
   isPublic?: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
   seatLimit?: number;
   inviteLinkEnabled?: boolean;
   inviteLinkRole?: MemberRole;

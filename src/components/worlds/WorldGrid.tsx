@@ -32,6 +32,7 @@ export function WorldGrid({ worlds, onEnterWorld, onEditWorld, onArchiveWorld, o
         <WorldCard
           key={world.id}
           {...world}
+          glow={world.glow ?? 'blue'}
           onEnter={onEnterWorld}
           onEdit={onEditWorld}
           onArchive={onArchiveWorld}

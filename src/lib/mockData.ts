@@ -15,7 +15,8 @@ export const folders: Folder[] = [
   { id: 'f-tpl-homebrew',    worldId: 'w1', name: 'Homebrew', description: 'Custom templates for unique content', kind: 'templates', color: 'yellow', count: 0 },
 ];
 
-const characterFields: TemplateField[] = [
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _characterFields: TemplateField[] = [
   { 
     id: 'tf-char-name', 
     name: 'Character Name', 
@@ -117,7 +118,7 @@ const characterFields: TemplateField[] = [
 
 export const templates: Template[] = [
   // Add comprehensive Character, Location, and Object templates from core templates
-  ...createCoreTemplates('w1', 'f-tpl-core').map((template, index) => ({
+  ...createCoreTemplates('w1', 'f-tpl-core').map((template) => ({
     id: `tpl-${template.name.toLowerCase()}`,
     ...template
   })),

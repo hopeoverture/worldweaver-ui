@@ -14,13 +14,11 @@ interface CreateEntityModalProps {
 }
 
 export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEntityModalProps) {
-  const { templates, folders, addEntity } = useStore();
+  const { templates, addEntity } = useStore();
   const [step, setStep] = useState(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const worldTemplates = templates.filter(t => t.worldId === worldId);
-  const worldFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
 
   const handleSelectTemplate = (templateId: string) => {
     const template = worldTemplates.find(t => t.id === templateId);
@@ -31,7 +29,7 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
   };
 
   const handleSave = async (entityData: Omit<Entity, 'id' | 'updatedAt'>) => {
-    setIsSubmitting(true);
+  // submission state not used here; proceed without local loading state
     
     try {
       // Use provided folderId or template's folder, but allow undefined for ungrouped entities
@@ -55,14 +53,13 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
       console.error('Error creating entity:', error);
       throw error; // Re-throw to let StepFillForm handle the error display
     } finally {
-      setIsSubmitting(false);
+      // no-op
     }
   };
 
   const handleClose = () => {
     setStep(1);
     setSelectedTemplate(null);
-    setIsSubmitting(false);
     onClose();
   };
 

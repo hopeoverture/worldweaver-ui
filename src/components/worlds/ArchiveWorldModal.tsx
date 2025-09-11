@@ -69,7 +69,7 @@ export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onCl
 
         <div className="mb-6">
           <p className="text-gray-700 dark:text-gray-300 mb-3">
-            Are you sure you want to {actionTextLower} the world <strong>"{worldName}"</strong>?
+            Are you sure you want to {actionTextLower} the world <strong>{worldName}</strong>?
           </p>
           
           {!isArchived && (
@@ -84,7 +84,7 @@ export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onCl
                     <li>Will be hidden from your main dashboard</li>
                     <li>Can be restored at any time</li>
                     <li>All data will be preserved</li>
-                    <li>Won't count toward your active world limit</li>
+                    <li>Will not count toward your active world limit</li>
                   </ul>
                 </div>
               </div>
@@ -132,8 +132,8 @@ export function ArchiveWorldModal({ worldId, worldName, isArchived = false, onCl
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 {isArchived ? 'Unarchiving...' : 'Archiving...'}
               </div>
-            ) : (
-              `${actionText} World`
+              ) : (
+              <>{actionText} World</>
             )}
           </Button>
         </div>
