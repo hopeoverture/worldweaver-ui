@@ -114,29 +114,16 @@ function classifyAuthError(error: AuthError | Error | any): AuthErrorState {
   }
 }
 
-// Create singleton Supabase client instance outside component to prevent multiple instances
-let supabaseClient: ReturnType<typeof createClient> | null = null
-
 const getSupabaseClient = () => {
   if (typeof window === 'undefined') {
     throw new Error('Supabase client not available during SSR')
   }
   
-  // Return existing instance if already created
-  if (supabaseClient) {
-    return supabaseClient
-  }
-  
-  console.log('Creating Supabase client singleton...', {
-    hasWindow: typeof window !== 'undefined',
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Present' : 'Missing',
-    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Present' : 'Missing'
-  })
-  
+  // Always create a fresh client to avoid session contamination between users
   try {
-    supabaseClient = createClient()
-    console.log('✅ Supabase client singleton created successfully')
-    return supabaseClient
+    const client = createClient()
+    console.log('✅ Created fresh Supabase client for auth operation')
+    return client
   } catch (error) {
     console.error('❌ Failed to create Supabase client:', error)
     throw error
@@ -356,7 +343,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       console.log('Supabase sign-in response:', {
         hasData: !!data,
-        user: data?.user?.id ? 'User returned' : 'No user',
+        user: data?.user?.id ? `User returned: ${data.user.id.substring(0, 8)}...` : 'No user',
+        userEmail: data?.user?.email ? `${data.user.email.split('@')[0]}@...` : 'No email',
         session: data?.session ? 'Session created' : 'No session',
         error: error ? {
           message: error.message,
@@ -407,6 +395,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut()
       if (error) {
         throw error
+      }
+      
+      // Force clear all local auth state immediately
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      clearError()
+      
+      // Clear any stored session data in localStorage/cookies
+      if (typeof window !== 'undefined') {
+        try {
+          // Clear any potential localStorage auth data
+          const keys = Object.keys(localStorage)
+          keys.forEach(key => {
+            if (key.includes('supabase') || key.includes('auth')) {
+              localStorage.removeItem(key)
+            }
+          })
+          console.log('✅ Cleared localStorage auth data')
+        } catch (e) {
+          console.warn('Could not clear localStorage:', e)
+        }
       }
     }
 
