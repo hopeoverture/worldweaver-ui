@@ -121,7 +121,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<AuthErrorState | null>(null)
   const [lastOperation, setLastOperation] = useState<(() => Promise<void>) | null>(null)
   
-  const supabase = createClient()
+  // Lazy initialize Supabase client only in browser environment
+  const getSupabaseClient = () => {
+    if (typeof window === 'undefined') {
+      throw new Error('Supabase client not available during SSR')
+    }
+    return createClient()
+  }
 
   // Clear error helper
   const clearError = () => setError(null)
@@ -144,9 +150,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // Skip initialization during SSR
+    if (typeof window === 'undefined') {
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     const initializeAuth = async () => {
       try {
+        const supabase = getSupabaseClient()
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
@@ -173,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth()
 
     // Listen for auth changes
+    const supabase = getSupabaseClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
@@ -208,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = async (userId: string) => {
     try {
+      const supabase = getSupabaseClient()
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -240,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const operation = async () => {
+      const supabase = getSupabaseClient()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -277,6 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const operation = async () => {
+      const supabase = getSupabaseClient()
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -309,6 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     const operation = async () => {
+      const supabase = getSupabaseClient()
       const { error } = await supabase.auth.signOut()
       if (error) {
         throw error
@@ -344,6 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     const operation = async () => {
+      const supabase = getSupabaseClient()
       const { error } = await supabase
         .from('profiles')
         .update(updates)
