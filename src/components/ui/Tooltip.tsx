@@ -15,7 +15,7 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
   ({ children, content, side = 'top', className, contentClassName, delayDuration = 400 }, ref) => {
     const [open, setOpen] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
-    const timeoutRef = React.useRef<NodeJS.Timeout>();
+    const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
     const tooltipId = React.useId();
 
     const showTooltip = () => {
@@ -73,7 +73,7 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(
           }
         }}
       >
-        {React.cloneElement(children as React.ReactElement, {
+        {React.cloneElement(children as React.ReactElement<any>, {
           'aria-describedby': open ? tooltipId : undefined,
         })}
         

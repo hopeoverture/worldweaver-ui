@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { cn, inputVariants, focusRing, disabledStyles, transitions } from '@/lib/component-utils';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   variant?: 'default' | 'error' | 'success';
   size?: 'sm' | 'md' | 'lg';
 }
