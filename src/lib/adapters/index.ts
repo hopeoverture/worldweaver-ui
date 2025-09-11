@@ -31,6 +31,22 @@ export function adaptWorldFromDatabase(
     archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined,
     isPublic: dbWorld.is_public ?? false,
     settings: (dbWorld.settings as Record<string, any>) ?? {},
+    // Extended world creation fields from database
+    logline: dbWorld.logline || undefined,
+    genreBlend: dbWorld.genre_blend || undefined,
+    overallTone: dbWorld.overall_tone || undefined,
+    keyThemes: dbWorld.key_themes || undefined,
+    audienceRating: dbWorld.audience_rating || undefined,
+    scopeScale: dbWorld.scope_scale || undefined,
+    technologyLevel: dbWorld.technology_level || undefined,
+    magicLevel: dbWorld.magic_level || undefined,
+    cosmologyModel: dbWorld.cosmology_model || undefined,
+    climateBiomes: dbWorld.climate_biomes || undefined,
+    calendarTimekeeping: dbWorld.calendar_timekeeping || undefined,
+    societalOverview: dbWorld.societal_overview || undefined,
+    conflictDrivers: dbWorld.conflict_drivers || undefined,
+    rulesConstraints: dbWorld.rules_constraints || undefined,
+    aestheticDirection: dbWorld.aesthetic_direction || undefined,
     // Fields not in current schema but expected by domain
     imageUrl: undefined,
     coverImage: undefined,
@@ -50,6 +66,7 @@ export function adaptWorldToDatabase(
 ): Partial<Database['public']['Tables']['worlds']['Insert']> {
   const dbWorld: Partial<Database['public']['Tables']['worlds']['Insert']> = {};
   
+  // Basic fields
   if (domainWorld.id !== undefined) dbWorld.id = domainWorld.id;
   if (domainWorld.name !== undefined) dbWorld.name = domainWorld.name;
   if (domainWorld.summary !== undefined) dbWorld.description = domainWorld.summary; // Domain: summary -> DB: description
@@ -57,6 +74,23 @@ export function adaptWorldToDatabase(
   if (domainWorld.isPublic !== undefined) dbWorld.is_public = domainWorld.isPublic;
   if (domainWorld.isArchived !== undefined) dbWorld.is_archived = domainWorld.isArchived;
   if (domainWorld.settings !== undefined) dbWorld.settings = domainWorld.settings as Database['public']['Tables']['worlds']['Row']['settings'];
+  
+  // Extended world creation fields (Domain camelCase -> DB snake_case)
+  if (domainWorld.logline !== undefined) dbWorld.logline = domainWorld.logline;
+  if (domainWorld.genreBlend !== undefined) dbWorld.genre_blend = domainWorld.genreBlend;
+  if (domainWorld.overallTone !== undefined) dbWorld.overall_tone = domainWorld.overallTone;
+  if (domainWorld.keyThemes !== undefined) dbWorld.key_themes = domainWorld.keyThemes;
+  if (domainWorld.audienceRating !== undefined) dbWorld.audience_rating = domainWorld.audienceRating;
+  if (domainWorld.scopeScale !== undefined) dbWorld.scope_scale = domainWorld.scopeScale;
+  if (domainWorld.technologyLevel !== undefined) dbWorld.technology_level = domainWorld.technologyLevel;
+  if (domainWorld.magicLevel !== undefined) dbWorld.magic_level = domainWorld.magicLevel;
+  if (domainWorld.cosmologyModel !== undefined) dbWorld.cosmology_model = domainWorld.cosmologyModel;
+  if (domainWorld.climateBiomes !== undefined) dbWorld.climate_biomes = domainWorld.climateBiomes;
+  if (domainWorld.calendarTimekeeping !== undefined) dbWorld.calendar_timekeeping = domainWorld.calendarTimekeeping;
+  if (domainWorld.societalOverview !== undefined) dbWorld.societal_overview = domainWorld.societalOverview;
+  if (domainWorld.conflictDrivers !== undefined) dbWorld.conflict_drivers = domainWorld.conflictDrivers;
+  if (domainWorld.rulesConstraints !== undefined) dbWorld.rules_constraints = domainWorld.rulesConstraints;
+  if (domainWorld.aestheticDirection !== undefined) dbWorld.aesthetic_direction = domainWorld.aestheticDirection;
   
   return dbWorld;
 }
@@ -165,7 +199,7 @@ export function adaptFolderFromDatabase(
     color: dbFolder.color || undefined,
     kind: 'entities', // Current schema has one folders table; treat as entity folders
     count: Array.isArray(dbFolder.entities) ? dbFolder.entities.length : 0,
-    data: {}, // Not in current schema but expected by domain
+    data: (dbFolder.data as Record<string, unknown>) || {}, // JSONB data field
   };
 }
 
@@ -199,7 +233,7 @@ export function adaptProfileFromDatabase(dbProfile: DatabaseProfile): Profile {
     avatarUrl: dbProfile.avatar_url || undefined,
     createdAt: dbProfile.created_at,
     updatedAt: dbProfile.updated_at,
-    data: {}, // Not in current schema but expected by domain
+    data: (dbProfile.data as Record<string, unknown>) || {}, // JSONB data field
   };
 }
 

@@ -76,6 +76,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
+          data: Json | null
           description: string | null
           id: string
           name: string
@@ -86,6 +87,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string
+          data?: Json | null
           description?: string | null
           id?: string
           name: string
@@ -96,6 +98,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string
+          data?: Json | null
           description?: string | null
           id?: string
           name?: string
@@ -124,6 +127,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          data: Json | null
           email: string
           full_name: string | null
           id: string
@@ -132,6 +136,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          data?: Json | null
           email: string
           full_name?: string | null
           id: string
@@ -140,6 +145,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          data?: Json | null
           email?: string
           full_name?: string | null
           id?: string
@@ -292,7 +298,7 @@ export type Database = {
           created_at: string
           file_path: string
           file_size: number | null
-          file_type: string | null
+          mime_type: string | null
           id: string
           updated_at: string
           uploaded_by: string | null
@@ -430,7 +436,6 @@ export type Database = {
           societal_overview: string | null
           technology_level: string[] | null
           updated_at: string
-          user_id: string
         }
         Insert: {
           aesthetic_direction?: string | null
@@ -450,14 +455,13 @@ export type Database = {
           magic_level?: string[] | null
           name: string
           overall_tone?: string | null
-          owner_id?: string
+          owner_id: string
           rules_constraints?: string | null
           scope_scale?: string | null
           settings?: Json | null
           societal_overview?: string | null
           technology_level?: string[] | null
           updated_at?: string
-          user_id: string
         }
         Update: {
           aesthetic_direction?: string | null
@@ -484,7 +488,6 @@ export type Database = {
           societal_overview?: string | null
           technology_level?: string[] | null
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -493,6 +496,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_world_invite: {
+        Args: { invite_token: string }
+        Returns: boolean
+      }
       user_can_edit_world: {
         Args: { world_id: string }
         Returns: boolean

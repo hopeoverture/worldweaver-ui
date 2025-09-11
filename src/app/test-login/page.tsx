@@ -43,7 +43,7 @@ export default function TestLoginPage() {
         }, 1000)
       }
     } catch (error) {
-      setResult(`❌ Unexpected error: ${error.message}`)
+      setResult(`❌ Unexpected error: ${(error as Error).message}`)
       console.error('Unexpected test login error:', error)
     } finally {
       setIsLoading(false)
@@ -71,6 +71,11 @@ export default function TestLoginPage() {
         keyLength: supabaseAnonKey?.length
       })
       
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setResult('❌ Missing Supabase environment variables')
+        return
+      }
+      
       const directClient = createClient(supabaseUrl, supabaseAnonKey)
       
       console.log('Direct client created, attempting signInWithPassword...')
@@ -88,8 +93,7 @@ export default function TestLoginPage() {
           message: error.message,
           code: error.code,
           status: error.status,
-          details: error.details,
-          hint: error.hint
+          // AuthError doesn't have details or hint properties
         } : 'No error'
       })
       
@@ -103,7 +107,7 @@ export default function TestLoginPage() {
         await directClient.auth.signOut()
       }
     } catch (error) {
-      setResult(`❌ Direct test error: ${error.message}`)
+      setResult(`❌ Direct test error: ${(error as Error).message}`)
       console.error('Direct test login error:', error)
     } finally {
       setIsLoading(false)

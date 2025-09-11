@@ -42,6 +42,22 @@ export type World = {
   inviteLinkRole?: MemberRole;
   inviteLinkExpires?: string; // ISO
   inviteLinkMaxUses?: number;
+  // Extended world creation fields
+  logline?: string;
+  genreBlend?: string[];
+  overallTone?: string;
+  keyThemes?: string[];
+  audienceRating?: string;
+  scopeScale?: string;
+  technologyLevel?: string[];
+  magicLevel?: string[];
+  cosmologyModel?: string;
+  climateBiomes?: string[];
+  calendarTimekeeping?: string;
+  societalOverview?: string;
+  conflictDrivers?: string[];
+  rulesConstraints?: string;
+  aestheticDirection?: string;
 }
 
 export type MemberRole = 'owner' | 'admin' | 'editor' | 'viewer';

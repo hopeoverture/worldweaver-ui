@@ -44,6 +44,22 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       description: z.string().max(5000).optional(),
       isPublic: z.boolean().optional(),
       isArchived: z.boolean().optional(),
+      // Extended world creation fields
+      logline: z.string().optional(),
+      genreBlend: z.array(z.string()).optional(),
+      overallTone: z.string().optional(),
+      keyThemes: z.array(z.string()).optional(),
+      audienceRating: z.string().optional(),
+      scopeScale: z.string().optional(),
+      technologyLevel: z.array(z.string()).optional(),
+      magicLevel: z.array(z.string()).optional(),
+      cosmologyModel: z.string().optional(),
+      climateBiomes: z.array(z.string()).optional(),
+      calendarTimekeeping: z.string().optional(),
+      societalOverview: z.string().optional(),
+      conflictDrivers: z.array(z.string()).optional(),
+      rulesConstraints: z.string().optional(),
+      aestheticDirection: z.string().optional(),
     })
 
     let parsed
@@ -62,12 +78,28 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       return NextResponse.json({ error: 'No valid fields provided' }, { status: 400 })
     }
 
-    // Map description -> summary for service layer
+    // Map request fields to World type (API uses description, domain model uses summary)
     const data: Partial<World> = {}
     if (parsed.name !== undefined) data.name = parsed.name
     if (parsed.description !== undefined) data.summary = parsed.description
     if (parsed.isPublic !== undefined) data.isPublic = parsed.isPublic
     if (parsed.isArchived !== undefined) data.isArchived = parsed.isArchived
+    // Extended world fields
+    if (parsed.logline !== undefined) data.logline = parsed.logline
+    if (parsed.genreBlend !== undefined) data.genreBlend = parsed.genreBlend
+    if (parsed.overallTone !== undefined) data.overallTone = parsed.overallTone
+    if (parsed.keyThemes !== undefined) data.keyThemes = parsed.keyThemes
+    if (parsed.audienceRating !== undefined) data.audienceRating = parsed.audienceRating
+    if (parsed.scopeScale !== undefined) data.scopeScale = parsed.scopeScale
+    if (parsed.technologyLevel !== undefined) data.technologyLevel = parsed.technologyLevel
+    if (parsed.magicLevel !== undefined) data.magicLevel = parsed.magicLevel
+    if (parsed.cosmologyModel !== undefined) data.cosmologyModel = parsed.cosmologyModel
+    if (parsed.climateBiomes !== undefined) data.climateBiomes = parsed.climateBiomes
+    if (parsed.calendarTimekeeping !== undefined) data.calendarTimekeeping = parsed.calendarTimekeeping
+    if (parsed.societalOverview !== undefined) data.societalOverview = parsed.societalOverview
+    if (parsed.conflictDrivers !== undefined) data.conflictDrivers = parsed.conflictDrivers
+    if (parsed.rulesConstraints !== undefined) data.rulesConstraints = parsed.rulesConstraints
+    if (parsed.aestheticDirection !== undefined) data.aestheticDirection = parsed.aestheticDirection
 
     const { worldService } = await import('@/lib/services/worldService')
     const updated = await worldService.updateWorld(params.id, data, user.id)

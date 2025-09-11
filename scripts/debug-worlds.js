@@ -1,3 +1,4 @@
+/* eslint-env node */
 // Quick database test script
 // Run with: node debug-worlds.js
 
@@ -22,7 +23,7 @@ async function testDatabase() {
     // Test basic connection
     const { data: testData, error: testError } = await supabase
       .from('worlds')
-      .select('id, name, user_id, owner_id, created_at')
+      .select('id, name, owner_id, created_at')
       .limit(5);
     
     console.log('📊 Database test result:', {
@@ -40,7 +41,6 @@ async function testDatabase() {
         console.log('📋 Found worlds:', testData.map(w => ({
           id: w.id,
           name: w.name,
-          user_id: w.user_id,
           owner_id: w.owner_id
         })));
       } else {

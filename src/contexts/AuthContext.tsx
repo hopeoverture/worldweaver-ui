@@ -19,6 +19,7 @@ interface AuthContextType {
   profile: Profile | null
   session: Session | null
   loading: boolean
+  isLoading: boolean
   error: AuthErrorState | null
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthErrorState | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthErrorState | null }>
@@ -473,6 +474,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profile,
     session,
     loading,
+    isLoading: loading,
     error,
     signUp,
     signIn,

@@ -24,7 +24,7 @@ export class WorldService {
           entities(count),
           world_members(count)
         `)
-        .eq('user_id', userId) // Filter by user ownership (user_id is the primary ownership field)
+        .eq('owner_id', userId) // Filter by user ownership (owner_id is the primary ownership field)
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
 
@@ -38,7 +38,7 @@ export class WorldService {
         rawWorlds: worlds?.map(w => ({ 
           id: w.id, 
           name: w.name, 
-          user_id: w.user_id, 
+          // user_id field removed from schema 
           owner_id: w.owner_id 
         })) || [],
         timestamp: new Date().toISOString()
@@ -125,7 +125,7 @@ export class WorldService {
           name: data.name,
           description: data.description || '',
           owner_id: ownerId,
-          user_id: ownerId, // Required field for ownership
+          // Note: user_id was removed from schema, only owner_id is used
           is_public: data.isPublic || false,
           is_archived: false,
           settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
@@ -163,7 +163,7 @@ export class WorldService {
         .from('worlds')
         .update(updateData)
         .eq('id', worldId)
-        .eq('user_id', userId) // Only owner can update
+        .eq('owner_id', userId) // Only owner can update
         .select()
         .single();
 
@@ -195,7 +195,7 @@ export class WorldService {
         .from('worlds')
         .delete()
         .eq('id', worldId)
-        .eq('user_id', userId); // Only owner can delete
+        .eq('owner_id', userId); // Only owner can delete
 
       if (error) {
         logError('Supabase error deleting world', error, { action: 'deleteWorld', worldId, userId });
@@ -217,7 +217,7 @@ export class WorldService {
         .from('worlds')
         .update({ is_archived: archived })
         .eq('id', worldId)
-        .eq('user_id', userId); // Only owner can archive
+        .eq('owner_id', userId); // Only owner can archive
 
       if (error) {
         logError('Supabase error archiving world', error, { action: 'archiveWorld', worldId, userId, metadata: { archived } });
@@ -239,7 +239,7 @@ export class WorldService {
       const { data: world, error } = await supabase
         .from('worlds')
         .select('id')
-        .or(`user_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
+        .or(`owner_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
         .eq('id', worldId)
         .single();
 
@@ -268,7 +268,7 @@ export class WorldService {
       const { data: worlds, error } = await supabase
         .from('worlds')
         .select('id')
-        .or(`user_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
+        .or(`owner_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
         .in('id', worldIds);
 
       if (error) {

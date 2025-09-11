@@ -109,7 +109,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest): Promise<N
     name: parsed.name,
     description: parsed.description ?? null,
     owner_id: user.id,
-    user_id: user.id, // Required field for Insert operations
+    // Note: user_id field removed from schema, only owner_id is used
     is_public: parsed.isPublic ?? false,
     is_archived: false,
     settings: {},
@@ -134,7 +134,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest): Promise<N
     requestId,
     userId: user.id,
     ownerIdValue: insertPayload.owner_id,
-    userIdValue: insertPayload.user_id,
+    // userIdValue removed - field no longer exists in schema
     userEmail: user.email,
     insertPayload,
     timestamp: new Date().toISOString()
@@ -166,7 +166,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest): Promise<N
     requestId,
     worldId: row.id,
     worldName: row.name,
-    createdUserId: row.user_id,
+    // createdUserId removed - field no longer exists in schema
     createdOwnerId: row.owner_id,
     requestUserId: user.id,
     userEmail: user.email,

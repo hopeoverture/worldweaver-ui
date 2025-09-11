@@ -5,7 +5,13 @@
       "Bash(npx supabase:*)",
       "Bash(node:*)",
       "Bash(curl:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx next:*)",
+      "Bash(chmod:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []
