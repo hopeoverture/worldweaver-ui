@@ -110,10 +110,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
+          <div className="mx-auto h-12 w-12 bg-blue-600 dark:bg-brand-600 rounded-xl flex items-center justify-center shadow-lg">
             <svg
               className="h-8 w-8 text-white"
               fill="none"
@@ -128,18 +128,18 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
             Welcome back to WorldWeaver
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Sign in to continue building your worlds
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 bg-white dark:bg-neutral-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email address
               </label>
               <Input
@@ -156,7 +156,7 @@ export default function LoginPage() {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
               </label>
               <Input
@@ -186,9 +186,9 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
-              <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/register" className="font-medium text-blue-600 dark:text-brand-400 hover:text-blue-500 dark:hover:text-brand-300">
                 Sign up here
               </Link>
             </p>

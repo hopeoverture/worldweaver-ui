@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createStandardClient } from '@supabase/supabase-js'
 import { Database } from './types.generated'
 
 export function createClient() {
@@ -15,10 +16,10 @@ export function createClient() {
     throw new Error('Supabase credentials not configured')
   }
 
-  return createBrowserClient<Database>(
-    supabaseUrl,
-    supabaseAnonKey
-  )
+  console.log('✅ Using SSR-compatible createBrowserClient for proper cookie management')
+  
+  // Use SSR-compatible browser client for proper cookie/session management
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
 }
 
 // For backward compatibility, create a singleton instance (only when valid)

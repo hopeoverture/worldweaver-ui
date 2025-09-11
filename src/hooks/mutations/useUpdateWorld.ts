@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/ToastProvider";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Patch = Partial<{
   name: string;
@@ -21,6 +22,8 @@ type Patch = Partial<{
 export function useUpdateWorld(worldId: string) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { user } = useAuth();
+  
   return useMutation({
     mutationFn: async (patch: Patch) => {
       const res = await fetch(`/api/worlds/${worldId}`, {
@@ -35,7 +38,11 @@ export function useUpdateWorld(worldId: string) {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate both the general worlds query and the user-specific one
       qc.invalidateQueries({ queryKey: ["worlds"] });
+      if (user?.id) {
+        qc.invalidateQueries({ queryKey: ["worlds", user.id] });
+      }
       qc.invalidateQueries({ queryKey: ["world", worldId] });
       toast({ title: "World updated", variant: "success" });
     },

@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(npx supabase:*)",
+      "Bash(node:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

@@ -54,10 +54,10 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-green-600 rounded-xl flex items-center justify-center">
+          <div className="text-center bg-white dark:bg-neutral-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800">
+            <div className="mx-auto h-12 w-12 bg-green-600 dark:bg-green-500 rounded-xl flex items-center justify-center shadow-lg">
               <svg
                 className="h-8 w-8 text-white"
                 fill="none"
@@ -72,13 +72,13 @@ export default function RegisterPage() {
                 />
               </svg>
             </div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
               Account created successfully!
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
               Please check your email to verify your account, then you can sign in.
             </p>
-            <p className="mt-4 text-center text-sm text-gray-500">
+            <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-500">
               Redirecting to sign in...
             </p>
           </div>
@@ -88,10 +88,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center">
+          <div className="mx-auto h-12 w-12 bg-blue-600 dark:bg-brand-600 rounded-xl flex items-center justify-center shadow-lg">
             <svg
               className="h-8 w-8 text-white"
               fill="none"
@@ -106,18 +106,18 @@ export default function RegisterPage() {
               />
             </svg>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-gray-100">
             Create your WorldWeaver account
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Start building amazing worlds today
           </p>
         </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 bg-white dark:bg-neutral-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Full name
               </label>
               <Input
@@ -134,7 +134,7 @@ export default function RegisterPage() {
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email address
               </label>
               <Input
@@ -151,7 +151,7 @@ export default function RegisterPage() {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
               </label>
               <Input
@@ -168,7 +168,7 @@ export default function RegisterPage() {
             </div>
             
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Confirm password
               </label>
               <Input
@@ -186,11 +186,11 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg
-                    className="h-5 w-5 text-red-400"
+                    className="h-5 w-5 text-red-400 dark:text-red-500"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
@@ -202,7 +202,7 @@ export default function RegisterPage() {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-red-800">{error}</p>
+                  <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
                 </div>
               </div>
             </div>
@@ -219,9 +219,9 @@ export default function RegisterPage() {
           </div>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{' '}
-              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/login" className="font-medium text-blue-600 dark:text-brand-400 hover:text-blue-500 dark:hover:text-brand-300">
                 Sign in here
               </Link>
             </p>

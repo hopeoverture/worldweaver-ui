@@ -113,6 +113,35 @@ function classifyAuthError(error: AuthError | Error | any): AuthErrorState {
   }
 }
 
+// Create singleton Supabase client instance outside component to prevent multiple instances
+let supabaseClient: ReturnType<typeof createClient> | null = null
+
+const getSupabaseClient = () => {
+  if (typeof window === 'undefined') {
+    throw new Error('Supabase client not available during SSR')
+  }
+  
+  // Return existing instance if already created
+  if (supabaseClient) {
+    return supabaseClient
+  }
+  
+  console.log('Creating Supabase client singleton...', {
+    hasWindow: typeof window !== 'undefined',
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Present' : 'Missing',
+    key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Present' : 'Missing'
+  })
+  
+  try {
+    supabaseClient = createClient()
+    console.log('✅ Supabase client singleton created successfully')
+    return supabaseClient
+  } catch (error) {
+    console.error('❌ Failed to create Supabase client:', error)
+    throw error
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -120,14 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AuthErrorState | null>(null)
   const [lastOperation, setLastOperation] = useState<(() => Promise<void>) | null>(null)
-  
-  // Lazy initialize Supabase client only in browser environment
-  const getSupabaseClient = () => {
-    if (typeof window === 'undefined') {
-      throw new Error('Supabase client not available during SSR')
-    }
-    return createClient()
-  }
 
   // Clear error helper
   const clearError = () => setError(null)
@@ -170,11 +191,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
           if (session?.user) {
-            await fetchProfile(session.user.id)
-          } else {
-            setLoading(false)
+            // Fetch profile but don't let it block auth completion
+            fetchProfile(session.user.id).catch(error => {
+              console.warn('Initial profile fetch failed (non-critical):', error)
+            })
           }
         }
+        // Always complete loading, regardless of profile success
+        setLoading(false)
       } catch (error) {
         const authError = classifyAuthError(error)
         setError(authError)
@@ -194,11 +218,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           
           if (session?.user) {
-            await fetchProfile(session.user.id)
+            // Fetch profile but don't let it block auth completion
+            fetchProfile(session.user.id).catch(error => {
+              // Profile errors are non-critical - just log them
+              console.warn('Profile fetch failed (non-critical):', error)
+            })
           } else {
             setProfile(null)
-            setLoading(false)
           }
+          
+          // Always complete auth loading, regardless of profile success
+          setLoading(false)
           
           // Clear errors on successful auth state change
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
@@ -230,27 +260,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        const authError = classifyAuthError(error)
-        setError(authError)
-        logAuthError('fetch_profile', error, { 
-          action: 'fetch_profile',
-          userId: userId.substring(0, 8) + '...' 
-        })
+        // For missing profiles (PGRST116), don't treat as auth error
+        if (error.code === 'PGRST116') {
+          console.info('No profile found for user - this is normal for new users')
+          setProfile(null)
+        } else {
+          // Other profile errors are still logged but don't break auth
+          logAuthError('fetch_profile', error, { 
+            action: 'fetch_profile',
+            userId: userId.substring(0, 8) + '...' 
+          })
+          setProfile(null)
+        }
       } else {
         setProfile(data)
-        // Clear profile-related errors on success
-        clearError()
       }
     } catch (error) {
-      const authError = classifyAuthError(error)
-      setError(authError)
       logAuthError('fetch_profile', error as Error, { 
         action: 'fetch_profile',
         userId: userId.substring(0, 8) + '...' 
       })
-    } finally {
-      setLoading(false)
+      setProfile(null)
     }
+    // Note: Don't set loading to false here - auth state handler manages that
   }
 
   const signUp = async (email: string, password: string, fullName?: string) => {
@@ -292,32 +324,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const operation = async () => {
+    try {
+      setLoading(true)
+      clearError()
+      
       const supabase = getSupabaseClient()
-      const { error } = await supabase.auth.signInWithPassword({
+      
+      console.log('Attempting sign-in with:', {
+        email: email.split('@')[0] + '@...',
+        hasPassword: !!password,
+        passwordLength: password.length
+      })
+      
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<{ data: null, error: Error }>((resolve) => {
+        setTimeout(() => resolve({ 
+          data: null, 
+          error: new Error('Sign-in timeout after 10 seconds') 
+        }), 10000)
+      })
+      
+      const signInPromise = supabase.auth.signInWithPassword({
         email,
         password,
       })
       
-      if (error) {
-        throw error
-      }
-    }
-
-    try {
-      setLoading(true)
-      clearError()
-      setLastOperation(() => operation)
+      console.log('About to race promises - signInPromise vs timeout...')
+      const { data, error } = await Promise.race([signInPromise, timeoutPromise])
+      console.log('Promise race completed successfully')
       
-      await operation()
+      console.log('Supabase sign-in response:', {
+        hasData: !!data,
+        user: data?.user?.id ? 'User returned' : 'No user',
+        session: data?.session ? 'Session created' : 'No session',
+        error: error ? {
+          message: error.message,
+          code: (error as any)?.code,
+          status: (error as any)?.status,
+          details: (error as any)?.details,
+          hint: (error as any)?.hint
+        } : 'No error'
+      })
+      
+      if (error) {
+        const authError = classifyAuthError(error)
+        setError(authError)
+        
+        console.error('Sign-in failed with Supabase error:', {
+          originalError: error,
+          classifiedError: authError,
+          email: email.split('@')[0] + '@...'
+        })
+        
+        logAuthError('sign_in', error, { 
+          action: 'sign_in',
+          metadata: { 
+            email: email.split('@')[0] + '@...',
+            errorCode: (error as any)?.code,
+            errorStatus: (error as any)?.status
+          }
+        })
+        
+        return { error: authError }
+      }
+      
       return { error: null }
     } catch (error) {
+      console.error('Unexpected error during sign-in:', error)
       const authError = classifyAuthError(error)
       setError(authError)
-      logAuthError('sign_in', error as Error, { 
-        action: 'sign_in',
-        metadata: { email: email.split('@')[0] + '@...' }
-      })
+      logAuthError('sign_in_unexpected', error as Error, { action: 'sign_in' })
       return { error: authError }
     } finally {
       setLoading(false)
