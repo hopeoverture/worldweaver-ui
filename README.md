@@ -3,15 +3,19 @@
 This document reflects the current, running state of the application and how to work with it. It supersedes older docs in the repo for setup and usage.
 
 ## Overview
-- Next.js App Router app with Supabase for auth, database, and storage
+- **Next.js 15.5.2** App Router with **React 19.1.0**
+- **Supabase** for auth, database, and storage with SSR support
+- **Tailwind CSS 4.1.13** for styling (no PostCSS config needed)
 - Fully authenticated API routes with server middleware (CSP nonces, headers, rate limiting)
 - Core domain: Worlds, Folders, Templates, Entities, Relationships, Members, Invites
-- Modern UI with virtualized grids and skeleton loaders for large datasets
+- Modern UI with virtualized grids, skeleton loaders, and error boundaries for large datasets
+- TypeScript with strict mode and Zod validation
 
 ## Requirements
-- Node 18+ (Node 20/22 recommended)
-- npm (repo uses `package-lock.json`)
-- Supabase project (URL + keys)
+- **Node 20/22** (Node 18+ minimum)
+- **npm** (repo uses `package-lock.json`)
+- **Supabase project** with database, auth, and storage enabled
+- Environment variables (see setup below)
 
 ## Setup
 1) Install dependencies
@@ -20,37 +24,88 @@ npm install
 ```
 
 2) Configure environment
-- Copy `.env.local.example` to `.env.local` and fill values, or set the following:
-```
-NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+Create `.env.local` with the following required variables:
+```bash
+# Required - Supabase public configuration
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-# Required for server/admin utilities (seeding, scripts)
+
+# Required - Service role for admin operations and seeding
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Optional - Development and seeding configuration
+SEED_ADMIN_TOKEN=your-random-secret-for-seeding
+SEED_BASE_URL=http://localhost:3000
+ADMIN_SEED_ENABLED=false
 ```
 
-3) Run the app
+3) Apply database migrations
+```bash
+# Using Supabase CLI
+npx supabase db push
+
+# Or using psql directly
+psql "$SUPABASE_DB_URL" -f supabase/migrations/*.sql
 ```
-# Dev
+
+4) Run the application
+```bash
+# Development server (includes Windows Node.js fs.readlink patch)
 npm run dev
 
-# Production build
+# Production build and start
 npm run build
-npm start
+npm run start
+
+# Seed core system templates (optional)
+npm run seed:core
 ```
 
-4) Lint and tests
-```
+5) Development tools
+```bash
+# Linting and testing
 npm run lint
-npm test
+npm run test
+npm run test:api
+
+# Type checking
+npm run typecheck
+
+# MCP server testing (optional)
+npm run test:mcp
 ```
 
-## Scripts
-- `dev`: Next.js dev server (with patch for fs.readlink on Windows)
-- `build`, `start`: Production build and start
-- `lint`: ESLint (Next config)
-- `test`: Vitest (minimal at present)
-- `seed:core`: Seed core templates into the database via API/admin script
-- `test:api`, `test:mcp`: Utility test scripts (optional)
+## Key Technologies
+
+### Frontend
+- **Next.js 15.5.2** with App Router and React 19.1.0
+- **Tailwind CSS 4.1.13** with CSS variables for theming
+- **TypeScript** with strict mode enabled
+- **Zod** for runtime validation and type safety
+- **TanStack Query** for server state management
+- **Zustand** for client-side state management
+
+### Backend & Database
+- **Supabase** for authentication, database, and file storage
+- **PostgreSQL** with Row Level Security (RLS) policies
+- **Server-side rendering** with authentication middleware
+- **JSONB fields** for flexible custom data storage
+
+### Development & Deployment
+- **Vitest** for testing with API endpoint validation
+- **ESLint** with Next.js configuration
+- **Vercel** deployment with automatic builds
+- **Windows compatibility** via fs.readlink patch
+
+## Available Scripts
+- `npm run dev` - Development server with HMR and Windows patch
+- `npm run build` - Production build with optimization
+- `npm run start` - Start production server
+- `npm run lint` - ESLint code analysis
+- `npm run test` - Run Vitest test suite
+- `npm run test:api` - Test API endpoints
+- `npm run seed:core` - Seed system templates via admin API
+- `npm run test:mcp` - Test MCP server configuration
 
 ## Environment
 - Browser client: `src/lib/supabase/browser.ts`
@@ -130,11 +185,28 @@ supabase/
   migrations/                 # SQL migrations
 ```
 
+## Recent Updates & Fixes
+
+### September 2025
+- **PostCSS Configuration Fix**: Fixed PostCSS config for Tailwind CSS v4 using `@tailwindcss/postcss` plugin, resolving Vercel build failures
+- **Field Consistency Audit**: Completed comprehensive database field naming consistency review
+- **Authentication & World Loading**: Fixed SSR initialization issues and authentication context problems
+- **Database Optimizations**: Added performance monitoring views and composite indexes for common query patterns
+
 ## Troubleshooting
-- Auth failures: ensure `NEXT_PUBLIC_SUPABASE_*` keys are set and valid
-- Admin/seed scripts: require `SUPABASE_SERVICE_ROLE_KEY`
-- CSP issues in dev: HMR requires relaxed inline policies; production uses nonces
-- Windows: repo includes a small patch loader for Next.js in scripts (`scripts/patch-fs-readlink.cjs`)
+
+### Common Issues
+- **Auth failures**: Ensure `NEXT_PUBLIC_SUPABASE_*` environment variables are set and valid
+- **Build failures**: Tailwind v4 requires proper PostCSS config with `@tailwindcss/postcss` plugin
+- **Admin operations**: Require `SUPABASE_SERVICE_ROLE_KEY` environment variable
+- **Windows development**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
+- **CSP violations**: Development allows unsafe-inline for HMR; production uses strict nonces
+
+### Performance & Monitoring
+- Database optimization views: `public.index_usage_stats`, `public.table_stats`
+- RLS helper functions: `user_has_world_access()`, `user_can_edit_world()`, `user_is_world_admin()`
+- Composite indexes for world access, membership, and entity searches
+- GIN indexes for JSONB field searches
 
 ## License & Support
 - Private project; no license file present

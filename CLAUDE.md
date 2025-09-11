@@ -33,12 +33,13 @@ Optional environment variables for development:
 
 ### Tech Stack
 - **Framework**: Next.js 15.5.2 with App Router
-- **UI**: React 19.1.0 with Tailwind CSS 4.1.x
-- **Database**: Supabase with PostgreSQL
+- **UI**: React 19.1.0 with Tailwind CSS 4.1.13 (CSS variables, no config file needed)
+- **Database**: Supabase with PostgreSQL and Row Level Security
 - **State Management**: Zustand for client state, TanStack Query for server state
 - **Authentication**: Supabase Auth with SSR support
-- **Testing**: Vitest
-- **Type Safety**: TypeScript with strict mode, Zod for validation
+- **Testing**: Vitest with API endpoint validation
+- **Type Safety**: TypeScript with strict mode, Zod for runtime validation
+- **Deployment**: Vercel with automatic builds
 
 ### Project Structure
 - `src/app/`: Next.js App Router pages and API routes
@@ -164,14 +165,25 @@ This project includes comprehensive MCP server configuration for enhanced develo
 
 See `MCP_SETUP.md` for detailed configuration and usage guide.
 
+## Recent Updates & Fixes
+
+### September 2025 - Build & Configuration Fixes
+- **PostCSS Configuration**: Fixed PostCSS config for Tailwind CSS v4. Requires `@tailwindcss/postcss` plugin with correct syntax to resolve Vercel build failures.
+- **Tailwind CSS v4.1.13**: Updated to latest version with CSS variables for theming. No `tailwind.config.ts` needed for v4.
+- **Field Consistency**: Completed comprehensive database field naming audit ensuring snake_case in database, camelCase in domain.
+- **Authentication Issues**: Fixed SSR initialization and AuthContext problems affecting world loading.
+- **Database Optimizations**: Added performance monitoring views and optimized indexes for common query patterns.
+
 ## Troubleshooting
 
 ### Common Issues
 - **Auth failures**: Ensure `NEXT_PUBLIC_SUPABASE_*` environment variables are set and valid
+- **Build failures**: Tailwind v4 requires proper PostCSS config with `@tailwindcss/postcss` plugin
 - **Admin/seed operations**: Require `SUPABASE_SERVICE_ROLE_KEY` environment variable  
 - **CSP issues**: Development allows unsafe-inline for HMR, production uses strict nonces
 - **Database sync**: Run migrations with `npx supabase db push`, regenerate types after schema changes
 - **Field consistency**: Database uses snake_case, domain uses camelCase - adapters handle conversion
+- **Windows compatibility**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
 
 ### Performance Monitoring
 - Database optimization views available: `public.index_usage_stats`, `public.table_stats`
