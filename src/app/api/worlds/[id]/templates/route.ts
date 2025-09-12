@@ -27,6 +27,8 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
   const requestId = generateRequestId()
   const debugSteps: string[] = ['HANDLER_START']
   
+  console.log('🔥 Template handler starting', { requestId, timestamp: new Date().toISOString() })
+  
   try {
     debugSteps.push('EXTRACT_PARAMS')
     const params = await ctx.params
@@ -98,15 +100,20 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
 export const POST = async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
   const debugInfo: string[] = ['POST_START']
   
+  console.log('🚀 POST handler starting', { timestamp: new Date().toISOString() })
+  
   try {
     debugInfo.push('CALLING_HANDLER')
+    console.log('🚀 About to call templatePostHandler')
     const result = await templatePostHandler(req, ctx)
+    console.log('🚀 templatePostHandler returned successfully')
     debugInfo.push('HANDLER_SUCCESS')
     
     // Add debug headers to successful response
     result.headers.set('X-Debug-Flow', debugInfo.join(','))
     return result
   } catch (error) {
+    console.log('🚀 POST handler caught error', { error, errorMessage: error instanceof Error ? error.message : String(error) })
     debugInfo.push('HANDLER_ERROR')
     debugInfo.push(`ERROR:${error instanceof Error ? error.message : String(error)}`)
     
