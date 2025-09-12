@@ -22,6 +22,7 @@ export function adaptWorldFromDatabase(
 ): World {
   return {
     id: dbWorld.id,
+    ownerId: dbWorld.owner_id,
     name: dbWorld.name,
     summary: dbWorld.description || undefined, // DB: description -> Domain: summary
     description: dbWorld.description || undefined,

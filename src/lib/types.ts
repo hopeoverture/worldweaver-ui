@@ -26,6 +26,7 @@ export type Json =
 
 export type World = {
   id: ID;
+  ownerId: ID;
   name: string;
   summary?: string;
   description?: string;

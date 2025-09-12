@@ -1594,6 +1594,94 @@ export class SupabaseWorldService {
       throw new Error('Failed to remove member');
     }
   }
+
+  /**
+   * Add a member to a world via invite link join
+   */
+  async addMemberByJoin(worldId: string, userId: string, role: 'viewer' | 'editor' | 'admin') {
+    try {
+      const supabase = await createServerSupabaseClient()
+
+      // Add the user as a member
+      const { data: newMember, error } = await supabase
+        .from('world_members')
+        .insert({
+          world_id: worldId,
+          user_id: userId,
+          role: role
+        })
+        .select(`
+          id,
+          world_id,
+          user_id,
+          role,
+          joined_at,
+          profiles(email, full_name)
+        `)
+        .single();
+
+      if (error) {
+        logDatabaseError('Error adding member via join', error, { worldId, userId, action: 'add_member_join' });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      // Log the join activity
+      logAuditEvent('member_joined', {
+        userId,
+        worldId,
+        metadata: { role, method: 'invite_link' }
+      });
+
+      return {
+        id: newMember.id,
+        worldId: newMember.world_id,
+        userId: newMember.user_id,
+        role: newMember.role,
+        joinedAt: newMember.joined_at,
+        email: (newMember.profiles as any)?.email,
+        fullName: (newMember.profiles as any)?.full_name
+      };
+    } catch (error) {
+      logDatabaseError('Error adding member via join', error as Error, { worldId, userId, action: 'add_member_join' });
+      throw new Error('Failed to add member to world');
+    }
+  }
+
+  /**
+   * Get user profile information
+   */
+  async getUserProfile(userId: string) {
+    try {
+      const supabase = await createServerSupabaseClient()
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, avatar_url, created_at, updated_at')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        // Don't throw error if profile doesn't exist, just return null
+        if (error.code === 'PGRST116') {
+          return null;
+        }
+        logDatabaseError('Error fetching user profile', error, { userId, action: 'get_user_profile' });
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      return {
+        id: profile.id,
+        email: profile.email,
+        fullName: profile.full_name,
+        avatarUrl: profile.avatar_url,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at
+      };
+    } catch (error) {
+      logDatabaseError('Error fetching user profile', error as Error, { userId, action: 'get_user_profile' });
+      throw new Error('Failed to fetch user profile');
+    }
+  }
 }
 
 // Export singleton instance

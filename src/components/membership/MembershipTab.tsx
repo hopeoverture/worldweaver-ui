@@ -52,6 +52,14 @@ const PERMISSION_LABELS = {
 
 export function MembershipTab({ world }: MembershipTabProps) {
   const [activeSection, setActiveSection] = useState<'members' | 'invites' | 'settings'>('members');
+  
+  // Helper function to get the correct invite URL
+  const getInviteUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/join/${world.id}`;
+    }
+    return `${process.env.NEXT_PUBLIC_APP_URL || 'https://worldweaver.app'}/join/${world.id}`;
+  };
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
@@ -675,11 +683,18 @@ export function MembershipTab({ world }: MembershipTabProps) {
                       </div>
                       <div className="flex items-center space-x-3">
                         <code className="flex-1 bg-white dark:bg-gray-800 px-3 py-2 rounded-md text-sm font-mono border border-blue-200 dark:border-blue-600 text-blue-800 dark:text-blue-200">
-                          https://worldweaver.app/join/{world.id}
+                          {getInviteUrl()}
                         </code>
                         <Button
                           size="sm"
-                          onClick={() => navigator.clipboard.writeText(`https://worldweaver.app/join/${world.id}`)}
+                          onClick={() => {
+                            navigator.clipboard.writeText(getInviteUrl());
+                            toast({
+                              title: 'Invite link copied!',
+                              description: 'The invite link has been copied to your clipboard.',
+                              variant: 'success',
+                            });
+                          }}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-4"
                         >
                           Copy

@@ -61,6 +61,8 @@ class UnifiedService {
   async getWorldMembers(worldId: string, userId: string) { return supabaseWorldService.getWorldMembers(worldId, userId); }
   async updateMemberRole(worldId: string, memberId: string, role: string, userId: string) { return supabaseWorldService.updateMemberRole(worldId, memberId, role, userId); }
   async removeMember(worldId: string, memberId: string, userId: string) { return supabaseWorldService.removeMember(worldId, memberId, userId); }
+  async addMemberByJoin(worldId: string, userId: string, role: 'viewer' | 'editor' | 'admin') { return supabaseWorldService.addMemberByJoin(worldId, userId, role); }
+  async getUserProfile(userId: string) { return supabaseWorldService.getUserProfile(userId); }
 }
 
 // Export singleton unified service for backward compatibility
