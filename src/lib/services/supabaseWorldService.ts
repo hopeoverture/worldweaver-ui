@@ -526,19 +526,48 @@ export class SupabaseWorldService {
     
     console.log('✅ CreateRelationship: World access verified', { worldId, worldName: world.name, userId })
 
-    console.log('🔧 CreateRelationship: Creating Supabase client')
+    console.log('🔧 CreateRelationship: Creating authenticated Supabase client')
     let supabase
     try {
       supabase = await createServerSupabaseClient()
       console.log('✅ CreateRelationship: Supabase client created')
+      
+      // Verify client has authentication context for RLS policies
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+      console.log('🔐 CreateRelationship: Auth context check', { 
+        hasUser: !!authData?.user, 
+        userId: authData?.user?.id,
+        passedUserId: userId,
+        authMatch: authData?.user?.id === userId,
+        authError: authError?.message
+      })
+      
+      if (authError) {
+        console.log('❌ CreateRelationship: Auth context error', { authError: authError.message })
+        throw new Error(`Authentication context missing: ${authError.message}`)
+      }
+      
+      if (!authData?.user) {
+        console.log('❌ CreateRelationship: No authenticated user context')
+        throw new Error('No authenticated user context for RLS policies')
+      }
+      
+      if (authData.user.id !== userId) {
+        console.log('❌ CreateRelationship: User ID mismatch', { 
+          authUserId: authData.user.id, 
+          passedUserId: userId 
+        })
+        throw new Error('User ID mismatch in authentication context')
+      }
+      
     } catch (supabaseError) {
-      console.log('❌ CreateRelationship: Failed to create Supabase client', {
+      console.log('❌ CreateRelationship: Failed to create authenticated Supabase client', {
         error: supabaseError instanceof Error ? supabaseError.message : 'Unknown Supabase error',
         stack: supabaseError instanceof Error ? supabaseError.stack : undefined,
         hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
-      throw new Error(`Supabase client creation failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}`)
+      throw new Error(`Authenticated Supabase client creation failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}`)
     }
 
     // Verify both entities exist in this world
