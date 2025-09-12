@@ -650,9 +650,16 @@ export class SupabaseWorldService {
       .single()
 
     if (error) {
-      console.log('❌ CreateRelationship: Database insert error', { error, insertData })
+      console.log('❌ CreateRelationship: Database insert error', { 
+        error, 
+        insertData,
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint,
+        usingAdminClient: supabase === adminClient
+      })
       logDatabaseError('Supabase error creating relationship', error, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'create_relationship' })
-      throw new Error(`Database error: ${error.message}`)
+      throw new Error(`Database error: ${error.message} (Code: ${error.code})`)
     }
 
     if (!row) {
