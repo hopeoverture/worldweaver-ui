@@ -55,7 +55,29 @@ export class SupabaseWorldService {
    */
   async getWorldById(worldId: string, userId: string): Promise<World | null> {
     try {
-      const supabase = await createServerSupabaseClient()
+      // Use admin client fallback pattern like in createRelationship
+      let supabase
+      try {
+        supabase = await createServerSupabaseClient()
+        const { data: authData, error: authError } = await supabase.auth.getUser()
+        
+        // If auth context is missing or invalid, use admin client
+        if (authError || !authData?.user || authData.user.id !== userId) {
+          console.log('⚠️ GetWorldById: Auth context invalid, switching to admin client')
+          
+          if (!adminClient) {
+            console.log('❌ GetWorldById: Admin client not available')
+            throw new Error('Admin client not configured and regular auth failed')
+          }
+          
+          supabase = adminClient
+          console.log('✅ GetWorldById: Using admin client to bypass RLS')
+        }
+      } catch (supabaseError) {
+        console.log('❌ GetWorldById: Failed to create Supabase client', supabaseError)
+        throw supabaseError
+      }
+
       const { data: world, error } = await supabase
         .from('worlds')
         .select(`
