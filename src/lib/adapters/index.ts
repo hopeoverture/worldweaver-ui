@@ -52,7 +52,7 @@ export function adaptWorldFromDatabase(
     imageUrl: undefined,
     coverImage: undefined,
     seatLimit: undefined,
-    inviteLinkEnabled: undefined,
+    inviteLinkEnabled: dbWorld.invite_link_enabled ?? false,
     inviteLinkRole: undefined,
     inviteLinkExpires: undefined,
     inviteLinkMaxUses: undefined,
@@ -92,6 +92,9 @@ export function adaptWorldToDatabase(
   if (domainWorld.conflictDrivers !== undefined) dbWorld.conflict_drivers = domainWorld.conflictDrivers;
   if (domainWorld.rulesConstraints !== undefined) dbWorld.rules_constraints = domainWorld.rulesConstraints;
   if (domainWorld.aestheticDirection !== undefined) dbWorld.aesthetic_direction = domainWorld.aestheticDirection;
+  
+  // Invite link settings
+  if (domainWorld.inviteLinkEnabled !== undefined) dbWorld.invite_link_enabled = domainWorld.inviteLinkEnabled;
   
   return dbWorld;
 }

@@ -422,6 +422,7 @@ export type Database = {
           description: string | null
           genre_blend: string[] | null
           id: string
+          invite_link_enabled: boolean | null
           is_archived: boolean | null
           is_public: boolean | null
           key_themes: string[] | null
@@ -448,6 +449,7 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
@@ -474,6 +476,7 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
