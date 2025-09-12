@@ -9,6 +9,7 @@ import { useCreateTemplate } from '@/hooks/mutations/useCreateTemplate';
 import { TemplateField, FieldType } from '@/lib/types';
 import { useToast } from '@/components/ui/ToastProvider';
 import { logError } from '@/lib/logging';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CreateTemplateModalProps {
   open: boolean;
@@ -51,7 +52,7 @@ export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateMo
     try {
       const templateFields: TemplateField[] = fields.map(field => ({
         ...field,
-        id: crypto.randomUUID()
+        id: uuidv4()
       }));
 
       await createTemplate.mutateAsync({

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Link } from '@/lib/types';
 import { Button } from '../../ui/Button';
+import { v4 as uuidv4 } from 'uuid';
 
 interface LinkEditorProps {
   worldId: string;
@@ -23,7 +24,7 @@ export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
     }
 
     const newLink: Link = {
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       fromEntityId: '', // Will be set when entity is created
       toEntityId: selectedEntityId,
       label: relationshipLabel.trim()

@@ -67,10 +67,10 @@ export function Modal({
       data-testid='create-entity-modal'
     >
       <button
-        aria-hidden='true'
         tabIndex={-1}
         className='absolute inset-0 bg-black/50 backdrop-blur-[2px]'
         onClick={onClose}
+        aria-label="Close modal"
       />
       <div
         role='dialog'

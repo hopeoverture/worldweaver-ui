@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { World, Folder, Template, Entity, Link, RelationshipRow, ID, WorldMember, WorldInvite, MemberRole } from './types';
 import { logError } from './logging';
+import { v4 as uuidv4 } from 'uuid';
 
 type State = {
   worlds: World[];
@@ -187,12 +188,12 @@ export const useStore = create<State & Actions>((set, get) => ({
     await get().updateWorld(id, { isArchived: false });
   },
   addFolder: (f) => {
-    const nf: Folder = { id: crypto.randomUUID(), count: 0, ...f };
+    const nf: Folder = { id: uuidv4(), count: 0, ...f };
     set(s => ({ folders: [nf, ...s.folders] }));
     return nf;
   },
   addTemplate: (t) => {
-    const nt: Template = { id: crypto.randomUUID(), ...t };
+    const nt: Template = { id: uuidv4(), ...t };
     set(s => ({ templates: [nt, ...s.templates] }));
     return nt;
   },
@@ -204,7 +205,7 @@ export const useStore = create<State & Actions>((set, get) => ({
       return { templates: s.templates.filter(t => t.id !== id) };
     }),
   addEntity: (e) => {
-    const ne: Entity = { id: crypto.randomUUID(), updatedAt: new Date().toISOString(), ...e };
+    const ne: Entity = { id: uuidv4(), updatedAt: new Date().toISOString(), ...e };
     set(s => {
       // No need to update world entity count since it's calculated dynamically
       const worlds = s.worlds.map(w => w.id === e.worldId ? { ...w, updatedAt: new Date().toISOString() } : w);
@@ -215,7 +216,7 @@ export const useStore = create<State & Actions>((set, get) => ({
   updateEntity: (id, patch) =>
     set(s => ({ entities: s.entities.map(en => en.id === id ? { ...en, ...patch, updatedAt: new Date().toISOString() } : en) })),
   addLink: (l) => {
-    const nl: Link = { id: crypto.randomUUID(), ...l };
+    const nl: Link = { id: uuidv4(), ...l };
     set(s => ({ links: [nl, ...s.links] }));
     return nl;
   },

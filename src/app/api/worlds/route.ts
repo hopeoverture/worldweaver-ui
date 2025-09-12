@@ -76,7 +76,7 @@ const createWorldSchema = z.object({
 export const POST = withApiErrorHandling(async (request: NextRequest): Promise<NextResponse<WorldResponse>> => {
   const requestId = generateRequestId();
   
-  console.log('🚀 POST /api/worlds - LOGGING TEST - World creation attempt');
+  console.log('🚀 POST /api/worlds - LOGGING TEST - World creation attempt with user_id fix');
   
   // Get authenticated user + the exact server client instance
   const { supabase, user, error: authError } = await getServerClientAndUser();
@@ -109,7 +109,7 @@ export const POST = withApiErrorHandling(async (request: NextRequest): Promise<N
     name: parsed.name,
     description: parsed.description ?? null,
     owner_id: user.id,
-    // Note: user_id field removed from schema, only owner_id is used
+    user_id: user.id, // Add user_id as well for database compatibility
     is_public: parsed.isPublic ?? false,
     is_archived: false,
     settings: {},

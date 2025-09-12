@@ -27,7 +27,7 @@ export function useCreateEntity(worldId: string) {
       return res.json();
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["entities", worldId] });
+      qc.invalidateQueries({ queryKey: ["world-entities", worldId] });
     },
   });
 }

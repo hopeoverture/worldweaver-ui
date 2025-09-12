@@ -791,8 +791,14 @@ export class SupabaseWorldService {
       
       console.log('🎯 Template creation - insert data prepared', insertData)
       
-      // Debug: Check auth context and membership before insert
+      // Debug: Check auth context at database level by querying worlds with owner check
       const { data: authUser } = await dbClient.auth.getUser()
+      
+      // Test what the database sees as the current user by checking world access
+      const { data: ownedWorlds, error: ownerCheckError } = await dbClient
+        .from('worlds') 
+        .select('id')
+        .eq('owner_id', world.owner_id)
       
       // Check membership
       const { data: membership } = await dbClient
@@ -803,12 +809,14 @@ export class SupabaseWorldService {
         .single()
       
       const debugInfo = {
-        authUserId: authUser?.id,
+        clientAuthUserId: authUser?.id,
         passedUserId: userId,
         worldOwner: world.owner_id,
         authMatch: authUser?.id === world.owner_id,
         membership: membership?.role || 'none',
-        canCreate: authUser?.id === world.owner_id || ['admin', 'editor'].includes(membership?.role || 'none')
+        canCreate: authUser?.id === world.owner_id || ['admin', 'editor'].includes(membership?.role || 'none'),
+        ownedWorldsCount: ownedWorlds?.length || 0,
+        ownerCheckError: ownerCheckError?.message || 'none'
       }
       
       console.log('🎯 Template creation - auth context check', debugInfo)
@@ -824,7 +832,11 @@ export class SupabaseWorldService {
       if (error) {
         console.log('🎯 Template creation - database error', { error, insertData, debugInfo })
         logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, userId, action: 'create_template' })
-        throw new Error(`Database error: ${error.message}. Debug: ${JSON.stringify(debugInfo)}`)
+        const detailedError = new Error(`Database error: ${error.message}. Debug: ${JSON.stringify(debugInfo)}`)
+        // Add debug info as properties so it can be accessed
+        ;(detailedError as any).debugInfo = debugInfo
+        ;(detailedError as any).originalError = error
+        throw detailedError
       }
       
       if (!row) {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { v4 as uuidv4 } from 'uuid';
 
 type ToastVariant = "default" | "success" | "error" | "warning";
 type Toast = { id: string; title?: string; description?: string; variant?: ToastVariant; };
@@ -21,7 +22,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toast = useCallback((t: Omit<Toast, "id"> & { durationMs?: number }) => {
-    const id = crypto.randomUUID();
+    const id = uuidv4();
     const { durationMs = 3500, ...rest } = t;
     setToasts((prev) => [...prev, { id, ...rest }]);
     if (durationMs > 0) {

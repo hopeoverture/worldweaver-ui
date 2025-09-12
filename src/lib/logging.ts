@@ -44,6 +44,15 @@ export interface LogEntry {
  * Sanitize error to remove sensitive information
  */
 function sanitizeError(error: Error): { name: string; message: string; stack?: string; code?: string } {
+  // Handle cases where error might be null, undefined, or not a proper Error object
+  if (!error || typeof error !== 'object') {
+    return {
+      name: 'Error',
+      message: 'Unknown error (invalid error object)',
+      code: undefined
+    };
+  }
+
   const sanitized: { name: string; message: string; stack?: string; code?: string } = {
     name: error.name || 'Error',
     message: error.message || 'Unknown error',

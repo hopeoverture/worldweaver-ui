@@ -95,6 +95,7 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
       } 
     })
   } catch (error) {
+    console.log('🔥 Template handler caught exception', { error, debugSteps })
     debugSteps.push('HANDLER_EXCEPTION')
     debugSteps.push(error instanceof Error ? error.message : String(error))
     throw error  // Re-throw to be caught by outer handler
