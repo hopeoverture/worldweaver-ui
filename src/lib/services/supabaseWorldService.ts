@@ -505,13 +505,41 @@ export class SupabaseWorldService {
     })
     
     // Verify access
-    const world = await this.getWorldById(worldId, userId)
+    console.log('🔍 CreateRelationship: Checking world access', { worldId, userId })
+    let world
+    try {
+      world = await this.getWorldById(worldId, userId)
+    } catch (worldError) {
+      console.log('❌ CreateRelationship: Error checking world access', { 
+        worldId, 
+        userId,
+        error: worldError instanceof Error ? worldError.message : 'Unknown world access error',
+        stack: worldError instanceof Error ? worldError.stack : undefined
+      })
+      throw new Error(`World access check failed: ${worldError instanceof Error ? worldError.message : 'Unknown error'}`)
+    }
+    
     if (!world) {
       console.log('❌ CreateRelationship: World not found or access denied', { worldId, userId })
       throw new Error('World not found or access denied')
     }
+    
+    console.log('✅ CreateRelationship: World access verified', { worldId, worldName: world.name, userId })
 
-    const supabase = await createServerSupabaseClient()
+    console.log('🔧 CreateRelationship: Creating Supabase client')
+    let supabase
+    try {
+      supabase = await createServerSupabaseClient()
+      console.log('✅ CreateRelationship: Supabase client created')
+    } catch (supabaseError) {
+      console.log('❌ CreateRelationship: Failed to create Supabase client', {
+        error: supabaseError instanceof Error ? supabaseError.message : 'Unknown Supabase error',
+        stack: supabaseError instanceof Error ? supabaseError.stack : undefined,
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      })
+      throw new Error(`Supabase client creation failed: ${supabaseError instanceof Error ? supabaseError.message : 'Unknown error'}`)
+    }
 
     // Verify both entities exist in this world
     console.log('🔍 CreateRelationship: Validating entities exist', { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })

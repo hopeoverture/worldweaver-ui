@@ -147,17 +147,39 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }
     })
     
-    const rel = await worldService.createRelationship(
-      worldId,
-      {
+    let rel
+    try {
+      rel = await worldService.createRelationship(
+        worldId,
+        {
+          fromEntityId: body.fromEntityId,
+          toEntityId: body.toEntityId,
+          label: body.label,
+          description: body.description ?? null,
+          metadata: body.metadata ?? null,
+        },
+        user.id,
+      )
+    } catch (serviceError) {
+      safeConsoleError('💥 WorldService.createRelationship failed', serviceError as Error, { 
+        worldId, 
+        userId: user.id,
         fromEntityId: body.fromEntityId,
         toEntityId: body.toEntityId,
-        label: body.label,
-        description: body.description ?? null,
-        metadata: body.metadata ?? null,
-      },
-      user.id,
-    )
+        action: 'POST_relationships_service_error',
+        metadata: {
+          serviceErrorMessage: serviceError instanceof Error ? serviceError.message : 'Unknown service error',
+          serviceErrorStack: serviceError instanceof Error ? serviceError.stack : undefined,
+          relationshipData: body
+        }
+      })
+      
+      // Re-throw with more context
+      if (serviceError instanceof Error) {
+        throw new Error(`Service layer error: ${serviceError.message}`)
+      }
+      throw new Error('Unknown service layer error')
+    }
 
     safeConsoleError('✅ Relationship created successfully', new Error('DEBUG'), { 
       worldId, 
