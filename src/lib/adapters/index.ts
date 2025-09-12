@@ -203,7 +203,7 @@ export function adaptFolderFromDatabase(
     color: dbFolder.color || undefined,
     kind: 'entities', // Current schema has one folders table; treat as entity folders
     count: Array.isArray(dbFolder.entities) ? dbFolder.entities.length : 0,
-    data: (dbFolder.data as Record<string, unknown>) || {}, // JSONB data field
+    data: {}, // Folders don't have custom data fields in current schema
   };
 }
 
