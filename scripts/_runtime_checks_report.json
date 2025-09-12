@@ -1,0 +1,160 @@
+{
+  "timestamp": "2025-09-10T00:53:20.889Z",
+  "overallStatus": "warning",
+  "summary": {
+    "total": 13,
+    "passed": 12,
+    "failed": 1,
+    "warnings": 0
+  },
+  "checks": [
+    {
+      "name": "Database Connectivity",
+      "success": true,
+      "message": "Check passed",
+      "duration": 272,
+      "details": {
+        "connected": true,
+        "queryResult": [
+          {
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "Table: worlds",
+      "success": true,
+      "message": "Check passed",
+      "duration": 193,
+      "details": {
+        "tableExists": true,
+        "sampleData": [
+          {
+            "id": "7f4ae79e-baaa-43c9-831f-6f6ae1a28996"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Table: entities",
+      "success": true,
+      "message": "Check passed",
+      "duration": 141,
+      "details": {
+        "tableExists": true,
+        "sampleData": []
+      }
+    },
+    {
+      "name": "Table: templates",
+      "success": true,
+      "message": "Check passed",
+      "duration": 153,
+      "details": {
+        "tableExists": true,
+        "sampleData": [
+          {
+            "id": "a13ceb18-f1e9-4e59-b829-52aa55562fed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Table: folders",
+      "success": true,
+      "message": "Check passed",
+      "duration": 113,
+      "details": {
+        "tableExists": true,
+        "sampleData": []
+      }
+    },
+    {
+      "name": "Table: relationships",
+      "success": true,
+      "message": "Check passed",
+      "duration": 194,
+      "details": {
+        "tableExists": true,
+        "sampleData": []
+      }
+    },
+    {
+      "name": "RLS Policies Active",
+      "success": false,
+      "message": "RLS check failed: Could not find the table 'public.pg_class' in the schema cache",
+      "duration": 137,
+      "details": null
+    },
+    {
+      "name": "Auth Users Table",
+      "success": true,
+      "message": "Check passed",
+      "duration": 113,
+      "details": {
+        "authWorking": true
+      }
+    },
+    {
+      "name": "Storage Buckets",
+      "success": true,
+      "message": "Check passed",
+      "duration": 239,
+      "details": {
+        "buckets": [
+          "world-assets",
+          "public.world_files"
+        ],
+        "count": 2
+      }
+    },
+    {
+      "name": "Custom Functions",
+      "success": true,
+      "message": "Check passed",
+      "duration": 119,
+      "details": {
+        "functionExists": true,
+        "callable": true
+      }
+    },
+    {
+      "name": "JSONB Fields",
+      "success": true,
+      "message": "Check passed",
+      "duration": 109,
+      "details": {
+        "jsonbWorking": true,
+        "sample": [
+          {
+            "settings": {}
+          }
+        ]
+      }
+    },
+    {
+      "name": "Index Performance",
+      "success": true,
+      "message": "Check passed",
+      "duration": 143,
+      "details": {
+        "indexPerformance": "good",
+        "queryTime": 142
+      }
+    },
+    {
+      "name": "World Membership Logic",
+      "success": true,
+      "message": "Check passed",
+      "duration": 116,
+      "details": {
+        "membershipStructure": "valid"
+      }
+    }
+  ],
+  "recommendations": [
+    "1 checks failed - review and fix issues before production",
+    "RLS policies may not be properly configured - security risk"
+  ]
+}

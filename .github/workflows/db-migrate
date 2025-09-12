@@ -1,0 +1,41 @@
+name: DB Migrate (Supabase)
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply migrations to Supabase (true/false)"
+        required: true
+        default: "true"
+
+jobs:
+  migrate:
+    if: ${{ github.event.inputs.apply == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Run storage policies migration
+        env:
+          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
+        run: |
+          supabase db execute -f supabase/migrations/20250907170000_add_storage_policies.sql --db-url "$SUPABASE_DB_OWNER_URL"
+
+      - name: Optimize RLS auth calls
+        env:
+          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
+        run: |
+          supabase db execute -f supabase/migrations/20250907173500_optimize_rls_auth_calls.sql --db-url "$SUPABASE_DB_OWNER_URL"
+
+      - name: Verify storage policies present
+        env:
+          SUPABASE_DB_OWNER_URL: ${{ secrets.SUPABASE_DB_OWNER_URL }}
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y postgresql-client
+          psql "$SUPABASE_DB_OWNER_URL" -c "select polname, cmd from pg_policies where schemaname='storage' and tablename='objects' order by polname;"
