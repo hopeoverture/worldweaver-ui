@@ -60,6 +60,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       conflictDrivers: z.array(z.string()).optional(),
       rulesConstraints: z.string().optional(),
       aestheticDirection: z.string().optional(),
+      // Invite link settings
+      inviteLinkEnabled: z.boolean().optional(),
     })
 
     let parsed
@@ -100,6 +102,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (parsed.conflictDrivers !== undefined) data.conflictDrivers = parsed.conflictDrivers
     if (parsed.rulesConstraints !== undefined) data.rulesConstraints = parsed.rulesConstraints
     if (parsed.aestheticDirection !== undefined) data.aestheticDirection = parsed.aestheticDirection
+    // Invite link settings
+    if (parsed.inviteLinkEnabled !== undefined) data.inviteLinkEnabled = parsed.inviteLinkEnabled
 
     const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
     const updated = await supabaseWorldService.updateWorld(params.id, data, user.id)
