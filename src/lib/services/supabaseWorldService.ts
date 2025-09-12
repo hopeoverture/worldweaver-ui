@@ -751,41 +751,58 @@ export class SupabaseWorldService {
     category?: string;
     fields: TemplateField[];
     [key: string]: any;
-  }): Promise<Template> {
-    const supabase = await createServerSupabaseClient()
-    // Persist all provided custom fields in fields JSONB
-  const customFields: Record<string, unknown> = Array.isArray(data.fields) ? { ...data.fields } : {};
-    for (const key of Object.keys(data)) {
-      if (!['name', 'description', 'icon', 'category', 'fields'].includes(key)) {
-        customFields[key] = data[key];
-      }
-    }
-    const { data: row, error } = await supabase
-      .from('templates')
-      .insert({
-        world_id: worldId,
-        name: data.name,
-        description: data.description || '',
-        icon: data.icon || 'file-text',
-        category: data.category || 'general',
-        fields: (customFields as unknown) as Json,
-        is_system: false,
-      })
-      .select('*')
+  }, userId: string, supabase?: any): Promise<Template> {
+    const dbClient = supabase || await createServerSupabaseClient()
+    
+    // Access check by fetching world using the same client - prevents auth context issues
+    const { data: world, error: worldError } = await dbClient
+      .from('worlds')
+      .select('id, name, owner_id')
+      .eq('id', worldId)
       .single()
-    if (error) {
-      logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, action: 'create_template' })
-      throw new Error(`Database error: ${error.message}`)
+    
+    if (worldError || !world) {
+      logDatabaseError('World access check failed for template creation', worldError, { worldId, userId, action: 'template_create_world_check' })
+      throw new Error('World not found or access denied')
     }
-    return {
-      id: row.id,
-      worldId: row.world_id || worldId,
-      name: row.name,
-      description: row.description || '',
-      icon: row.icon || undefined,
-      category: row.category || 'general',
-      fields: (row.fields as TemplateField[]) || [],
-      isSystem: row.is_system || false,
+    
+    try {
+      const { data: row, error } = await dbClient
+        .from('templates')
+        .insert({
+          world_id: worldId,
+          name: data.name,
+          description: data.description || '',
+          icon: data.icon || 'file-text',
+          category: data.category || 'general',
+          fields: (data.fields as unknown) as Json,
+          is_system: false,
+        })
+        .select('*')
+        .single()
+      
+      if (error) {
+        logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, userId, action: 'create_template' })
+        throw new Error(`Database error: ${error.message}`)
+      }
+      
+      if (!row) {
+        throw new Error('Template creation succeeded but no data returned')
+      }
+      
+      return {
+        id: row.id,
+        worldId: row.world_id || worldId,
+        name: row.name,
+        description: row.description || '',
+        icon: row.icon || undefined,
+        category: row.category || 'general',
+        fields: (row.fields as TemplateField[]) || [],
+        isSystem: row.is_system || false,
+      }
+    } catch (error) {
+      logDatabaseError('Error in template creation', error as Error, { worldId, templateName: data.name, userId, action: 'create_template' })
+      throw error
     }
   }
 
