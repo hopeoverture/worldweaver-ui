@@ -36,7 +36,7 @@ export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: 
   const relationship = await worldService.updateRelationship(
     params.id,
     {
-      label: result.label,
+      relationship_type: result.label,
       description: result.description ?? undefined,
       metadata: (result.metadata as any) ?? undefined,
     },
