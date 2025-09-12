@@ -12,7 +12,7 @@ This document reflects the current, running state of the application and how to 
 - TypeScript with strict mode and Zod validation
 
 ## Requirements
-- **Node 20/22** (Node 18+ minimum)
+- **Node 20 LTS** (see `.nvmrc` - use `nvm use` for version consistency)
 - **npm** (repo uses `package-lock.json`)
 - **Supabase project** with database, auth, and storage enabled
 - Environment variables (see setup below)
@@ -50,8 +50,14 @@ psql "$SUPABASE_DB_URL" -f supabase/migrations/*.sql
 
 4) Run the application
 ```bash
-# Development server (includes Windows Node.js fs.readlink patch)
+# Development server with auto port cleanup (includes Windows Node.js fs.readlink patch)
 npm run dev
+
+# Development with explicit port cleanup
+npm run dev:clean
+
+# Full development stack (dev server + auto-seed templates)
+npm run dev:all
 
 # Production build and start
 npm run build
@@ -73,6 +79,9 @@ npm run typecheck
 
 # MCP server testing (optional)
 npm run test:mcp
+
+# Port management (if needed)
+npm run kill-ports
 ```
 
 ## Key Technologies
@@ -98,14 +107,26 @@ npm run test:mcp
 - **Windows compatibility** via fs.readlink patch
 
 ## Available Scripts
-- `npm run dev` - Development server with HMR and Windows patch
+
+### Development
+- `npm run dev` - Development server with auto port cleanup, HMR and Windows patch
+- `npm run dev:clean` - Development with explicit port cleanup (same as predev + dev)
+- `npm run dev:all` - Full development stack (server + auto-seed templates)
+- `npm run predev` - Auto port cleanup (runs before dev automatically)
+
+### Build & Production
 - `npm run build` - Production build with optimization
 - `npm run start` - Start production server
+
+### Testing & Quality
 - `npm run lint` - ESLint code analysis
 - `npm run test` - Run Vitest test suite
 - `npm run test:api` - Test API endpoints
-- `npm run seed:core` - Seed system templates via admin API
 - `npm run test:mcp` - Test MCP server configuration
+
+### Utilities
+- `npm run seed:core` - Seed system templates via admin API
+- `npm run kill-ports` - Manual port cleanup (3000, 3001, 54321, 5432, 8000)
 
 ## Environment
 - Browser client: `src/lib/supabase/browser.ts`
@@ -188,18 +209,22 @@ supabase/
 ## Recent Updates & Fixes
 
 ### September 2025
+- **Port Management**: Added automatic port cleanup with `kill-port`, `concurrently` for graceful process management, preventing zombie Node processes
 - **PostCSS Configuration Fix**: Fixed PostCSS config for Tailwind CSS v4 using `@tailwindcss/postcss` plugin, resolving Vercel build failures
 - **Field Consistency Audit**: Completed comprehensive database field naming consistency review
 - **Authentication & World Loading**: Fixed SSR initialization issues and authentication context problems
 - **Database Optimizations**: Added performance monitoring views and composite indexes for common query patterns
+- **Node Version Standardization**: Added `.nvmrc` for Node 20 LTS consistency across development environments
 
 ## Troubleshooting
 
 ### Common Issues
+- **Port conflicts (EADDRINUSE)**: Run `npm run kill-ports` or `npm run dev:clean` - automatic cleanup prevents zombie Node processes
 - **Auth failures**: Ensure `NEXT_PUBLIC_SUPABASE_*` environment variables are set and valid
 - **Build failures**: Tailwind v4 requires proper PostCSS config with `@tailwindcss/postcss` plugin
 - **Admin operations**: Require `SUPABASE_SERVICE_ROLE_KEY` environment variable
 - **Windows development**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
+- **Node version inconsistency**: Use `nvm use` to match `.nvmrc` (Node 20 LTS)
 - **CSP violations**: Development allows unsafe-inline for HMR; production uses strict nonces
 
 ### Performance & Monitoring

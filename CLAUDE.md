@@ -4,14 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Common Development Commands
 
-- `npm run dev`: Start development server (includes Windows Node 22 readlink patch)
+### Development & Port Management
+- `npm run dev`: Start development server with auto port cleanup (includes Windows Node 20 readlink patch)
+- `npm run dev:clean`: Development with explicit port cleanup (same as predev + dev)
+- `npm run dev:all`: Full development stack (server + auto-seed templates when ready)
+- `npm run predev`: Auto port cleanup - runs before dev automatically (ports: 3000, 3001, 54321, 5432, 8000)
+- `npm run kill-ports`: Manual port cleanup when needed
+
+### Build & Production
 - `npm run build`: Build production version (includes readlink patch)
 - `npm run start`: Start production server
+
+### Testing & Quality
 - `npm run test`: Run tests with Vitest (minimal test suite currently)
 - `npm run lint`: Run ESLint with flat config
-- `npm run seed:core`: Seed core system templates (requires dev server running)
 - `npm run test:api`: Run API endpoint tests
 - `npm run test:mcp`: Test MCP server configuration and connectivity
+
+### Utilities
+- `npm run seed:core`: Seed core system templates (requires dev server running)
 
 ### Database Operations
 - Apply migrations: Use Supabase SQL editor, Supabase CLI (`npx supabase db push`), or direct psql
@@ -28,6 +39,11 @@ Optional environment variables for development:
 - `SEED_ADMIN_TOKEN`: Random secret for seeding endpoints
 - `SEED_BASE_URL`: Base URL for seeding (default: http://localhost:3000)
 - `ADMIN_SEED_ENABLED`: Enable seeding in production (default: false)
+
+### Node Version Management
+- Use Node 20 LTS as specified in `.nvmrc`
+- Run `nvm use` to ensure version consistency across development environments
+- Port management automatically handles common development ports to prevent EADDRINUSE errors
 
 ## Architecture Overview
 
@@ -102,9 +118,12 @@ The application manages "worlds" containing entities, templates, folders, and re
 
 ## Key Development Notes
 
-### Windows Compatibility
+### Windows Compatibility & Port Management
 - Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
 - Patch is automatically included in dev/build commands
+- **Port cleanup**: `predev` script automatically kills processes on ports 3000, 3001, 54321, 5432, 8000
+- **Process management**: Uses `concurrently -k` for graceful shutdown preventing zombie processes
+- **Manual cleanup**: Use `npm run kill-ports` if ports remain busy
 
 ### Database Operations
 - **Always use SupabaseWorldService** class for database operations (`src/lib/services/worldService.ts`)
@@ -168,6 +187,8 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 ## Recent Updates & Fixes
 
 ### September 2025 - Build & Configuration Fixes
+- **Port Management**: Added automatic port cleanup with `kill-port`, `concurrently` for graceful process management, preventing zombie Node processes and EADDRINUSE errors
+- **Node Version Standardization**: Added `.nvmrc` for Node 20 LTS consistency across development environments
 - **PostCSS Configuration**: Fixed PostCSS config for Tailwind CSS v4. Requires `@tailwindcss/postcss` plugin with correct syntax to resolve Vercel build failures.
 - **Tailwind CSS v4.1.13**: Updated to latest version with CSS variables for theming. No `tailwind.config.ts` needed for v4.
 - **Field Consistency**: Completed comprehensive database field naming audit ensuring snake_case in database, camelCase in domain.
@@ -177,9 +198,11 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 ## Troubleshooting
 
 ### Common Issues
+- **Port conflicts (EADDRINUSE)**: Run `npm run kill-ports` or use `npm run dev:clean` - automatic `predev` cleanup prevents zombie Node processes
 - **Auth failures**: Ensure `NEXT_PUBLIC_SUPABASE_*` environment variables are set and valid
 - **Build failures**: Tailwind v4 requires proper PostCSS config with `@tailwindcss/postcss` plugin
 - **Admin/seed operations**: Require `SUPABASE_SERVICE_ROLE_KEY` environment variable  
+- **Node version inconsistency**: Use `nvm use` to match `.nvmrc` (Node 20 LTS)
 - **CSP issues**: Development allows unsafe-inline for HMR, production uses strict nonces
 - **Database sync**: Run migrations with `npx supabase db push`, regenerate types after schema changes
 - **Field consistency**: Database uses snake_case, domain uses camelCase - adapters handle conversion
