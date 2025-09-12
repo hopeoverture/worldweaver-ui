@@ -139,6 +139,7 @@ export class SupabaseWorldService {
           name: data.name, // Required field
           description: data.description || '',
           owner_id: ownerId,
+          user_id: ownerId, // Required field - same as owner_id for new worlds
           is_public: data.isPublic || false,
           is_archived: false,
           settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
