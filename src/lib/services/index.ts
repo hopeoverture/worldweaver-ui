@@ -54,7 +54,7 @@ class UnifiedService {
 
   async getWorldTemplates(worldId: string) { return supabaseWorldService.getWorldTemplates(worldId); }
   async getSystemTemplates() { return supabaseWorldService.getSystemTemplates(); }
-  async createTemplate(worldId: string, data: any) { return supabaseWorldService.createTemplate(worldId, data); }
+  async createTemplate(worldId: string, data: any, userId: string, supabase?: any) { return supabaseWorldService.createTemplate(worldId, data, userId, supabase); }
   async updateTemplate(templateId: string, data: any, userId: string) { return supabaseWorldService.updateTemplate(templateId, data, userId); }
   async deleteTemplate(templateId: string, userId: string) { return supabaseWorldService.deleteTemplate(templateId, userId); }
 
