@@ -161,7 +161,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
           toEntityId: body.toEntityId,
           label: body.label,
           description: body.description ?? null,
-          metadata: body.metadata ?? null,
+          metadata: (body.metadata ?? null) as any,
         },
         user.id,
       )
