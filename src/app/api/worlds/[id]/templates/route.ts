@@ -23,8 +23,9 @@ export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params:
 
 export const dynamic = 'force-dynamic'
 
-export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
-  console.log('🚀 Template API - POST request started')
+const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  console.log('🚀 Template API - POST request started - DIRECT LOG')
+  console.error('🚀 Template API - POST request started - ERROR LOG')  // Try console.error too
   const requestId = generateRequestId()
   console.log('🚀 Template API - request ID generated:', requestId)
   
@@ -92,4 +93,20 @@ export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params:
   
   console.log('🚀 Template API - createTemplate completed successfully:', { templateId: template?.id })
   return NextResponse.json({ template }, { headers: { 'X-Request-ID': requestId } })
-})
+}
+
+// Temporary: bypass error wrapper to test if logs appear
+export const POST = async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  console.log('🚀🚀🚀 DIRECT POST - NO WRAPPER - START')
+  console.error('🚀🚀🚀 DIRECT POST - NO WRAPPER - ERROR LOG')
+  
+  try {
+    return await templatePostHandler(req, ctx)
+  } catch (error) {
+    console.log('🚀🚀🚀 DIRECT POST - CAUGHT ERROR:', error)
+    console.error('🚀🚀🚀 DIRECT POST - CAUGHT ERROR (ERROR LOG):', error)
+    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 })
+  }
+}
+
+// export const POST = withApiErrorHandling(templatePostHandler)
