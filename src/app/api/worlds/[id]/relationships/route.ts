@@ -44,8 +44,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (authError || !user) {
       safeConsoleError('❌ Authentication failed', authError || new Error('No user'), { 
         worldId, 
-        authError: authError?.message,
-        action: 'POST_relationships_auth_fail' 
+        action: 'POST_relationships_auth_fail',
+        metadata: {
+          authErrorMessage: authError?.message
+        }
       })
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
@@ -56,8 +58,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       safeConsoleError('📥 Request body received', new Error('DEBUG'), { 
         worldId, 
         userId: user.id,
-        requestBody,
-        action: 'POST_relationships_body_parsed' 
+        action: 'POST_relationships_body_parsed',
+        metadata: {
+          requestBody
+        }
       })
     } catch (e) {
       safeConsoleError('❌ Failed to parse request body', e as Error, { 
@@ -82,22 +86,26 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       safeConsoleError('✅ Request body validated', new Error('DEBUG'), { 
         worldId, 
         userId: user.id,
-        validatedBody: body,
-        action: 'POST_relationships_validation_success' 
+        action: 'POST_relationships_validation_success',
+        metadata: {
+          validatedBody: body
+        }
       })
     } catch (e) {
       if (e instanceof z.ZodError) {
         const errorDetails = e.issues.map(issue => ({
           field: issue.path.join('.'),
           message: issue.message,
-          received: issue.received
+          code: issue.code
         }))
         safeConsoleError('❌ Request validation failed', e, { 
           worldId, 
           userId: user.id,
-          requestBody,
-          validationErrors: errorDetails,
-          action: 'POST_relationships_validation_fail' 
+          action: 'POST_relationships_validation_fail',
+          metadata: {
+            requestBody,
+            validationErrors: errorDetails
+          }
         })
         return NextResponse.json({ 
           error: 'Invalid request body', 
@@ -107,8 +115,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       safeConsoleError('❌ Unexpected validation error', e as Error, { 
         worldId, 
         userId: user.id,
-        requestBody,
-        action: 'POST_relationships_validation_error' 
+        action: 'POST_relationships_validation_error',
+        metadata: {
+          requestBody
+        }
       })
       return NextResponse.json({ error: 'Request validation failed' }, { status: 400 })
     }
@@ -131,8 +141,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     safeConsoleError('🔄 Creating relationship via worldService', new Error('DEBUG'), { 
       worldId, 
       userId: user.id,
-      relationshipData: body,
-      action: 'POST_relationships_service_call' 
+      action: 'POST_relationships_service_call',
+      metadata: {
+        relationshipData: body
+      }
     })
     
     const rel = await worldService.createRelationship(
@@ -162,10 +174,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     safeConsoleError('💥 Error creating relationship', error as Error, { 
       worldId: params?.id, 
       userId: user?.id,
-      requestBody,
-      errorMessage,
-      errorStack,
-      action: 'POST_relationships_error' 
+      action: 'POST_relationships_error',
+      metadata: {
+        requestBody,
+        errorMessage,
+        errorStack
+      }
     })
     
     // Provide more specific error messages based on common issues
