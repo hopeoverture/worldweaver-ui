@@ -28,36 +28,115 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   let params: { id: string } | undefined
   let user: any
+  let requestBody: any = {}
+  
   try {
     params = await ctx.params
+    const worldId = params.id
+    
+    safeConsoleError('🚀 Relationships POST start', new Error('DEBUG'), { 
+      worldId, 
+      action: 'POST_relationships_start' 
+    })
+
     const { user: authUser, error: authError } = await getServerAuth()
     user = authUser
     if (authError || !user) {
+      safeConsoleError('❌ Authentication failed', authError || new Error('No user'), { 
+        worldId, 
+        authError: authError?.message,
+        action: 'POST_relationships_auth_fail' 
+      })
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
+    // Parse request body first for better error reporting
+    try {
+      requestBody = await req.json()
+      safeConsoleError('📥 Request body received', new Error('DEBUG'), { 
+        worldId, 
+        userId: user.id,
+        requestBody,
+        action: 'POST_relationships_body_parsed' 
+      })
+    } catch (e) {
+      safeConsoleError('❌ Failed to parse request body', e as Error, { 
+        worldId, 
+        userId: user.id,
+        action: 'POST_relationships_json_parse_fail' 
+      })
+      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 })
+    }
+
     const schema = z.object({
-      fromEntityId: z.string().uuid(),
-      toEntityId: z.string().uuid(),
-      label: z.string().min(1).max(200),
-      description: z.string().max(1000).nullable().optional(),
+      fromEntityId: z.string().uuid('From entity ID must be a valid UUID'),
+      toEntityId: z.string().uuid('To entity ID must be a valid UUID'),
+      label: z.string().min(1, 'Relationship type is required').max(200, 'Relationship type too long'),
+      description: z.string().max(1000, 'Description too long').nullable().optional(),
       metadata: z.record(z.unknown()).nullable().optional(),
     })
 
     let body: z.infer<typeof schema>
     try {
-      const json = await req.json()
-      body = schema.parse(json)
+      body = schema.parse(requestBody)
+      safeConsoleError('✅ Request body validated', new Error('DEBUG'), { 
+        worldId, 
+        userId: user.id,
+        validatedBody: body,
+        action: 'POST_relationships_validation_success' 
+      })
     } catch (e) {
       if (e instanceof z.ZodError) {
-        return NextResponse.json({ error: 'Invalid request body', issues: e.issues }, { status: 400 })
+        const errorDetails = e.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+          received: issue.received
+        }))
+        safeConsoleError('❌ Request validation failed', e, { 
+          worldId, 
+          userId: user.id,
+          requestBody,
+          validationErrors: errorDetails,
+          action: 'POST_relationships_validation_fail' 
+        })
+        return NextResponse.json({ 
+          error: 'Invalid request body', 
+          details: errorDetails 
+        }, { status: 400 })
       }
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      safeConsoleError('❌ Unexpected validation error', e as Error, { 
+        worldId, 
+        userId: user.id,
+        requestBody,
+        action: 'POST_relationships_validation_error' 
+      })
+      return NextResponse.json({ error: 'Request validation failed' }, { status: 400 })
+    }
+
+    // Additional validation: ensure entities are different
+    if (body.fromEntityId === body.toEntityId) {
+      safeConsoleError('❌ Same entity relationship attempted', new Error('Same entity relationship'), { 
+        worldId, 
+        userId: user.id,
+        entityId: body.fromEntityId,
+        action: 'POST_relationships_same_entity' 
+      })
+      return NextResponse.json({ 
+        error: 'Cannot create relationship between the same entity' 
+      }, { status: 400 })
     }
 
     const { worldService } = await import('@/lib/services/worldService')
+    
+    safeConsoleError('🔄 Creating relationship via worldService', new Error('DEBUG'), { 
+      worldId, 
+      userId: user.id,
+      relationshipData: body,
+      action: 'POST_relationships_service_call' 
+    })
+    
     const rel = await worldService.createRelationship(
-      params.id,
+      worldId,
       {
         fromEntityId: body.fromEntityId,
         toEntityId: body.toEntityId,
@@ -68,10 +147,42 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       user.id,
     )
 
+    safeConsoleError('✅ Relationship created successfully', new Error('DEBUG'), { 
+      worldId, 
+      userId: user.id,
+      relationshipId: rel.id,
+      action: 'POST_relationships_success' 
+    })
+
     return NextResponse.json({ relationship: rel })
   } catch (error) {
-    safeConsoleError('Error creating relationship', error as Error, { action: 'POST_relationships', worldId: params?.id, userId: user?.id })
-    return NextResponse.json({ error: 'Failed to create relationship' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    safeConsoleError('💥 Error creating relationship', error as Error, { 
+      worldId: params?.id, 
+      userId: user?.id,
+      requestBody,
+      errorMessage,
+      errorStack,
+      action: 'POST_relationships_error' 
+    })
+    
+    // Provide more specific error messages based on common issues
+    if (errorMessage.includes('World not found')) {
+      return NextResponse.json({ error: 'World not found or access denied' }, { status: 404 })
+    }
+    if (errorMessage.includes('Database error')) {
+      return NextResponse.json({ error: 'Database operation failed', details: errorMessage }, { status: 500 })
+    }
+    if (errorMessage.includes('Entity not found') || errorMessage.includes('foreign key')) {
+      return NextResponse.json({ error: 'One or both entities not found in this world' }, { status: 400 })
+    }
+    
+    return NextResponse.json({ 
+      error: 'Failed to create relationship',
+      details: errorMessage 
+    }, { status: 500 })
   }
 }
 

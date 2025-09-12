@@ -491,13 +491,42 @@ export class SupabaseWorldService {
     metadata?: Json | null;
     created?: boolean;
   }> {
+    console.log('🔄 CreateRelationship: Starting', { worldId, fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, label: data.label })
+    
     // Verify access
     const world = await this.getWorldById(worldId, userId)
-    if (!world) throw new Error('World not found or access denied')
+    if (!world) {
+      console.log('❌ CreateRelationship: World not found or access denied', { worldId, userId })
+      throw new Error('World not found or access denied')
+    }
 
     const supabase = await createServerSupabaseClient()
 
+    // Verify both entities exist in this world
+    console.log('🔍 CreateRelationship: Validating entities exist', { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })
+    const { data: entities, error: entitiesError } = await supabase
+      .from('entities')
+      .select('id')
+      .eq('world_id', worldId)
+      .in('id', [data.fromEntityId, data.toEntityId])
+
+    if (entitiesError) {
+      console.log('❌ CreateRelationship: Error checking entities', { error: entitiesError, fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })
+      logDatabaseError('Supabase error checking entities', entitiesError, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'check_entities' })
+      throw new Error(`Database error checking entities: ${entitiesError.message}`)
+    }
+
+    if (!entities || entities.length !== 2) {
+      const foundIds = entities?.map(e => e.id) || []
+      const missingIds = [data.fromEntityId, data.toEntityId].filter(id => !foundIds.includes(id))
+      console.log('❌ CreateRelationship: Entities not found', { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, foundIds, missingIds })
+      throw new Error(`Entity not found in this world: ${missingIds.join(', ')}`)
+    }
+
+    console.log('✅ CreateRelationship: Entities validated', { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })
+
     // Pre-check to avoid uniqueness error and behave idempotently
+    console.log('🔍 CreateRelationship: Checking for existing relationship')
     const { data: existingRows, error: findErr } = await supabase
       .from('relationships')
       .select('*')
@@ -507,11 +536,13 @@ export class SupabaseWorldService {
       .eq('relationship_type', data.label)
       .limit(1)
     if (findErr) {
+      console.log('❌ CreateRelationship: Error checking existing relationship', { error: findErr, fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })
       logDatabaseError('Supabase error pre-checking relationship', findErr, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'precheck_relationship' })
       throw new Error(`Database error: ${findErr.message}`)
     }
     if (existingRows && existingRows.length > 0) {
       const r = existingRows[0]
+      console.log('✅ CreateRelationship: Found existing relationship, returning it', { relationshipId: r.id })
       return {
         id: r.id,
         worldId: r.world_id,
@@ -531,24 +562,35 @@ export class SupabaseWorldService {
         customFields[key] = data[key];
       }
     }
+    
+    const insertData = {
+      world_id: worldId,
+      from_entity_id: data.fromEntityId,
+      to_entity_id: data.toEntityId,
+      relationship_type: data.label,
+      description: data.description ?? null,
+      metadata: customFields as Json,
+    }
+    
+    console.log('💾 CreateRelationship: Inserting relationship', { insertData })
     const { data: row, error } = await supabase
       .from('relationships')
-      .insert({
-        world_id: worldId,
-        from_entity_id: data.fromEntityId,
-        to_entity_id: data.toEntityId,
-        relationship_type: data.label,
-        description: data.description ?? null,
-        metadata: customFields as Json,
-      })
+      .insert(insertData)
       .select('*')
       .single()
 
     if (error) {
+      console.log('❌ CreateRelationship: Database insert error', { error, insertData })
       logDatabaseError('Supabase error creating relationship', error, { fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, action: 'create_relationship' })
       throw new Error(`Database error: ${error.message}`)
     }
 
+    if (!row) {
+      console.log('❌ CreateRelationship: No row returned after insert')
+      throw new Error('Relationship creation succeeded but no data returned')
+    }
+
+    console.log('✅ CreateRelationship: Successfully created', { relationshipId: row.id })
     return {
       id: row.id,
       worldId: row.world_id,
