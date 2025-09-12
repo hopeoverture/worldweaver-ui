@@ -89,7 +89,9 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
         setErrors({});
         onClose();
       } catch (error) {
-        setErrors({ submit: error instanceof Error ? error.message : 'Failed to create relationship' });
+        console.error('Relationship creation error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to create relationship';
+        setErrors({ submit: errorMessage });
       } finally {
         setIsSubmitting(false);
       }
