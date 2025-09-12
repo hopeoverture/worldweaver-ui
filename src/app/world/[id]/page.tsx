@@ -94,7 +94,7 @@ export default function WorldDashboard() {
   };
 
   const entityFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'entities');
-  const templateFolders: Folder[] = []; // Templates don't use folders in current schema
+  const templateFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'templates');
 
   const entitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
   const templatesInFolder = selectedFolder ? remoteTemplates.filter((template: Template) => template.folderId === selectedFolder) : [];
