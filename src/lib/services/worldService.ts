@@ -125,7 +125,7 @@ export class WorldService {
           name: data.name,
           description: data.description || '',
           owner_id: ownerId,
-          // Note: user_id was removed from schema, only owner_id is used
+          user_id: ownerId, // Required field - same as owner_id for new worlds
           is_public: data.isPublic || false,
           is_archived: false,
           settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
