@@ -1,11 +1,17 @@
 'use client';
-import { RelationshipRow } from '@/lib/types';
-import { useStore } from '@/lib/store';
+import { RelationshipRow, Entity } from '@/lib/types';
+import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 
-export function RelationshipTable() {
-  const { relationships, entities } = useStore();
+interface RelationshipTableProps {
+  worldId: string;
+}
 
-  const getEntityName = (id: string) => entities.find(e => e.id === id)?.name || 'Unknown';
+export function RelationshipTable({ worldId }: RelationshipTableProps) {
+  const { data: relationships = [] } = useWorldRelationships(worldId);
+  const { data: entities = [] } = useWorldEntities(worldId);
+
+  const getEntityName = (id: string) => entities.find((e: Entity) => e.id === id)?.name || 'Unknown';
 
   return (
     <div className="overflow-x-auto">

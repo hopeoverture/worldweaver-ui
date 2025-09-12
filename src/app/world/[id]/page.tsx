@@ -384,7 +384,7 @@ export default function WorldDashboard() {
           </Suspense>
           <div className="mt-8">
             <Suspense fallback={<SkeletonLoader type="relationships" message="Loading relationship table..." />}>
-              <LazyRelationshipTable />
+              <LazyRelationshipTable worldId={strWorldId} />
             </Suspense>
           </div>
         </div>
