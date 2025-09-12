@@ -527,7 +527,14 @@ export class SupabaseWorldService {
     
     console.log('✅ CreateRelationship: World access verified', { worldId, worldName: world.name, userId })
 
-    console.log('🔧 CreateRelationship: Using admin client to bypass RLS issues')
+    console.log('🔧 CreateRelationship: Setting up client with environment check', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      adminClientExists: !!adminClient,
+      nodeEnv: process.env.NODE_ENV
+    })
+    
     let supabase
     try {
       // Use regular client first to try normal RLS flow
@@ -549,8 +556,8 @@ export class SupabaseWorldService {
         console.log('⚠️ CreateRelationship: Auth context invalid, switching to admin client')
         
         if (!adminClient) {
-          console.log('❌ CreateRelationship: Admin client not available')
-          throw new Error('Admin client not configured and regular auth failed')
+          console.log('❌ CreateRelationship: Admin client not available - missing SUPABASE_SERVICE_ROLE_KEY')
+          throw new Error('Admin client not configured and regular auth failed - check SUPABASE_SERVICE_ROLE_KEY environment variable')
         }
         
         // Use admin client which bypasses RLS
