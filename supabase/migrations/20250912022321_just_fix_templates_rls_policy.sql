@@ -1,8 +1,10 @@
 -- Fix templates RLS policy - standalone migration
 -- Issue: Template creation fails because auth.uid() returns NULL in server context
 
--- Drop the existing restrictive policy
+-- Drop any existing policies first
 DROP POLICY IF EXISTS "Users can create templates in editable worlds" ON public.templates;
+DROP POLICY IF EXISTS "Allow template creation for authenticated users and server operations" ON public.templates;
+DROP POLICY IF EXISTS "Allow template creation for authenticated users and server oper" ON public.templates;
 
 -- Create a new policy that allows server-side operations
 CREATE POLICY "Allow template creation for authenticated users and server operations"

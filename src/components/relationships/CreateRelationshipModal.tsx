@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useWorldEntities } from '@/hooks/query/useWorldEntities';
+import type { Entity } from '@/lib/types';
 
 interface CreateRelationshipModalProps {
   isOpen: boolean;
@@ -104,7 +105,7 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
             className={errors.fromEntityId ? 'border-red-500' : ''}
           >
             <option value="">Select an entity</option>
-            {worldEntities.map(entity => (
+            {worldEntities.map((entity: Entity) => (
               <option key={entity.id} value={entity.id}>
                 {entity.name}
               </option>
@@ -152,7 +153,7 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
             className={errors.toEntityId ? 'border-red-500' : ''}
           >
             <option value="">Select an entity</option>
-            {worldEntities.map(entity => (
+            {worldEntities.map((entity: Entity) => (
               <option key={entity.id} value={entity.id}>
                 {entity.name}
               </option>
@@ -190,13 +191,13 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
                 {fromEntityId && toEntityId && label ? (
                   <>
                     <span className="font-medium">
-                      {worldEntities.find(e => e.id === fromEntityId)?.name || 'Entity'}
+                      {worldEntities.find((e: Entity) => e.id === fromEntityId)?.name || 'Entity'}
                     </span>
                     {' '}
                     <span className="italic">{label}</span>
                     {' '}
                     <span className="font-medium">
-                      {worldEntities.find(e => e.id === toEntityId)?.name || 'Entity'}
+                      {worldEntities.find((e: Entity) => e.id === toEntityId)?.name || 'Entity'}
                     </span>
                   </>
                 ) : (
