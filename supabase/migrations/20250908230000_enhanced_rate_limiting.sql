@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_limits_key_bucket_window 
 ON rate_limits(key_hash, bucket, window_start);
 
--- Create index for cleanup operations
+-- Create index for cleanup operations (remove NOW() predicate for migration compatibility)
 CREATE INDEX IF NOT EXISTS idx_rate_limits_window_end 
-ON rate_limits(window_end) WHERE window_end < NOW();
+ON rate_limits(window_end);
 
 -- Enable RLS
 ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;

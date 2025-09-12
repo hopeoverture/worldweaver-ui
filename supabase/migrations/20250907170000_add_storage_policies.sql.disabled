@@ -6,7 +6,15 @@ values ('world-assets', 'world-assets', false)
 on conflict (id) do nothing;
 
 -- Ensure RLS is enabled on storage.objects (should be enabled by default)
-alter table storage.objects enable row level security;
+-- Skip this if not owner of storage schema
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+  END IF;
+EXCEPTION WHEN insufficient_privilege THEN
+  -- RLS likely already enabled by default in Supabase
+  NULL;
+END $$;
 
 -- Allow reading files in the world-assets bucket if user has access to the world
 DO $$ BEGIN

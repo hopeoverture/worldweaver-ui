@@ -19,4 +19,6 @@ COMMENT ON TABLE public.worlds IS NULL;
 -- Note: The extended fields are left in place as they are part of the application functionality
 -- and removing them would cause data loss
 
-RAISE NOTICE 'Rollback complete - user_id column restored with owner_id values';
+DO $$ BEGIN
+  RAISE NOTICE 'Rollback complete - user_id column restored with owner_id values';
+END $$;
