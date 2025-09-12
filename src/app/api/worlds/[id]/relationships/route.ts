@@ -16,8 +16,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { worldService } = await import('@/lib/services/supabaseWorldService')
-    const relationships = await worldService.getWorldRelationships(params.id, user.id)
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+    const relationships = await supabaseWorldService.getWorldRelationships(params.id, user.id)
     return NextResponse.json({ relationships })
   } catch (error) {
     safeConsoleError('Error fetching relationships', error as Error, { action: 'GET_relationships', worldId: params?.id, userId: user?.id })
@@ -141,9 +141,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }, { status: 400 })
     }
 
-    const { worldService } = await import('@/lib/services/supabaseWorldService')
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
     
-    safeConsoleError('🔄 Creating relationship via worldService', new Error('DEBUG'), { 
+    safeConsoleError('🔄 Creating relationship via supabaseWorldService', new Error('DEBUG'), { 
       worldId, 
       userId: user.id,
       action: 'POST_relationships_service_call',
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     
     let rel
     try {
-      rel = await worldService.createRelationship(
+      rel = await supabaseWorldService.createRelationship(
         worldId,
         {
           fromEntityId: body.fromEntityId,

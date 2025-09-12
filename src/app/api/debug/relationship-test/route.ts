@@ -29,10 +29,10 @@ export async function POST(req: NextRequest) {
 
     // Step 3: Call the exact same worldService method that's failing
     try {
-      const { worldService } = await import('@/lib/services/worldService')
-      console.log('🧪 DEBUG: About to call worldService.createRelationship')
+      const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+      console.log('🧪 DEBUG: About to call supabaseWorldService.createRelationship')
       
-      const relationship = await worldService.createRelationship(
+      const relationship = await supabaseWorldService.createRelationship(
         worldId,
         {
           fromEntityId,
