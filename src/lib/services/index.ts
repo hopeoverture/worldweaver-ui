@@ -50,7 +50,7 @@ class UnifiedService {
 
   // Legacy operations - delegate to old service temporarily
   async getWorldRelationships(worldId: string, userId: string) { return supabaseWorldService.getWorldRelationships(worldId, userId); }
-  async createRelationship(worldId: string, data: Partial<Relationship> & { fromEntityId: string; toEntityId: string; name: string }, userId: string) { return supabaseWorldService.createRelationship(worldId, data, userId); }
+  async createRelationship(worldId: string, data: Partial<Relationship> & { fromEntityId: string; toEntityId: string; label: string }, userId: string) { return supabaseWorldService.createRelationship(worldId, data, userId); }
   async updateRelationship(relationshipId: string, data: Partial<Relationship>, userId: string) { return supabaseWorldService.updateRelationship(relationshipId, data, userId); }
   async deleteRelationship(relationshipId: string, userId: string) { return supabaseWorldService.deleteRelationship(relationshipId, userId); }
 
