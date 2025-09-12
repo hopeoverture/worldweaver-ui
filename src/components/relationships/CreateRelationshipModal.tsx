@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useWorldEntities } from '@/hooks/query/useWorldEntities';
+import { useCreateRelationship } from '@/hooks/mutations/useCreateRelationship';
+import { useToast } from '@/components/ui/ToastProvider';
 import type { Entity } from '@/lib/types';
 
 interface CreateRelationshipModalProps {
@@ -16,12 +18,13 @@ interface CreateRelationshipModalProps {
 
 export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRelationshipModalProps) {
   const { data: entities = [] } = useWorldEntities(worldId);
+  const createRelationshipMutation = useCreateRelationship(worldId);
+  const { toast } = useToast();
   const [fromEntityId, setFromEntityId] = useState('');
   const [toEntityId, setToEntityId] = useState('');
   const [label, setLabel] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const worldEntities = entities;
 
@@ -36,50 +39,22 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      setIsSubmitting(true);
       try {
-        const response = await fetch(`/api/worlds/${worldId}/relationships`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          body: JSON.stringify({
-            fromEntityId,
-            toEntityId,
-            label: label.trim(),
-            description: notes.trim() || null,
-          }),
+        await createRelationshipMutation.mutateAsync({
+          fromEntityId,
+          toEntityId,
+          label: label.trim(),
+          description: notes.trim() || null,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('Relationship creation failed:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorData,
-            requestData: {
-              fromEntityId,
-              toEntityId,
-              label: label.trim(),
-              description: notes.trim() || null,
-            }
-          });
-          
-          // Provide more specific error messages based on status
-          let errorMessage = errorData.error || 'Failed to create relationship';
-          if (response.status === 401) {
-            errorMessage = 'Authentication required. Please log in again.';
-          } else if (response.status === 403) {
-            errorMessage = 'You do not have permission to create relationships in this world.';
-          } else if (response.status === 404) {
-            errorMessage = 'World not found or one of the selected entities no longer exists.';
-          } else if (response.status === 400 && errorData.details) {
-            errorMessage = `Invalid data: ${errorData.details.map((d: any) => d.message).join(', ')}`;
-          }
-          
-          throw new Error(errorMessage);
-        }
+        // Show success toast
+        const fromEntity = entities.find((e: Entity) => e.id === fromEntityId);
+        const toEntity = entities.find((e: Entity) => e.id === toEntityId);
+        toast({
+          title: 'Relationship created!',
+          description: `${fromEntity?.name || 'Entity'} ${label.trim()} ${toEntity?.name || 'Entity'}`,
+          variant: 'success',
+        });
 
         // Reset form and close modal
         setFromEntityId('');
@@ -92,8 +67,6 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
         console.error('Relationship creation error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Failed to create relationship';
         setErrors({ submit: errorMessage });
-      } finally {
-        setIsSubmitting(false);
       }
     }
   };
@@ -104,7 +77,6 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
     setLabel('');
     setNotes('');
     setErrors({});
-    setIsSubmitting(false);
     onClose();
   };
 
@@ -247,11 +219,11 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
       </div>
 
       <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-neutral-700 mt-6">
-        <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+        <Button variant="outline" onClick={handleClose} disabled={createRelationshipMutation.isPending}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
-          {isSubmitting ? (
+        <Button onClick={handleSubmit} disabled={createRelationshipMutation.isPending}>
+          {createRelationshipMutation.isPending ? (
             <>
               <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
