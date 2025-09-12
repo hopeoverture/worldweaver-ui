@@ -5,7 +5,7 @@
 import type { Database } from '../supabase/types.generated';
 import { Folder } from '../types';
 import { createClient as createServerSupabaseClient } from '../supabase/server';
-import { createAdminClient } from '../supabase/admin';
+import { adminClient } from '../supabase/admin';
 import { adaptFolderFromDatabase, adaptFolderToDatabase } from '../adapters';
 import { logError } from '../logging';
 import { worldService } from './worldService';
@@ -47,7 +47,8 @@ export class FolderService {
     const world = await worldService.getWorldById(worldId, userId);
     if (!world) throw new Error('World not found or access denied');
 
-    const supabase = createAdminClient();
+    if (!adminClient) throw new Error('Admin client not initialized');
+    const supabase = adminClient;
     const { data: row, error } = await supabase
       .from('folders')
       .insert({
@@ -103,7 +104,8 @@ export class FolderService {
     if (data.description !== undefined) patch.description = data.description;
     if (data.color !== undefined) patch.color = data.color;
 
-    const supabase = createAdminClient();
+    if (!adminClient) throw new Error('Admin client not initialized');
+    const supabase = adminClient;
     const { data: row, error } = await supabase
       .from('folders')
       .update(patch)
@@ -127,7 +129,8 @@ export class FolderService {
     const current = await this.getFolderById(folderId, userId);
     if (!current) throw new Error('Folder not found or access denied');
 
-    const supabase = createAdminClient();
+    if (!adminClient) throw new Error('Admin client not initialized');
+    const supabase = adminClient;
     const { error } = await supabase
       .from('folders')
       .delete()
