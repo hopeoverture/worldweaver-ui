@@ -201,7 +201,7 @@ export function adaptFolderFromDatabase(
     name: dbFolder.name,
     description: dbFolder.description || '',
     color: dbFolder.color || undefined,
-    kind: 'entities', // Current schema has one folders table; treat as entity folders
+    kind: (dbFolder as any).kind || 'entities', // Use kind from database, default to entities for backward compatibility
     count: Array.isArray(dbFolder.entities) ? dbFolder.entities.length : 0,
     data: {}, // Folders don't have custom data fields in current schema
   };

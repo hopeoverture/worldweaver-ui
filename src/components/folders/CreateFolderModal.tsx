@@ -39,6 +39,7 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         color: formData.color,
+        kind: folderType,
       });
       toast({ title: 'Folder created', description: `“${formData.name.trim()}” added`, variant: 'success' });
       setFormData({ name: '', description: '', color: 'blue' });

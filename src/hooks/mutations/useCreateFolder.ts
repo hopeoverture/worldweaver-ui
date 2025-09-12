@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-type Body = { name: string; description?: string; color?: string };
+type Body = { name: string; description?: string; color?: string; kind?: 'entities' | 'templates' };
 
 export function useCreateFolder(worldId: string) {
   const qc = useQueryClient();

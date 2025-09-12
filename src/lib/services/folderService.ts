@@ -42,7 +42,7 @@ export class FolderService {
   /**
    * Create a folder in a world
    */
-  async createFolder(worldId: string, data: { name: string; description?: string; color?: string; [key: string]: unknown }, userId: string): Promise<Folder> {
+  async createFolder(worldId: string, data: { name: string; description?: string; color?: string; kind?: 'entities' | 'templates'; [key: string]: unknown }, userId: string): Promise<Folder> {
     // Access check
     const world = await worldService.getWorldById(worldId, userId);
     if (!world) throw new Error('World not found or access denied');
@@ -56,6 +56,7 @@ export class FolderService {
         name: data.name,
         description: data.description || '',
         color: data.color || null,
+        kind: data.kind || 'entities',
       })
       .select('*')
       .single();
