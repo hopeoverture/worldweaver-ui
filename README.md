@@ -208,7 +208,22 @@ supabase/
 
 ## Recent Updates & Fixes
 
-### September 2025
+### September 2025 - Relationship System Complete
+- **Relationship Creation Fixed**: Resolved critical 500 errors when creating relationships between entities
+  - Fixed RLS (Row Level Security) policy violations on relationships table
+  - Applied migration with `service_role` checks for admin operations
+  - Updated all API endpoints to use `supabaseWorldService` with proper admin client fallback
+- **Complete UI/UX Workflow**: Full relationship creation experience with proper user feedback
+  - Added mutation hooks with TanStack Query integration and automatic cache invalidation
+  - Success toast notifications with relationship details: "Entity A relationship Entity B"  
+  - Auto-refresh relationships table after creation (no manual refresh needed)
+  - Fixed deprecated Zustand store usage - all components now use TanStack Query
+- **TypeScript & Validation**: Comprehensive error handling and type safety
+  - Proper Zod validation schemas for relationship data
+  - User-friendly error messages for auth, validation, and database errors
+  - Fixed all TypeScript compilation issues
+
+### September 2025 - Infrastructure & Build Fixes
 - **Port Management**: Added automatic port cleanup with `kill-port`, `concurrently` for graceful process management, preventing zombie Node processes
 - **PostCSS Configuration Fix**: Fixed PostCSS config for Tailwind CSS v4 using `@tailwindcss/postcss` plugin, resolving Vercel build failures
 - **Field Consistency Audit**: Completed comprehensive database field naming consistency review
@@ -226,6 +241,8 @@ supabase/
 - **Windows development**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
 - **Node version inconsistency**: Use `nvm use` to match `.nvmrc` (Node 20 LTS)
 - **CSP violations**: Development allows unsafe-inline for HMR; production uses strict nonces
+- **Relationship creation failures**: Check RLS policies have `service_role` exceptions; ensure `supabaseWorldService` is used for admin operations
+- **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
 
 ### Performance & Monitoring
 - Database optimization views: `public.index_usage_stats`, `public.table_stats`

@@ -111,6 +111,7 @@ The application manages "worlds" containing entities, templates, folders, and re
   - Entities: `GET/PUT/DELETE /api/entities/[id]`, `POST /api/worlds/[id]/entities`
   - Templates: `GET/PUT/DELETE /api/templates/[id]`, `POST /api/worlds/[id]/templates`
   - Folders: `GET/PUT/DELETE /api/folders/[id]`, `POST /api/worlds/[id]/folders`
+  - Relationships: `GET/POST /api/worlds/[id]/relationships`, `PUT/DELETE /api/relationships/[id]`
   - Invites: `POST /api/worlds/[id]/invites`, `POST /api/invites/accept`
   - Files: `POST /api/worlds/[id]/files/upload`
   - Health: `GET /api/health/db`
@@ -186,7 +187,21 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 
 ## Recent Updates & Fixes
 
-### September 2025 - Build & Configuration Fixes
+### September 2025 - Relationship System & RLS Policy Fixes
+- **Relationship Creation Fixed**: Resolved 500 errors when creating relationships between entities
+  - Fixed RLS (Row Level Security) policy violations on relationships table with `service_role` checks
+  - Applied migration `20250912150110_fix_relationships_rls_policy.sql` with comprehensive policies
+  - Updated all API endpoints to use `supabaseWorldService` with admin client fallback support
+- **UI/UX Improvements**: Complete relationship creation workflow with proper feedback
+  - Added `useCreateRelationship` mutation hook with TanStack Query integration
+  - Success toast notifications showing relationship details: "Entity A relationship Entity B"
+  - Auto-refresh relationships table after creation via query invalidation
+  - Fixed RelationshipTable component to use TanStack Query instead of deprecated Zustand store
+- **TypeScript & Error Handling**: Comprehensive error handling with specific user-friendly messages
+  - Proper validation with Zod schemas for relationship data
+  - Fixed all TypeScript compilation errors and type safety issues
+
+### September 2025 - Build & Configuration Fixes  
 - **Port Management**: Added automatic port cleanup with `kill-port`, `concurrently` for graceful process management, preventing zombie Node processes and EADDRINUSE errors
 - **Node Version Standardization**: Added `.nvmrc` for Node 20 LTS consistency across development environments
 - **PostCSS Configuration**: Fixed PostCSS config for Tailwind CSS v4. Requires `@tailwindcss/postcss` plugin with correct syntax to resolve Vercel build failures.
@@ -207,6 +222,8 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - **Database sync**: Run migrations with `npx supabase db push`, regenerate types after schema changes
 - **Field consistency**: Database uses snake_case, domain uses camelCase - adapters handle conversion
 - **Windows compatibility**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
+- **Relationship creation failures**: Check RLS policies have `service_role` exceptions, ensure `supabaseWorldService` is used for admin operations
+- **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
 
 ### Performance Monitoring
 - Database optimization views available: `public.index_usage_stats`, `public.table_stats`
