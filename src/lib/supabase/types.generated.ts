@@ -496,6 +496,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_world_invite: {
+        Args: { invite_token: string }
+        Returns: boolean
+      }
       user_has_world_access: {
         Args: { user_uuid: string; world_uuid: string }
         Returns: boolean
