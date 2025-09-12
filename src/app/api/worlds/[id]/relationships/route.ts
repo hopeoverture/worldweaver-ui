@@ -34,9 +34,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     params = await ctx.params
     const worldId = params.id
     
-    safeConsoleError('🚀 Relationships POST start', new Error('DEBUG'), { 
+    // Check for debug flag
+    const url = new URL(req.url)
+    const debug = url.searchParams.get('debug') === 'true'
+    
+    safeConsoleError('🚀 Relationships POST start - CACHE BUST v3', new Error('DEBUG'), { 
       worldId, 
-      action: 'POST_relationships_start' 
+      action: 'POST_relationships_start',
+      timestamp: new Date().toISOString()
     })
 
     const { user: authUser, error: authError } = await getServerAuth()
