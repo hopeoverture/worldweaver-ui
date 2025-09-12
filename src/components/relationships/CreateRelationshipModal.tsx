@@ -54,7 +54,31 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to create relationship');
+          console.error('Relationship creation failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            requestData: {
+              fromEntityId,
+              toEntityId,
+              label: label.trim(),
+              description: notes.trim() || null,
+            }
+          });
+          
+          // Provide more specific error messages based on status
+          let errorMessage = errorData.error || 'Failed to create relationship';
+          if (response.status === 401) {
+            errorMessage = 'Authentication required. Please log in again.';
+          } else if (response.status === 403) {
+            errorMessage = 'You do not have permission to create relationships in this world.';
+          } else if (response.status === 404) {
+            errorMessage = 'World not found or one of the selected entities no longer exists.';
+          } else if (response.status === 400 && errorData.details) {
+            errorMessage = `Invalid data: ${errorData.details.map((d: any) => d.message).join(', ')}`;
+          }
+          
+          throw new Error(errorMessage);
         }
 
         // Reset form and close modal

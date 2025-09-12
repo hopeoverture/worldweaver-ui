@@ -213,3 +213,5 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - Helper functions for RLS policies: `user_has_world_access`, `user_can_edit_world`, `user_is_world_admin`
 - Composite indexes for common query patterns (world access, membership, entity searches)
 - GIN indexes for JSONB field searches (entities.data, templates.fields, etc.)
+
+Always make sure all tests pass (especially typescript) before committing changes to git

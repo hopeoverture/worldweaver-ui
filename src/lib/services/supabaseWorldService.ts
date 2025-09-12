@@ -491,7 +491,18 @@ export class SupabaseWorldService {
     metadata?: Json | null;
     created?: boolean;
   }> {
-    console.log('🔄 CreateRelationship: Starting', { worldId, fromEntityId: data.fromEntityId, toEntityId: data.toEntityId, label: data.label })
+    const startTime = Date.now()
+    console.log('🔄 CreateRelationship: Starting', { 
+      worldId, 
+      fromEntityId: data.fromEntityId, 
+      toEntityId: data.toEntityId, 
+      label: data.label,
+      userId,
+      environment: process.env.NODE_ENV,
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      startTime
+    })
     
     // Verify access
     const world = await this.getWorldById(worldId, userId)
@@ -590,7 +601,13 @@ export class SupabaseWorldService {
       throw new Error('Relationship creation succeeded but no data returned')
     }
 
-    console.log('✅ CreateRelationship: Successfully created', { relationshipId: row.id })
+    const endTime = Date.now()
+    const duration = endTime - startTime
+    console.log('✅ CreateRelationship: Successfully created', { 
+      relationshipId: row.id,
+      duration: `${duration}ms`,
+      environment: process.env.NODE_ENV
+    })
     return {
       id: row.id,
       worldId: row.world_id,
