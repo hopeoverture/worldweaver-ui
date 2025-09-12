@@ -755,33 +755,52 @@ export class SupabaseWorldService {
     const dbClient = supabase || await createServerSupabaseClient()
     
     // Access check by fetching world using the same client - prevents auth context issues
+    console.log('🎯 Template creation - starting world access check', { worldId, userId })
     const { data: world, error: worldError } = await dbClient
       .from('worlds')
       .select('id, name, owner_id')
       .eq('id', worldId)
       .single()
     
+    console.log('🎯 Template creation - world access check result', { world, worldError })
+    
     if (worldError || !world) {
+      console.log('🎯 Template creation - world access check failed', { worldError, worldId, userId })
       logDatabaseError('World access check failed for template creation', worldError, { worldId, userId, action: 'template_create_world_check' })
       throw new Error('World not found or access denied')
     }
     
+    console.log('🎯 Template creation - world access check passed', { worldId: world.id, worldName: world.name })
+    
     try {
+      console.log('🎯 Template creation - preparing to insert template', { 
+        worldId, 
+        templateName: data.name, 
+        fieldsLength: data.fields?.length || 0
+      })
+      
+      const insertData = {
+        world_id: worldId,
+        name: data.name,
+        description: data.description || '',
+        icon: data.icon || 'file-text',
+        category: data.category || 'general',
+        fields: (data.fields as unknown) as Json,
+        is_system: false,
+      }
+      
+      console.log('🎯 Template creation - insert data prepared', insertData)
+      
       const { data: row, error } = await dbClient
         .from('templates')
-        .insert({
-          world_id: worldId,
-          name: data.name,
-          description: data.description || '',
-          icon: data.icon || 'file-text',
-          category: data.category || 'general',
-          fields: (data.fields as unknown) as Json,
-          is_system: false,
-        })
+        .insert(insertData)
         .select('*')
         .single()
       
+      console.log('🎯 Template creation - insert result', { row, error })
+      
       if (error) {
+        console.log('🎯 Template creation - database error', { error, insertData })
         logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, userId, action: 'create_template' })
         throw new Error(`Database error: ${error.message}`)
       }
@@ -801,6 +820,7 @@ export class SupabaseWorldService {
         isSystem: row.is_system || false,
       }
     } catch (error) {
+      console.log('🎯 Template creation - caught error', { error, worldId, templateName: data.name, userId })
       logDatabaseError('Error in template creation', error as Error, { worldId, templateName: data.name, userId, action: 'create_template' })
       throw error
     }
