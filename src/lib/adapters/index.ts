@@ -237,7 +237,7 @@ export function adaptProfileFromDatabase(dbProfile: DatabaseProfile): Profile {
     avatarUrl: dbProfile.avatar_url || undefined,
     createdAt: dbProfile.created_at,
     updatedAt: dbProfile.updated_at,
-    data: (dbProfile.data as Record<string, unknown>) || {}, // JSONB data field
+    data: {}, // Profiles don't have custom data fields in current schema
   };
 }
 
