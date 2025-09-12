@@ -791,14 +791,27 @@ export class SupabaseWorldService {
       
       console.log('🎯 Template creation - insert data prepared', insertData)
       
-      // Debug: Check auth context before insert
+      // Debug: Check auth context and membership before insert
       const { data: authUser } = await dbClient.auth.getUser()
-      console.log('🎯 Template creation - auth context check', { 
+      
+      // Check membership
+      const { data: membership } = await dbClient
+        .from('world_members')
+        .select('role')
+        .eq('world_id', worldId)
+        .eq('user_id', authUser?.id || 'none')
+        .single()
+      
+      const debugInfo = {
         authUserId: authUser?.id,
         passedUserId: userId,
         worldOwner: world.owner_id,
-        authMatch: authUser?.id === world.owner_id
-      })
+        authMatch: authUser?.id === world.owner_id,
+        membership: membership?.role || 'none',
+        canCreate: authUser?.id === world.owner_id || ['admin', 'editor'].includes(membership?.role || 'none')
+      }
+      
+      console.log('🎯 Template creation - auth context check', debugInfo)
       
       const { data: row, error } = await dbClient
         .from('templates')
@@ -809,9 +822,9 @@ export class SupabaseWorldService {
       console.log('🎯 Template creation - insert result', { row, error })
       
       if (error) {
-        console.log('🎯 Template creation - database error', { error, insertData })
+        console.log('🎯 Template creation - database error', { error, insertData, debugInfo })
         logDatabaseError('Supabase error creating template', error, { worldId, templateName: data.name, userId, action: 'create_template' })
-        throw new Error(`Database error: ${error.message}`)
+        throw new Error(`Database error: ${error.message}. Debug: ${JSON.stringify(debugInfo)}`)
       }
       
       if (!row) {
