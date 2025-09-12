@@ -38,7 +38,7 @@ export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: 
     {
       label: result.label,
       description: result.description ?? undefined,
-      metadata: result.metadata ?? undefined,
+      metadata: (result.metadata as any) ?? undefined,
     },
     user.id,
   )
