@@ -217,6 +217,7 @@ export type Database = {
           created_at: string
           description: string | null
           fields: Json
+          folder_id: string | null
           icon: string | null
           id: string
           is_system: boolean | null
@@ -229,6 +230,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           fields?: Json
+          folder_id?: string | null
           icon?: string | null
           id?: string
           is_system?: boolean | null
