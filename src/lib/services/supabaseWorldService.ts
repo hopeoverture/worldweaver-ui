@@ -63,7 +63,7 @@ export class SupabaseWorldService {
         
         // If auth context is missing or invalid, use admin client
         if (authError || !authData?.user || authData.user.id !== userId) {
-          console.log('⚠️ GetWorldById: Auth context invalid, switching to admin client')
+          console.log('⚠️ GetWorldById: FIXED VERSION - Auth context invalid, switching to admin client')
           
           if (!adminClient) {
             console.log('❌ GetWorldById: Admin client not available')
@@ -549,12 +549,13 @@ export class SupabaseWorldService {
     
     console.log('✅ CreateRelationship: World access verified', { worldId, worldName: world.name, userId })
 
-    console.log('🔧 CreateRelationship: Setting up client with environment check', {
+    console.log('🔧 CreateRelationship: FIXED VERSION - Setting up client with environment check', {
       hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
       hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       adminClientExists: !!adminClient,
-      nodeEnv: process.env.NODE_ENV
+      nodeEnv: process.env.NODE_ENV,
+      version: 'v2-with-getWorldById-fix'
     })
     
     let supabase
