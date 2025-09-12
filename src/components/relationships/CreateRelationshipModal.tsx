@@ -5,7 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { useStore } from '@/lib/store';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 
 interface CreateRelationshipModalProps {
   isOpen: boolean;
@@ -14,16 +14,17 @@ interface CreateRelationshipModalProps {
 }
 
 export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRelationshipModalProps) {
-  const { entities, addLink } = useStore();
+  const { data: entities = [] } = useWorldEntities(worldId);
   const [fromEntityId, setFromEntityId] = useState('');
   const [toEntityId, setToEntityId] = useState('');
   const [label, setLabel] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const worldEntities = entities.filter(e => e.worldId === worldId);
+  const worldEntities = entities;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
 
     if (!fromEntityId) newErrors.fromEntityId = 'From entity is required';
@@ -34,19 +35,39 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      addLink({
-        fromEntityId,
-        toEntityId,
-        label: label.trim(),
-      });
+      setIsSubmitting(true);
+      try {
+        const response = await fetch(`/api/worlds/${worldId}/relationships`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            fromEntityId,
+            toEntityId,
+            label: label.trim(),
+            description: notes.trim() || null,
+          }),
+        });
 
-      // Reset form and close modal
-      setFromEntityId('');
-      setToEntityId('');
-      setLabel('');
-      setNotes('');
-      setErrors({});
-      onClose();
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to create relationship');
+        }
+
+        // Reset form and close modal
+        setFromEntityId('');
+        setToEntityId('');
+        setLabel('');
+        setNotes('');
+        setErrors({});
+        onClose();
+      } catch (error) {
+        setErrors({ submit: error instanceof Error ? error.message : 'Failed to create relationship' });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -56,6 +77,7 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
     setLabel('');
     setNotes('');
     setErrors({});
+    setIsSubmitting(false);
     onClose();
   };
 
@@ -74,6 +96,9 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
               setFromEntityId(e.target.value);
               if (errors.fromEntityId) {
                 setErrors(prev => ({ ...prev, fromEntityId: '' }));
+              }
+              if (errors.submit) {
+                setErrors(prev => ({ ...prev, submit: '' }));
               }
             }}
             className={errors.fromEntityId ? 'border-red-500' : ''}
@@ -99,6 +124,9 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
               if (errors.label) {
                 setErrors(prev => ({ ...prev, label: '' }));
               }
+              if (errors.submit) {
+                setErrors(prev => ({ ...prev, submit: '' }));
+              }
             }}
             placeholder="e.g., father of, lives in, owns, allies with"
             className={errors.label ? 'border-red-500' : ''}
@@ -116,6 +144,9 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
               setToEntityId(e.target.value);
               if (errors.toEntityId) {
                 setErrors(prev => ({ ...prev, toEntityId: '' }));
+              }
+              if (errors.submit) {
+                setErrors(prev => ({ ...prev, submit: '' }));
               }
             }}
             className={errors.toEntityId ? 'border-red-500' : ''}
@@ -175,14 +206,35 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
             </div>
           </div>
         </div>
+
+        {errors.submit && (
+          <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <svg className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-sm text-red-800 dark:text-red-200">{errors.submit}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-neutral-700 mt-6">
-        <Button variant="outline" onClick={handleClose}>
+        <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
           Cancel
         </Button>
-        <Button onClick={handleSubmit}>
-          Create Relationship
+        <Button onClick={handleSubmit} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Creating...
+            </>
+          ) : (
+            'Create Relationship'
+          )}
         </Button>
       </div>
     </Modal>
