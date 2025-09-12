@@ -38,8 +38,8 @@ export const GET = withApiErrorHandling(async (request: NextRequest): Promise<Ne
   const includeArchived = searchParams.get('includeArchived') === 'true';
 
   console.log('GET /api/worlds - Calling getUserWorlds with userId:', user.id);
-  const { worldService } = await import('@/lib/services/worldService');
-  const worlds = await worldService.getUserWorlds(user.id);
+  const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService');
+  const worlds = await supabaseWorldService.getUserWorlds(user.id);
   
   console.log('GET /api/worlds - Response:', {
     requestId,

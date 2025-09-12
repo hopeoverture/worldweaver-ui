@@ -24,13 +24,13 @@ export { supabaseWorldService } from './supabaseWorldService';
  * This maintains API compatibility while services are being split
  */
 class UnifiedService {
-  // World operations
-  async getUserWorlds(userId: string) { return worldService.getUserWorlds(userId); }
-  async getWorldById(worldId: string, userId: string) { return worldService.getWorldById(worldId, userId); }
-  async createWorld(data: any, userId: string) { return worldService.createWorld(data, userId); }
-  async updateWorld(worldId: string, data: any, userId: string) { return worldService.updateWorld(worldId, data, userId); }
-  async deleteWorld(worldId: string, userId: string) { return worldService.deleteWorld(worldId, userId); }
-  async archiveWorld(worldId: string, userId: string, archived?: boolean) { return worldService.archiveWorld(worldId, userId, archived); }
+  // World operations - use supabaseWorldService for admin client fallback support
+  async getUserWorlds(userId: string) { return supabaseWorldService.getUserWorlds(userId); }
+  async getWorldById(worldId: string, userId: string) { return supabaseWorldService.getWorldById(worldId, userId); }
+  async createWorld(data: any, userId: string) { return supabaseWorldService.createWorld(data, userId); }
+  async updateWorld(worldId: string, data: any, userId: string) { return supabaseWorldService.updateWorld(worldId, data, userId); }
+  async deleteWorld(worldId: string, userId: string) { return supabaseWorldService.deleteWorld(worldId, userId); }
+  async archiveWorld(worldId: string, userId: string, archived?: boolean) { return supabaseWorldService.archiveWorld(worldId, userId, archived); }
 
   // Entity operations
   async getWorldEntities(worldId: string, userId: string) { return entityService.getWorldEntities(worldId, userId); }

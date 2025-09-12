@@ -15,8 +15,8 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    const world = await worldService.getWorldById(params.id, user.id)
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+    const world = await supabaseWorldService.getWorldById(params.id, user.id)
     if (!world) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
@@ -101,8 +101,8 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (parsed.rulesConstraints !== undefined) data.rulesConstraints = parsed.rulesConstraints
     if (parsed.aestheticDirection !== undefined) data.aestheticDirection = parsed.aestheticDirection
 
-    const { worldService } = await import('@/lib/services/worldService')
-    const updated = await worldService.updateWorld(params.id, data, user.id)
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+    const updated = await supabaseWorldService.updateWorld(params.id, data, user.id)
     return NextResponse.json({ world: updated })
   } catch (error) {
     safeConsoleError('Error updating world', error as Error, { action: 'PUT_world', worldId: params?.id, userId: user?.id })
@@ -121,8 +121,8 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
-    await worldService.deleteWorld(params.id, user.id)
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+    await supabaseWorldService.deleteWorld(params.id, user.id)
     return NextResponse.json({ ok: true })
   } catch (error) {
     safeConsoleError('Error deleting world', error as Error, { action: 'DELETE_world', worldId: params?.id, userId: user?.id })
