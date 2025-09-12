@@ -35,7 +35,8 @@ export default function JoinWorldPage() {
     
     if (!user) {
       // Redirect to login with return URL
-      router.push(`/login?redirect=${encodeURIComponent(window.location.href)}`);
+      const currentUrl = window.location.href;
+      router.push(`/login?redirect=${encodeURIComponent(currentUrl)}`);
       return;
     }
 

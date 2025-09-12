@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -13,8 +13,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   
-  const { signIn, error, clearError, retryLastOperation } = useAuth()
+  const { user, loading: authLoading, signIn, error, clearError, retryLastOperation } = useAuth()
   const router = useRouter()
+
+  // Redirect authenticated users to home
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push('/');
+    }
+  }, [authLoading, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,7 +31,10 @@ export default function LoginPage() {
     const { error: signInError } = await signIn(email, password)
     
     if (!signInError) {
-      router.push('/')
+      // Check for redirect parameter
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectTo = searchParams.get('redirect') || '/';
+      router.push(redirectTo);
     }
     
     setIsLoading(false)
@@ -107,6 +117,23 @@ export default function LoginPage() {
         </div>
       </div>
     )
+  }
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950">
+        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if user is authenticated (will redirect)
+  if (user) {
+    return null;
   }
 
   return (

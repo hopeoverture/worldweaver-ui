@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { useWorlds } from '@/hooks/query/useWorlds';
 import { WorldGrid } from '@/components/worlds/WorldGrid';
 import { CreateWorldModal } from '@/components/worlds/CreateWorldModal';
@@ -11,8 +12,9 @@ import { Button } from '@/components/ui/Button';
 import { useKeyboardShortcuts } from '@/components/ui/KeyboardShortcuts';
 import type { World } from '@/lib/types';
 
-export default function WorldsPage() {
+export default function HomePage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const { data: worlds = [], isLoading, error } = useWorlds();
   const [errorDismissed, setErrorDismissed] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,6 +22,30 @@ export default function WorldsPage() {
   const [deleteWorldId, setDeleteWorldId] = useState<string | null>(null);
   const [archiveWorldId, setArchiveWorldId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+
+  // Redirect unauthenticated users to login
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [authLoading, user, router]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render content if user is not authenticated (will redirect)
+  if (!user) {
+    return null;
+  }
 
   // Optional: auto dismiss query error after a delay
   // setTimeout(() => setErrorDismissed(true), 5000);
