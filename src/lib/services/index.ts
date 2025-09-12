@@ -36,7 +36,7 @@ class UnifiedService {
 
   // Entity operations
   async getWorldEntities(worldId: string, userId: string) { return entityService.getWorldEntities(worldId, userId); }
-  async createEntity(worldId: string, data: Partial<Entity> & { name: string }, userId: string) { return entityService.createEntity(worldId, data, userId); }
+  async createEntity(worldId: string, data: Partial<Entity> & { name: string; fields: Record<string, unknown> }, userId: string) { return entityService.createEntity(worldId, data, userId); }
   async getEntityById(entityId: string, userId: string) { return entityService.getEntityById(entityId, userId); }
   async updateEntity(entityId: string, data: Partial<Entity>, userId: string) { return entityService.updateEntity(entityId, data, userId); }
   async deleteEntity(entityId: string, userId: string) { return entityService.deleteEntity(entityId, userId); }
