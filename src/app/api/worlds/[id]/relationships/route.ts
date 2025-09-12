@@ -16,7 +16,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
+    const { worldService } = await import('@/lib/services/supabaseWorldService')
     const relationships = await worldService.getWorldRelationships(params.id, user.id)
     return NextResponse.json({ relationships })
   } catch (error) {
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }, { status: 400 })
     }
 
-    const { worldService } = await import('@/lib/services/worldService')
+    const { worldService } = await import('@/lib/services/supabaseWorldService')
     
     safeConsoleError('🔄 Creating relationship via worldService', new Error('DEBUG'), { 
       worldId, 
