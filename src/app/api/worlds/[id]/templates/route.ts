@@ -74,6 +74,11 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
     debugSteps.push('SERVICES_IMPORTED')
     
     debugSteps.push('CREATE_TEMPLATE')
+    
+    // DEBUG: Check if supabase client has proper auth context
+    const { data: clientAuthUser } = await supabase.auth.getUser()
+    debugSteps.push(`CLIENT_AUTH_CHECK:${clientAuthUser?.id || 'NULL'}`)
+    
     const template = await worldService.createTemplate(params.id, {
       name: body.name,
       description: body.description,
