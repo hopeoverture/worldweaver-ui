@@ -14,6 +14,8 @@ import { useRevokeInvite } from '@/hooks/mutations/useRevokeInvite';
 import { useWorldMembers } from '@/hooks/query/useWorldMembers';
 import { useUpdateMemberRole, useRemoveMember } from '@/hooks/mutations/useMembers';
 import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/ToastProvider';
 
 type MembershipTabProps = {
   world: World;
@@ -55,6 +57,8 @@ export function MembershipTab({ world }: MembershipTabProps) {
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<WorldMember | null>(null);
   
+  const { user } = useAuth();
+  const { toast } = useToast();
   const updateWorldMutation = useUpdateWorld(world.id);
   // TODO: transferOwnership would need a dedicated mutation hook
 
@@ -66,23 +70,69 @@ export function MembershipTab({ world }: MembershipTabProps) {
   const updateMemberRoleMut = useUpdateMemberRole(world.id);
   const removeMemberMut = useRemoveMember(world.id);
 
-  // Find current user member (you'd get this from auth context in real app)
-  const currentUserMember = members.find((m: WorldMember) => m.email === 'current@user.com'); // In real app, get from auth
-  const isOwner = currentUserMember?.role === 'owner';
-  const canManageMembers = currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role);
+  // Find current user member using auth context
+  const currentUserMember = members.find((m: WorldMember) => m.email === user?.email || m.userId === user?.id);
+  // Check if user is owner or has owner role in members
+  const isOwner = currentUserMember?.role === 'owner' || (world as any).owner_id === user?.id;
+  const canManageMembers = isOwner || (currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role));
 
   const handleInviteMember = async (email: string, role: MemberRole) => {
-    await createInvite.mutateAsync({ email, role });
-    setShowInviteModal(false);
+    try {
+      await createInvite.mutateAsync({ email, role });
+      toast({
+        title: 'Invite sent!',
+        description: `Invitation sent to ${email} as ${role}`,
+        variant: 'success',
+      });
+      setShowInviteModal(false);
+    } catch (error) {
+      toast({
+        title: 'Failed to send invite',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'error',
+      });
+    }
   };
 
   const handleChangeRole = (memberId: string, newRole: MemberRole) => {
-    updateMemberRoleMut.mutate({ memberId, role: newRole });
+    const member = members.find((m: WorldMember) => m.id === memberId);
+    updateMemberRoleMut.mutate({ memberId, role: newRole }, {
+      onSuccess: () => {
+        toast({
+          title: 'Role updated',
+          description: `${member?.name || 'Member'} is now a ${newRole}`,
+          variant: 'success',
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: 'Failed to update role',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'error',
+        });
+      }
+    });
   };
 
   const handleRemoveMember = (memberId: string) => {
-    if (confirm('Are you sure you want to remove this member from the world?')) {
-      removeMemberMut.mutate(memberId);
+    const member = members.find((m: WorldMember) => m.id === memberId);
+    if (confirm(`Are you sure you want to remove ${member?.name || 'this member'} from the world?`)) {
+      removeMemberMut.mutate(memberId, {
+        onSuccess: () => {
+          toast({
+            title: 'Member removed',
+            description: `${member?.name || 'Member'} has been removed from the world`,
+            variant: 'success',
+          });
+        },
+        onError: (error) => {
+          toast({
+            title: 'Failed to remove member',
+            description: error instanceof Error ? error.message : 'Unknown error',
+            variant: 'error',
+          });
+        }
+      });
     }
   };
 
@@ -95,17 +145,49 @@ export function MembershipTab({ world }: MembershipTabProps) {
   };
 
   const handleRevokeInvite = (inviteId: string) => {
-    revokeInviteMut.mutate(inviteId);
+    const invite = invites.find((inv: any) => inv.id === inviteId);
+    revokeInviteMut.mutate(inviteId, {
+      onSuccess: () => {
+        toast({
+          title: 'Invite revoked',
+          description: `Invitation to ${invite?.email || 'user'} has been revoked`,
+          variant: 'success',
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: 'Failed to revoke invite',
+          description: error instanceof Error ? error.message : 'Unknown error',
+          variant: 'error',
+        });
+      }
+    });
   };
 
   const handleCopyInviteLink = (token?: string) => {
     if (!token) {
-      alert('Invite link unavailable for this invite')
+      toast({
+        title: 'Cannot copy link',
+        description: 'Invite link unavailable for this invite',
+        variant: 'error',
+      });
       return
     }
     const origin = typeof window !== 'undefined' ? window.location.origin : ''
     const url = `${origin}/invite/accept?token=${encodeURIComponent(token)}`
-    navigator.clipboard.writeText(url).catch(() => alert('Failed to copy link'))
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        title: 'Link copied!',
+        description: 'Invite link has been copied to clipboard',
+        variant: 'success',
+      });
+    }).catch(() => {
+      toast({
+        title: 'Failed to copy',
+        description: 'Could not copy link to clipboard',
+        variant: 'error',
+      });
+    })
   }
 
   const getRoleColor = (role: MemberRole) => {
@@ -273,7 +355,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
                           <div className="min-w-0 flex-1">
                             <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
                               {member.name}
-                              {member.name === 'You' && (
+                              {(member.email === user?.email || member.userId === user?.id) && (
                                 <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-normal">(You)</span>
                               )}
                             </div>
