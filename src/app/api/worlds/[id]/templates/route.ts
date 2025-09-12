@@ -24,13 +24,23 @@ export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params:
 export const dynamic = 'force-dynamic'
 
 export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+  console.log('🚀 Template API - POST request started')
   const requestId = generateRequestId()
+  console.log('🚀 Template API - request ID generated:', requestId)
+  
   const params = await ctx.params
+  console.log('🚀 Template API - params extracted:', params)
+  
+  console.log('🚀 Template API - calling getServerClientAndUser')
   const { supabase, user, error: authError } = await getServerClientAndUser()
+  console.log('🚀 Template API - auth result:', { user: user?.id, hasSupabase: !!supabase, authError })
+  
   if (authError || !user) {
+    console.log('🚀 Template API - auth failed, returning apiAuthRequired')
     return apiAuthRequired()
   }
 
+  console.log('🚀 Template API - defining schema')
   const schema = z.object({
     name: z.string().min(1).max(200),
     description: z.string().max(5000).optional(),
@@ -47,23 +57,31 @@ export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params:
     })).default([]),
   })
 
+  console.log('🚀 Template API - parsing request body')
   const bodyResult = await parseRequestBody(req, schema)
+  console.log('🚀 Template API - body parse result:', { success: !('error' in bodyResult), bodyKeys: 'error' in bodyResult ? 'error' : Object.keys(bodyResult) })
+  
   if ('error' in bodyResult) {
+    console.log('🚀 Template API - body parsing failed, returning error')
     return bodyResult.error
   }
   const body = bodyResult
+  console.log('🚀 Template API - body parsed successfully:', { name: body.name, fieldsCount: body.fields?.length || 0 })
 
+  console.log('🚀 Template API - importing services')
   const { unifiedService: worldService } = await import('@/lib/services')
+  console.log('🚀 Template API - services imported successfully')
   
   // Debug: check if user can access this world
-  console.log('🎯 Template creation - checking world access for user:', user.id, 'world:', params.id)
+  console.log('🚀 Template API - checking world access for user:', user.id, 'world:', params.id)
   try {
     const world = await worldService.getWorldById(params.id, user.id)
-    console.log('🎯 Template creation - world access check result:', !!world)
+    console.log('🚀 Template API - world access check result:', !!world)
   } catch (error) {
-    console.log('🎯 Template creation - world access failed:', error)
+    console.log('🚀 Template API - world access failed:', error)
   }
   
+  console.log('🚀 Template API - calling createTemplate service')
   const template = await worldService.createTemplate(params.id, {
     name: body.name,
     description: body.description,
@@ -71,5 +89,7 @@ export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params:
     category: body.category,
     fields: body.fields,
   }, user.id, supabase)
+  
+  console.log('🚀 Template API - createTemplate completed successfully:', { templateId: template?.id })
   return NextResponse.json({ template }, { headers: { 'X-Request-ID': requestId } })
 })
