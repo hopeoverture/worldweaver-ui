@@ -3,6 +3,7 @@ import { adminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
+// Allow unauthenticated access to diagnostic endpoint
 export async function GET() {
   try {
     const results: any = {
