@@ -791,6 +791,15 @@ export class SupabaseWorldService {
       
       console.log('🎯 Template creation - insert data prepared', insertData)
       
+      // Debug: Check auth context before insert
+      const { data: authUser } = await dbClient.auth.getUser()
+      console.log('🎯 Template creation - auth context check', { 
+        authUserId: authUser?.id,
+        passedUserId: userId,
+        worldOwner: world.owner_id,
+        authMatch: authUser?.id === world.owner_id
+      })
+      
       const { data: row, error } = await dbClient
         .from('templates')
         .insert(insertData)
