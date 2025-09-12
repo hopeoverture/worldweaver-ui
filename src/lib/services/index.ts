@@ -10,6 +10,7 @@ import { worldService } from './worldService';
 import { entityService } from './entityService';
 import { folderService } from './folderService';
 import { supabaseWorldService } from './supabaseWorldService';
+import type { World, Entity, Folder, Template, Relationship } from '../types';
 
 // New focused services
 export { worldService, WorldService } from './worldService';
@@ -27,35 +28,35 @@ class UnifiedService {
   // World operations - use supabaseWorldService for admin client fallback support
   async getUserWorlds(userId: string) { return supabaseWorldService.getUserWorlds(userId); }
   async getWorldById(worldId: string, userId: string) { return supabaseWorldService.getWorldById(worldId, userId); }
-  async createWorld(data: any, userId: string) { return supabaseWorldService.createWorld(data, userId); }
-  async updateWorld(worldId: string, data: any, userId: string) { return supabaseWorldService.updateWorld(worldId, data, userId); }
+  async createWorld(data: Partial<World> & { name: string }, userId: string) { return supabaseWorldService.createWorld(data, userId); }
+  async updateWorld(worldId: string, data: Partial<World>, userId: string) { return supabaseWorldService.updateWorld(worldId, data, userId); }
   async deleteWorld(worldId: string, userId: string) { return supabaseWorldService.deleteWorld(worldId, userId); }
   async archiveWorld(worldId: string, userId: string, archived?: boolean) { return supabaseWorldService.archiveWorld(worldId, userId, archived); }
 
   // Entity operations
   async getWorldEntities(worldId: string, userId: string) { return entityService.getWorldEntities(worldId, userId); }
-  async createEntity(worldId: string, data: any, userId: string) { return entityService.createEntity(worldId, data, userId); }
+  async createEntity(worldId: string, data: Partial<Entity> & { name: string }, userId: string) { return entityService.createEntity(worldId, data, userId); }
   async getEntityById(entityId: string, userId: string) { return entityService.getEntityById(entityId, userId); }
-  async updateEntity(entityId: string, data: any, userId: string) { return entityService.updateEntity(entityId, data, userId); }
+  async updateEntity(entityId: string, data: Partial<Entity>, userId: string) { return entityService.updateEntity(entityId, data, userId); }
   async deleteEntity(entityId: string, userId: string) { return entityService.deleteEntity(entityId, userId); }
 
   // Folder operations
   async getWorldFolders(worldId: string, userId: string) { return folderService.getWorldFolders(worldId, userId); }
-  async createFolder(worldId: string, data: any, userId: string) { return folderService.createFolder(worldId, data, userId); }
+  async createFolder(worldId: string, data: { name: string; description?: string; color?: string }, userId: string) { return folderService.createFolder(worldId, data, userId); }
   async getFolderById(folderId: string, userId: string) { return folderService.getFolderById(folderId, userId); }
-  async updateFolder(folderId: string, data: any, userId: string) { return folderService.updateFolder(folderId, data, userId); }
+  async updateFolder(folderId: string, data: { name?: string; description?: string; color?: string | null }, userId: string) { return folderService.updateFolder(folderId, data, userId); }
   async deleteFolder(folderId: string, userId: string) { return folderService.deleteFolder(folderId, userId); }
 
   // Legacy operations - delegate to old service temporarily
   async getWorldRelationships(worldId: string, userId: string) { return supabaseWorldService.getWorldRelationships(worldId, userId); }
-  async createRelationship(worldId: string, data: any, userId: string) { return supabaseWorldService.createRelationship(worldId, data, userId); }
-  async updateRelationship(relationshipId: string, data: any, userId: string) { return supabaseWorldService.updateRelationship(relationshipId, data, userId); }
+  async createRelationship(worldId: string, data: Partial<Relationship> & { fromEntityId: string; toEntityId: string; name: string }, userId: string) { return supabaseWorldService.createRelationship(worldId, data, userId); }
+  async updateRelationship(relationshipId: string, data: Partial<Relationship>, userId: string) { return supabaseWorldService.updateRelationship(relationshipId, data, userId); }
   async deleteRelationship(relationshipId: string, userId: string) { return supabaseWorldService.deleteRelationship(relationshipId, userId); }
 
   async getWorldTemplates(worldId: string) { return supabaseWorldService.getWorldTemplates(worldId); }
   async getSystemTemplates() { return supabaseWorldService.getSystemTemplates(); }
-  async createTemplate(worldId: string, data: any, userId: string, supabase?: any) { return supabaseWorldService.createTemplate(worldId, data, userId, supabase); }
-  async updateTemplate(templateId: string, data: any, userId: string) { return supabaseWorldService.updateTemplate(templateId, data, userId); }
+  async createTemplate(worldId: string, data: Partial<Template> & { name: string; fields: any[] }, userId: string, supabase?: any) { return supabaseWorldService.createTemplate(worldId, data, userId, supabase); }
+  async updateTemplate(templateId: string, data: Partial<Template>, userId: string) { return supabaseWorldService.updateTemplate(templateId, data, userId); }
   async deleteTemplate(templateId: string, userId: string) { return supabaseWorldService.deleteTemplate(templateId, userId); }
 
   async getWorldMembers(worldId: string, userId: string) { return supabaseWorldService.getWorldMembers(worldId, userId); }

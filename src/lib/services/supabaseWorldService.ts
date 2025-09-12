@@ -724,7 +724,7 @@ export class SupabaseWorldService {
     relationshipId: string,
     data: { label?: string; description?: string | null; metadata?: Json | null; [key: string]: any },
     userId: string,
-  ): Promise<{ id: string; worldId: string; from: string; to: string; label: string; description?: string | null; metadata?: Json | null }> {
+  ): Promise<{ id: string; worldId: string; from: string; to: string; label: string; description?: string | null; metadata?: Json | null; createdAt: string; updatedAt: string }> {
     const supabase = await createServerSupabaseClient()
 
     // Fetch current to check access via world
@@ -771,6 +771,8 @@ export class SupabaseWorldService {
       label: row.relationship_type,
       description: row.description,
       metadata: row.metadata as Json | null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
     }
   }
 

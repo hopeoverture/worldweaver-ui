@@ -52,8 +52,8 @@ export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: 
     label: relationship.label,
     description: relationship.description ?? undefined,
     metadata: relationship.metadata as Record<string, unknown> | undefined,
-    createdAt: new Date().toISOString(), // TODO: Get from database
-    updatedAt: new Date().toISOString(), // TODO: Get from database
+    createdAt: relationship.createdAt,
+    updatedAt: relationship.updatedAt,
   }
   
   return apiSuccess(responseData, { 'X-Request-ID': requestId })
