@@ -394,6 +394,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('✅ Login successful, refreshing router to sync server-side session')
       router.refresh()
 
+      // Add a small delay to allow server-side session to fully synchronize
+      await new Promise(resolve => setTimeout(resolve, 500))
+      console.log('✅ Session sync delay completed')
+
+      // Validate server-side session by making a test API call
+      try {
+        const testResponse = await fetch('/api/worlds', { credentials: 'include' })
+        if (testResponse.ok) {
+          console.log('✅ Server-side session validated successfully')
+        } else {
+          console.warn('⚠️ Server-side session validation failed, but continuing anyway')
+        }
+      } catch (error) {
+        console.warn('⚠️ Session validation request failed, but continuing anyway:', error)
+      }
+
       return { error: null }
     } catch (error) {
       console.error('Unexpected error during sign-in:', error)
