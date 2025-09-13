@@ -20,13 +20,16 @@ type DatabaseProfile = Database['public']['Tables']['profiles']['Row'];
 export function adaptWorldFromDatabase(
   dbWorld: DatabaseWorld & { entities?: any }
 ): World {
+  // Extract entity count from the entities array returned by Supabase count query
+  const entityCount = Array.isArray(dbWorld.entities) ? dbWorld.entities[0]?.count || 0 : 0;
+
   return {
     id: dbWorld.id,
     ownerId: dbWorld.owner_id,
     name: dbWorld.name,
     summary: dbWorld.description || undefined, // DB: description -> Domain: summary
     description: dbWorld.description || undefined,
-    entityCount: 0, // Entity count will be fetched separately if needed
+    entityCount,
     updatedAt: dbWorld.updated_at,
     isArchived: dbWorld.is_archived ?? false,
     archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined,

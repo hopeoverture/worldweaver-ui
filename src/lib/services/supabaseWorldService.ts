@@ -29,7 +29,10 @@ export class SupabaseWorldService {
       const supabase = await createServerSupabaseClient()
       const { data: worlds, error } = await supabase
         .from('worlds')
-        .select('*')
+        .select(`
+          *,
+          entities(count)
+        `)
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
 
