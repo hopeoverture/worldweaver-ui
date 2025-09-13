@@ -254,9 +254,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null)
         } else {
           // Other profile errors are still logged but don't break auth
-          logAuthError('fetch_profile', error, { 
+          // Convert Supabase error to proper Error object for logging
+          const errorObj = new Error(error.message || 'Profile fetch failed')
+          errorObj.name = error.code || 'ProfileError'
+          logAuthError('fetch_profile', errorObj, {
             action: 'fetch_profile',
-            userId: userId.substring(0, 8) + '...' 
+            userId: userId.substring(0, 8) + '...',
+            metadata: {
+              supabaseError: {
+                code: error.code,
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+              }
+            }
           })
           setProfile(null)
         }

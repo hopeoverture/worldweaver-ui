@@ -61,17 +61,31 @@ export class SupabaseWorldService {
 
           let displayableEntityCount = 0;
 
-          if (!entitiesResult.error && entitiesResult.data && !foldersResult.error && foldersResult.data) {
+          if (!entitiesResult.error && entitiesResult.data) {
             const entities = entitiesResult.data;
-            const validFolderIds = new Set(foldersResult.data.map(f => f.id));
 
-            // Count entities that are either:
-            // 1. Ungrouped (no folder_id)
-            // 2. In a valid entity folder
-            displayableEntityCount = entities.filter(entity => {
-              if (!entity.id || !entity.name || !entity.world_id) return false;
-              return !entity.folder_id || validFolderIds.has(entity.folder_id);
-            }).length;
+            if (!foldersResult.error && foldersResult.data) {
+              // Normal case: both entities and folders queries succeeded
+              const validFolderIds = new Set(foldersResult.data.map(f => f.id));
+
+              // Count entities that are either:
+              // 1. Ungrouped (no folder_id)
+              // 2. In a valid entity folder
+              displayableEntityCount = entities.filter(entity => {
+                if (!entity.id || !entity.name || !entity.world_id) return false;
+                return !entity.folder_id || validFolderIds.has(entity.folder_id);
+              }).length;
+            } else {
+              // Fallback: folders query failed, count all valid entities
+              console.warn('Folders query failed, counting all valid entities:', foldersResult.error);
+              displayableEntityCount = entities.filter(entity => {
+                return entity.id && entity.name && entity.world_id;
+              }).length;
+            }
+          } else if (entitiesResult.error) {
+            // Entities query failed, log error but continue with 0 count
+            console.warn('Entities query failed for world', world.id, ':', entitiesResult.error);
+            displayableEntityCount = 0;
           }
 
           return {
