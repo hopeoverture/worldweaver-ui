@@ -16,6 +16,7 @@ const updateTemplateSchema = z.object({
   icon: z.string().optional(),
   category: z.string().optional(),
   fields: z.array(z.any()).optional(),
+  folderId: z.string().uuid().optional().nullable(),
   // If editing a system template, provide worldId to create/update a world-specific override
   worldId: z.string().uuid().optional(),
 })

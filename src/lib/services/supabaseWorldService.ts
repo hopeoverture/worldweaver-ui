@@ -1041,15 +1041,16 @@ export class SupabaseWorldService {
     // Persist all provided custom fields in fields JSONB
   const customFields: Record<string, unknown> = Array.isArray((data as any).fields) ? { ...(data as any).fields } : {};
     for (const key of Object.keys(data)) {
-      if (!['name', 'description', 'icon', 'category', 'fields'].includes(key)) {
+      if (!['name', 'description', 'icon', 'category', 'fields', 'folderId'].includes(key)) {
         customFields[key] = (data as any)[key];
       }
     }
-    const patch: Partial<{ name: string; description?: string | null; icon?: string | null; category?: string | null; fields?: Json }> = {}
+    const patch: Partial<{ name: string; description?: string | null; icon?: string | null; category?: string | null; fields?: Json; folder_id?: string | null }> = {}
     if (data.name !== undefined) patch.name = data.name
     if (data.description !== undefined) patch.description = data.description
     if (data.icon !== undefined) patch.icon = data.icon
     if (data.category !== undefined) patch.category = data.category
+    if ((data as any).folderId !== undefined) patch.folder_id = (data as any).folderId || null
     if ((data as Partial<Template>).fields !== undefined) patch.fields = (customFields as unknown) as Json
 
     // If editing a system template, create or update a world-specific override
