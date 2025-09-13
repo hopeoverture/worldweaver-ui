@@ -22,7 +22,10 @@ export function useUpdateEntity(worldId: string) {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || "Failed to update entity");
+        const error = new Error(text || "Failed to update entity");
+        (error as any).status = res.status;
+        (error as any).statusText = res.statusText;
+        throw error;
       }
       return res.json();
     },
