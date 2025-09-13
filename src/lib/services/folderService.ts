@@ -55,7 +55,8 @@ export class FolderService {
       name: data.name,
       description: data.description || '',
       color: data.color || null,
-      kind: data.kind || 'entities', // Default to entities if not specified
+      // Temporarily comment out 'kind' until schema is fixed
+      // kind: data.kind || 'entities', // Default to entities if not specified
     };
     
     try {
