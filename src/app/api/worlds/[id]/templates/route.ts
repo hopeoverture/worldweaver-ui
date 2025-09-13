@@ -7,6 +7,7 @@ import {
   parseRequestBody,
   generateRequestId,
 } from '@/lib/api-utils'
+import { ActivityLogger } from '@/lib/activity-logger'
 
 export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
   const requestId = generateRequestId()
@@ -86,13 +87,26 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
       category: body.category,
       fields: body.fields,
     }, user.id, supabase)
-    
+
     debugSteps.push('TEMPLATE_CREATED')
-    return NextResponse.json({ template }, { 
-      headers: { 
+
+    // Log template creation activity
+    try {
+      const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+      const world = await supabaseWorldService.getWorldById(params.id, user.id)
+      if (world) {
+        ActivityLogger.templateCreated(user.id, template.name, template.id, world.id, world.name)
+      }
+    } catch (error) {
+      // Silent failure for activity logging
+      console.warn('Failed to log template creation activity:', error)
+    }
+
+    return NextResponse.json({ template }, {
+      headers: {
         'X-Request-ID': requestId,
         'X-Debug-Steps': debugSteps.join(',')
-      } 
+      }
     })
   } catch (error) {
     console.log('🔥 Template handler caught exception', { error, debugSteps })

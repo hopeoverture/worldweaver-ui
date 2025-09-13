@@ -20,6 +20,10 @@ interface FolderCardProps {
   onEntityDrop?: (entityId: string, entityName: string) => void;
   /** Optional handler for when a template is dropped onto this folder */
   onTemplateDrop?: (templateId: string, templateName: string) => void;
+  /** Optional entities array for calculating count (overrides store data) */
+  entities?: Array<{ id: string; folderId?: string }>;
+  /** Optional templates array for calculating count (overrides store data) */
+  templates?: Array<{ id: string; folderId?: string }>;
 }
 
 const colorClasses = {
@@ -73,15 +77,19 @@ const colorClasses = {
   }
 };
 
-function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop, onTemplateDrop }: FolderCardProps) {
-  const { entities, templates } = useStore();
+function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop, onTemplateDrop, entities: propsEntities, templates: propsTemplates }: FolderCardProps) {
+  const { entities: storeEntities, templates: storeTemplates } = useStore();
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Use provided entities/templates or fallback to store data
+  const entitiesData = propsEntities || storeEntities;
+  const templatesData = propsTemplates || storeTemplates;
+
   // Calculate dynamic count based on folder type
-  const dynamicCount = folder.kind === 'entities' 
-    ? entities.filter(e => e.folderId === folder.id).length
-    : templates.filter(t => t.folderId === folder.id).length;
+  const dynamicCount = folder.kind === 'entities'
+    ? entitiesData.filter(e => e.folderId === folder.id).length
+    : templatesData.filter(t => t.folderId === folder.id).length;
 
   // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
@@ -135,10 +143,10 @@ function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop
   const iconStyles = iconBackgroundTransition(colors);
 
   return (
-    <button
+    <div
       onClick={handleClick}
       data-testid="folder-card"
-      className={`group relative rounded-xl border text-left w-full p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+      className={`group relative rounded-xl border text-left w-full p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 cursor-pointer ${
         isDragOver
           ? 'border-brand-500 dark:border-brand-400 bg-brand-50/50 dark:bg-brand-900/20 shadow-lg scale-105'
           : 'border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card'
@@ -191,7 +199,7 @@ function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop
           </p>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 

@@ -16,6 +16,7 @@ export type Template = Tables<'templates'>
 export type Entity = Tables<'entities'>
 export type Relationship = Tables<'relationships'>
 export type WorldBan = Tables<'world_bans'>
+export type ActivityLog = Tables<'activity_logs'>
 
 // Insert types
 export type ProfileInsert = TablesInsert<'profiles'>

@@ -387,7 +387,7 @@ export default function WorldDashboard() {
   
   // Get ungrouped entities (entities without a folder)
   const ungroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
-  // Get ungrouped templates (templates without a folder)  
+  // Get ungrouped templates (templates without a folder)
   const ungroupedTemplates = remoteTemplates.filter((template: Template) => (template.worldId || strWorldId) === strWorldId && !template.folderId);
 
   const tabs: TabItem[] = [
@@ -454,6 +454,7 @@ export default function WorldDashboard() {
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
                     onEntityDrop={(entityId, entityName, folderId) => handleEntityDropOnFolder(entityId, entityName, folderId)}
+                    entities={remoteEntities}
                   />
                 </Suspense>
               ) : (
@@ -561,6 +562,7 @@ export default function WorldDashboard() {
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
                     onTemplateDrop={(templateId, templateName, folderId) => handleTemplateDropOnFolder(templateId, templateName, folderId)}
+                    templates={remoteTemplates}
                   />
                 </Suspense>
               ) : (

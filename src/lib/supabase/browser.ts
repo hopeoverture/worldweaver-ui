@@ -17,9 +17,17 @@ export function createClient() {
   }
 
   console.log('✅ Using SSR-compatible createBrowserClient for proper cookie management')
-  
+
   // Use SSR-compatible browser client for proper cookie/session management
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Extend session duration and enable auto-refresh
+      persistSession: true,
+      autoRefreshToken: true,
+      // Detect session from URL for OAuth flows
+      detectSessionInUrl: true,
+    }
+  })
 }
 
 // For backward compatibility, create a singleton instance (only when valid)

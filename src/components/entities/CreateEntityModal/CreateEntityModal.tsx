@@ -40,8 +40,8 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
     setIsSubmitting(true);
     
     try {
-      // Use provided folderId or template's folder, but allow undefined for ungrouped entities
-      const targetFolderId = folderId || entityData.folderId || undefined;
+      // Use provided folderId or entityData folderId, but convert empty string to undefined
+      const targetFolderId = folderId || (entityData.folderId && entityData.folderId.trim() !== '' ? entityData.folderId : undefined);
 
       await createEntity.mutateAsync({
         name: entityData.name,

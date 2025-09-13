@@ -11,6 +11,7 @@ import {
   generateRequestId
 } from '@/lib/api-utils';
 import { WorldsListResponse, WorldResponse } from '@/lib/api-types';
+import { ActivityLogger } from '@/lib/activity-logger';
 
 export const GET = withApiErrorHandling(async (request: NextRequest): Promise<NextResponse<WorldsListResponse>> => {
   const requestId = generateRequestId();
@@ -104,86 +105,55 @@ export const POST = withApiErrorHandling(async (request: NextRequest): Promise<N
   
   const parsed = bodyResult;
 
-  // Debug the insert payload
-  const insertPayload = {
+  // Prepare world data for SupabaseWorldService
+  const worldData = {
     name: parsed.name,
-    description: parsed.description ?? null,
-    owner_id: user.id,
-    user_id: user.id, // Add user_id as well for database compatibility
-    is_public: parsed.isPublic ?? false,
-    is_archived: false,
-    settings: {},
-    logline: parsed.logline ?? null,
-    genre_blend: parsed.genreBlend ?? null,
-    overall_tone: parsed.overallTone ?? null,
-    key_themes: parsed.keyThemes ?? null,
-    audience_rating: parsed.audienceRating ?? null,
-    scope_scale: parsed.scopeScale ?? null,
-    technology_level: parsed.technologyLevel ?? null,
-    magic_level: parsed.magicLevel ?? null,
-    cosmology_model: parsed.cosmologyModel ?? null,
-    climate_biomes: parsed.climateBiomes ?? null,
-    calendar_timekeeping: parsed.calendarTimekeeping ?? null,
-    societal_overview: parsed.societalOverview ?? null,
-    conflict_drivers: parsed.conflictDrivers ?? null,
-    rules_constraints: parsed.rulesConstraints ?? null,
-    aesthetic_direction: parsed.aestheticDirection ?? null,
+    description: parsed.description ?? undefined,
+    isPublic: parsed.isPublic ?? false,
+    logline: parsed.logline,
+    genreBlend: parsed.genreBlend,
+    overallTone: parsed.overallTone,
+    keyThemes: parsed.keyThemes,
+    audienceRating: parsed.audienceRating,
+    scopeScale: parsed.scopeScale,
+    technologyLevel: parsed.technologyLevel,
+    magicLevel: parsed.magicLevel,
+    cosmologyModel: parsed.cosmologyModel,
+    climateBiomes: parsed.climateBiomes,
+    calendarTimekeeping: parsed.calendarTimekeeping,
+    societalOverview: parsed.societalOverview,
+    conflictDrivers: parsed.conflictDrivers,
+    rulesConstraints: parsed.rulesConstraints,
+    aestheticDirection: parsed.aestheticDirection,
   };
 
-  console.log('POST /api/worlds - Insert Debug:', {
+  console.log('POST /api/worlds - Creating world via service:', {
     requestId,
     userId: user.id,
-    ownerIdValue: insertPayload.owner_id,
-    // userIdValue removed - field no longer exists in schema
     userEmail: user.email,
-    insertPayload,
+    worldData,
     timestamp: new Date().toISOString()
   });
 
-  // Use the same authenticated supabase client to ensure RLS context matches
-  const { data: row, error } = await supabase
-    .from('worlds')
-    .insert(insertPayload)
-    .select('*')
-    .single()
+  // Use SupabaseWorldService which includes setupInitialWorldResources
+  const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService');
+  const world = await supabaseWorldService.createWorld(worldData, user.id);
 
-  if (error) {
-    console.error('POST /api/worlds - Database Error:', {
-      requestId,
-      error,
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      insertPayload,
-      userId: user.id,
-      timestamp: new Date().toISOString()
-    });
-    throw new Error(error.message)
-  }
-
-  console.log('POST /api/worlds - World created successfully:', {
+  console.log('POST /api/worlds - World created successfully via service:', {
     requestId,
-    worldId: row.id,
-    worldName: row.name,
-    // createdUserId removed - field no longer exists in schema
-    createdOwnerId: row.owner_id,
+    worldId: world.id,
+    worldName: world.name,
     requestUserId: user.id,
     userEmail: user.email,
     timestamp: new Date().toISOString()
   });
 
-  const world = {
-    id: row.id,
-    name: row.name,
-    summary: row.description || '',
-    description: row.description || undefined,
-    entityCount: 0,
-    updatedAt: row.updated_at,
-    isArchived: row.is_archived || false,
-    coverImage: undefined,
-    isPublic: row.is_public || false,
-    settings: (row.settings as Record<string, unknown>) || {},
+  // Log world creation activity
+  try {
+    ActivityLogger.worldCreated(user.id, world.name, world.id);
+  } catch (error) {
+    // Silent failure for activity logging
+    console.warn('Failed to log world creation activity:', error);
   }
 
   return apiSuccess(world, { 'X-Request-ID': requestId });

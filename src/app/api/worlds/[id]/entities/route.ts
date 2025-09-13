@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { safeConsoleError } from '@/lib/logging'
+import { ActivityLogger } from '@/lib/activity-logger'
 import { z } from 'zod'
 
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -63,6 +64,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       fields: body.fields,
       tags: body.tags,
     }, user.id)
+
+    // Log entity creation activity
+    try {
+      const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+      const world = await supabaseWorldService.getWorldById(params.id, user.id)
+      if (world) {
+        ActivityLogger.entityCreated(user.id, entity.name, entity.id, world.id, world.name)
+      }
+    } catch (error) {
+      // Silent failure for activity logging
+      console.warn('Failed to log entity creation activity:', error)
+    }
 
     return NextResponse.json({ entity })
   } catch (error) {

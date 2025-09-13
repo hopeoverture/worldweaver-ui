@@ -22,7 +22,7 @@ export function StepFillForm({ template, worldId, onSave, onBack }: StepFillForm
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
-    folderId: template.folderId || '', // Use template's folder as default
+    folderId: '', // Default to no folder (ungrouped) - don't inherit template's folder
     fields: {} as Record<string, any>,
     links: [] as Link[]
   });

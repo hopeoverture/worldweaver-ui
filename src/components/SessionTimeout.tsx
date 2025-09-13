@@ -5,13 +5,13 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
-import { logAuthError } from '@/lib/logging'
+import { logAuthError, logInfo } from '@/lib/logging'
 
 interface SessionTimeoutProps {
   children: React.ReactNode
 }
 
-const SESSION_WARNING_TIME = 5 * 60 * 1000 // 5 minutes before expiry
+const SESSION_WARNING_TIME = 2 * 60 * 1000 // 2 minutes before expiry
 const SESSION_CHECK_INTERVAL = 60 * 1000 // Check every minute
 const IDLE_WARNING_TIME = 25 * 60 * 1000 // 25 minutes of inactivity
 const IDLE_LOGOUT_TIME = 30 * 60 * 1000 // 30 minutes of inactivity
@@ -142,7 +142,7 @@ export function SessionTimeoutProvider({ children }: SessionTimeoutProps) {
       } else {
         setShowWarning(false)
         setTimeLeft(null)
-        logAuthError('session_extended', new Error('Session extended successfully'), { action: 'extend_session' })
+        logInfo('Session extended successfully', { action: 'extend_session', component: 'auth' })
       }
     } catch (error) {
       logAuthError('session_extend_error', error as Error, { action: 'extend_session' })

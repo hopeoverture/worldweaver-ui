@@ -17,6 +17,13 @@ export const createClient = async () => {
     supabaseUrl,
     supabaseAnonKey,
     {
+      auth: {
+        // Extend session duration and enable auto-refresh
+        persistSession: true,
+        autoRefreshToken: true,
+        // Detect session from URL for OAuth flows
+        detectSessionInUrl: true,
+      },
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value

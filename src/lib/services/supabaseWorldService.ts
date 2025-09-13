@@ -2,7 +2,7 @@ import type { Database } from '../supabase/types.generated';
 import { World, Entity, Template, TemplateField, Json } from '../types';
 import { createClient as createServerSupabaseClient } from '../supabase/server';
 import { adminClient } from '../supabase/admin';
-import { logDatabaseError, logAuditEvent } from '../logging';
+import { logDatabaseError, logAuditEvent, logError, logInfo } from '../logging';
 import { 
   adaptWorldFromDatabase, 
   adaptWorldToDatabase,
@@ -15,7 +15,6 @@ import {
   isValidWorld,
   isValidEntity 
 } from '../adapters';
-import { logError } from '../logging';
 // Use domain Json type for serialization
 
 /**
@@ -102,6 +101,96 @@ export class SupabaseWorldService {
   }
 
   /**
+   * Set up initial resources for a newly created world (Core folder and system templates)
+   */
+  private async setupInitialWorldResources(worldId: string, supabase: any): Promise<void> {
+    try {
+      // Create the Core folder for system templates
+      const { data: coreFolder, error: folderError } = await supabase
+        .from('folders')
+        .insert({
+          world_id: worldId,
+          name: 'Core',
+          description: 'Core system templates',
+          kind: 'templates',
+          color: '#6366f1' // Indigo color for core templates
+        })
+        .select('id')
+        .single();
+
+      if (folderError) {
+        // Don't fail world creation if folder creation fails, just log it
+        logError('Failed to create Core folder for new world', folderError, { worldId, action: 'setup_initial_resources' });
+        return;
+      }
+
+      const coreFolderId = coreFolder.id;
+
+      // Get all system templates - use admin client to bypass RLS policies for system templates
+      let systemTemplatesClient = supabase;
+      if (adminClient) {
+        systemTemplatesClient = adminClient;
+        logInfo('Using admin client to fetch system templates for new world', { worldId, action: 'setup_initial_resources' });
+      }
+
+      const { data: systemTemplates, error: templatesError } = await systemTemplatesClient
+        .from('templates')
+        .select('*')
+        .eq('is_system', true);
+
+      if (templatesError || !systemTemplates) {
+        logError('Failed to fetch system templates for new world', templatesError, {
+          worldId,
+          action: 'setup_initial_resources',
+          metadata: { usingAdminClient: !!adminClient }
+        });
+        return;
+      }
+
+      logInfo('Successfully fetched system templates for new world', {
+        worldId,
+        action: 'setup_initial_resources',
+        metadata: {
+          templateCount: systemTemplates.length,
+          usingAdminClient: !!adminClient
+        }
+      });
+
+      // Create world-specific copies of system templates in the Core folder
+      const templateCopies = systemTemplates.map((template: any) => ({
+        world_id: worldId,
+        name: template.name,
+        description: template.description,
+        icon: template.icon,
+        category: template.category,
+        fields: template.fields,
+        folder_id: coreFolderId,
+        is_system: false, // These are world-specific copies, not system templates
+      }));
+
+      const { error: insertError } = await supabase
+        .from('templates')
+        .insert(templateCopies);
+
+      if (insertError) {
+        logError('Failed to create template copies for new world', insertError, { worldId, action: 'setup_initial_resources' });
+        return;
+      }
+
+      logInfo('Successfully set up initial world resources', {
+        worldId,
+        folderId: coreFolderId,
+        action: 'setup_initial_resources',
+        metadata: { templateCount: templateCopies.length }
+      });
+
+    } catch (error) {
+      // Don't fail world creation if initial setup fails, just log it
+      logError('Error setting up initial world resources', error as Error, { worldId, action: 'setup_initial_resources' });
+    }
+  }
+
+  /**
    * Create a new world
    */
   async createWorld(data: {
@@ -151,6 +240,9 @@ export class SupabaseWorldService {
         throw new Error('Invalid world data after creation');
       }
 
+      // Set up initial world resources (Core folder and system templates)
+      await this.setupInitialWorldResources(adaptedWorld.id, supabase);
+
       // Audit log for world creation
       logAuditEvent('world_created', {
         userId,
@@ -162,7 +254,7 @@ export class SupabaseWorldService {
           description: adaptedWorld.description
         }
       });
-      
+
       return adaptedWorld;
     } catch (error) {
       logError('Error creating world', error as Error, { action: 'createWorld', userId, metadata: { worldData: data } });
@@ -844,7 +936,7 @@ export class SupabaseWorldService {
       const result = deduped.map(template => ({
         id: template.id,
         worldId: template.world_id || worldId,
-        folderId: undefined,
+        folderId: template.folder_id || undefined,
         name: template.name,
         description: template.description || '',
         icon: template.icon || undefined,

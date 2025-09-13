@@ -24,7 +24,34 @@ export function useUpdateTemplate(worldId: string) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches (so they don't overwrite our optimistic update)
+      await qc.cancelQueries({ queryKey: ["templates", worldId] });
+
+      // Snapshot the previous value
+      const previousTemplates = qc.getQueryData(["templates", worldId]);
+
+      // Optimistically update to the new value
+      qc.setQueryData(["templates", worldId], (old: Template[] | undefined) => {
+        if (!old) return old;
+        return old.map((template) =>
+          template.id === variables.id
+            ? { ...template, ...variables.patch }
+            : template
+        );
+      });
+
+      // Return a context object with the snapshotted value
+      return { previousTemplates };
+    },
+    onError: (err, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousTemplates) {
+        qc.setQueryData(["templates", worldId], context.previousTemplates);
+      }
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have latest data
       qc.invalidateQueries({ queryKey: ["templates", worldId] });
     },
   });

@@ -23,6 +23,11 @@ export default function HomePage() {
   const [archiveWorldId, setArchiveWorldId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
 
+  // Keyboard shortcuts - must be called before any early returns
+  useKeyboardShortcuts({
+    onNewWorld: () => setIsModalOpen(true)
+  });
+
   // Redirect unauthenticated users to login
   useEffect(() => {
     if (!authLoading && !user) {
@@ -57,10 +62,6 @@ export default function HomePage() {
   
   const archivedCount = worlds.filter((world: World) => world.isArchived).length;
 
-  const handleNewWorld = () => {
-    setIsModalOpen(true);
-  };
-
   const handleEditWorld = (id: string) => {
     setEditWorldId(id);
   };
@@ -84,11 +85,6 @@ export default function HomePage() {
   const handleCloseArchiveModal = () => {
     setArchiveWorldId(null);
   };
-
-  // Keyboard shortcuts
-  useKeyboardShortcuts({
-    onNewWorld: handleNewWorld
-  });
 
   return (
     <main className="container py-8">
@@ -166,7 +162,7 @@ export default function HomePage() {
               {/* New World button */}
               {!showArchived && (
                 <Button
-                  onClick={handleNewWorld}
+                  onClick={() => setIsModalOpen(true)}
                   className="group relative hidden sm:flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-300 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -186,7 +182,7 @@ export default function HomePage() {
             onEditWorld={handleEditWorld}
             onDeleteWorld={handleDeleteWorld}
             onArchiveWorld={handleArchiveWorld}
-            onCreateWorld={handleNewWorld}
+            onCreateWorld={() => setIsModalOpen(true)}
           />
 
           {/* Modals */}
@@ -223,7 +219,7 @@ export default function HomePage() {
           {/* Floating action buttons for mobile */}
           {filteredWorlds.length > 0 && !showArchived && (
             <Button
-              onClick={handleNewWorld}
+              onClick={() => setIsModalOpen(true)}
               className="group fixed sm:hidden bottom-6 right-6 h-14 w-14 rounded-full shadow-xl hover:scale-110 hover:shadow-2xl hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
               aria-label="New World"
             >

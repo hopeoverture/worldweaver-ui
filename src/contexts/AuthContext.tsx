@@ -447,33 +447,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(authError)
       return { error: authError }
     }
-    
+
     const operation = async () => {
       const supabase = getSupabaseClient()
+
+      // Handle JSONB fields properly - merge with existing data instead of replacing
+      const processedUpdates = { ...updates }
+
+      if (updates.social_links && profile?.social_links) {
+        processedUpdates.social_links = {
+          ...(typeof profile.social_links === 'object' ? profile.social_links as Record<string, any> : {}),
+          ...(typeof updates.social_links === 'object' ? updates.social_links as Record<string, any> : {})
+        }
+      }
+
+      if (updates.preferences && profile?.preferences) {
+        processedUpdates.preferences = {
+          ...(typeof profile.preferences === 'object' ? profile.preferences as Record<string, any> : {}),
+          ...(typeof updates.preferences === 'object' ? updates.preferences as Record<string, any> : {})
+        }
+      }
+
+      if (updates.data && profile?.data) {
+        processedUpdates.data = {
+          ...(typeof profile.data === 'object' ? profile.data as Record<string, any> : {}),
+          ...(typeof updates.data === 'object' ? updates.data as Record<string, any> : {})
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(processedUpdates)
         .eq('id', user.id)
 
       if (error) {
         throw error
       }
-      
-      setProfile(prev => prev ? { ...prev, ...updates } : null)
+
+      // Update local state with processed updates
+      setProfile(prev => prev ? { ...prev, ...processedUpdates } : null)
+
+      // Note: Activity logging for profile updates is handled server-side in the profile update API
     }
 
     try {
       clearError()
       setLastOperation(() => operation)
-      
+
       await operation()
       return { error: null }
     } catch (error) {
       const authError = classifyAuthError(error)
       setError(authError)
-      logAuthError('update_profile', error as Error, { 
+      logAuthError('update_profile', error as Error, {
         action: 'update_profile',
-        userId: user.id.substring(0, 8) + '...'
+        userId: user.id.substring(0, 8) + '...',
+        metadata: {
+          fieldsUpdated: Object.keys(updates)
+        }
       })
       return { error: authError }
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { ActivityLogger } from '@/lib/activity-logger'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,13 +24,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
-    const { data, error } = await supabase.rpc('accept_world_invite', { invite_token: body.token })
+    const { data, error } = await supabase.rpc('accept_world_invite' as any, { invite_token: body.token })
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
     if (!data) {
       return NextResponse.json({ ok: false, accepted: false }, { status: 400 })
+    }
+
+    // Log invite acceptance activity
+    try {
+      // Get the invite details to find the world
+      const { data: invite } = await supabase
+        .from('world_invites')
+        .select('world_id, worlds(name)')
+        .eq('token', body.token)
+        .single()
+
+      if (invite && invite.world_id) {
+        const { logActivity } = await import('@/lib/activity-logger')
+        await logActivity({
+          userId: user.id,
+          action: 'accept_invite',
+          description: `Accepted invite to join "${(invite.worlds as any)?.name || 'Unknown World'}"`,
+          resourceType: 'invite',
+          worldId: invite.world_id,
+          resourceName: (invite.worlds as any)?.name
+        })
+      }
+    } catch (error) {
+      // Silent failure for activity logging
+      console.warn('Failed to log invite acceptance activity:', error)
     }
 
     return NextResponse.json({ ok: true, accepted: true })

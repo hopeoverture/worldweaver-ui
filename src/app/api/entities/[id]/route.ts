@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { z } from 'zod'
-import { 
-  apiSuccess, 
-  apiAuthRequired, 
+import {
+  apiSuccess,
+  apiAuthRequired,
   apiNotFound,
   parseRequestBody,
   withApiErrorHandling,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/api-utils'
 import { EntityResponse } from '@/lib/api-types'
 import { logApiError } from '@/lib/logging'
+import { ActivityLogger } from '@/lib/activity-logger'
 
 export const GET = withApiErrorHandling(async (_req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse<EntityResponse>> => {
   const requestId = generateRequestId()
@@ -71,6 +72,21 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       },
       user.id,
     )
+
+    // Log entity update activity
+    try {
+      if (updated.worldId) {
+        const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
+        const world = await supabaseWorldService.getWorldById(updated.worldId, user.id)
+        if (world) {
+          ActivityLogger.entityUpdated(user.id, updated.name, updated.id, world.id, world.name)
+        }
+      }
+    } catch (error) {
+      // Silent failure for activity logging
+      console.warn('Failed to log entity update activity:', error)
+    }
+
     return NextResponse.json({ entity: updated })
   } catch (error) {
     logApiError('/api/entities/[id] PUT', error as Error, { entityId: params.id, userId: user.id })

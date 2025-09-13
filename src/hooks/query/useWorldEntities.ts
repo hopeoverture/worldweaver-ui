@@ -24,7 +24,7 @@ export function useWorldEntities(worldId: string) {
       return data.entities
     },
     enabled: !!worldId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 0, // Allow immediate refetch on cache invalidation
     refetchOnWindowFocus: false,
   })
 }
