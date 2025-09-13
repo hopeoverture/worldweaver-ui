@@ -14,35 +14,13 @@ export class WorldService {
    */
   async getUserWorlds(userId: string): Promise<World[]> {
     try {
-      console.log('WorldService.getUserWorlds - Starting query for userId:', userId);
-      
       const supabase = await createServerSupabaseClient();
       const { data: worlds, error } = await supabase
         .from('worlds')
-        .select(`
-          *,
-          entities(count),
-          world_members(count)
-        `)
+        .select('*')
         .eq('owner_id', userId) // Filter by user ownership (owner_id is the primary ownership field)
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
-
-      console.log('WorldService.getUserWorlds - Query result:', {
-        userId,
-        hasError: !!error,
-        error: error?.message,
-        errorCode: error?.code,
-        errorDetails: error?.details,
-        rawWorldsCount: worlds?.length || 0,
-        rawWorlds: worlds?.map(w => ({ 
-          id: w.id, 
-          name: w.name, 
-          // user_id field removed from schema 
-          owner_id: w.owner_id 
-        })) || [],
-        timestamp: new Date().toISOString()
-      });
 
       if (error) {
         logError('Supabase error fetching worlds', error, { action: 'getUserWorlds', userId });

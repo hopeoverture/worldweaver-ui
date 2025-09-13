@@ -9,13 +9,7 @@ import { NextRequest } from 'next/server'
 import crypto from 'crypto'
 import { logError } from './logging'
 
-// Rate limit configuration interface
-export interface RateLimitConfig {
-  bucket: string
-  maxRequests: number
-  windowSeconds: number
-  description?: string
-}
+// Remove the duplicate interface since we enhanced it above
 
 // Rate limit result interface
 export interface RateLimitResult {
@@ -26,16 +20,32 @@ export interface RateLimitResult {
   retryAfter: number
 }
 
-// Default rate limit configurations
+// Rate limiting strategy enum
+type RateLimitStrategy = 'ip' | 'user' | 'combined';
+
+// Enhanced rate limit configuration interface
+export interface RateLimitConfig {
+  bucket: string
+  maxRequests: number
+  windowSeconds: number
+  strategy: RateLimitStrategy
+  description?: string
+}
+
+// Default rate limit configurations with enhanced security
 const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
-  'invites.create': { bucket: 'invites.create', maxRequests: 10, windowSeconds: 60 },
-  'admin.seed': { bucket: 'admin.seed', maxRequests: 2, windowSeconds: 60 },
-  'auth.login': { bucket: 'auth.login', maxRequests: 5, windowSeconds: 300 },
-  'auth.register': { bucket: 'auth.register', maxRequests: 3, windowSeconds: 300 },
-  'api.general': { bucket: 'api.general', maxRequests: 100, windowSeconds: 60 },
-  'upload.files': { bucket: 'upload.files', maxRequests: 20, windowSeconds: 60 },
-  'worlds.create': { bucket: 'worlds.create', maxRequests: 5, windowSeconds: 300 },
-  'entities.create': { bucket: 'entities.create', maxRequests: 50, windowSeconds: 60 },
+  'invites.create': { bucket: 'invites.create', maxRequests: 10, windowSeconds: 60, strategy: 'user' },
+  'admin.seed': { bucket: 'admin.seed', maxRequests: 2, windowSeconds: 60, strategy: 'ip' },
+  'auth.login': { bucket: 'auth.login', maxRequests: 5, windowSeconds: 300, strategy: 'ip' },
+  'auth.register': { bucket: 'auth.register', maxRequests: 3, windowSeconds: 300, strategy: 'ip' },
+  'api.general': { bucket: 'api.general', maxRequests: 100, windowSeconds: 60, strategy: 'combined' },
+  'upload.files': { bucket: 'upload.files', maxRequests: 20, windowSeconds: 60, strategy: 'user' },
+  'worlds.create': { bucket: 'worlds.create', maxRequests: 5, windowSeconds: 300, strategy: 'user' },
+  'entities.create': { bucket: 'entities.create', maxRequests: 50, windowSeconds: 60, strategy: 'user' },
+  'entities.delete': { bucket: 'entities.delete', maxRequests: 20, windowSeconds: 60, strategy: 'user' },
+  'templates.delete': { bucket: 'templates.delete', maxRequests: 10, windowSeconds: 60, strategy: 'user' },
+  'folders.delete': { bucket: 'folders.delete', maxRequests: 15, windowSeconds: 60, strategy: 'user' },
+  'relationships.delete': { bucket: 'relationships.delete', maxRequests: 20, windowSeconds: 60, strategy: 'user' },
 }
 
 /**
@@ -204,13 +214,81 @@ export class RateLimitService {
   }
 
   /**
-   * Generate a hashed key for rate limiting
-   * Uses SHA-256 hash to protect IP privacy while maintaining uniqueness
+   * Extract user ID from request if authenticated
    */
-  private generateKey(ip: string, bucket: string): string {
-    const key = `${ip}:${bucket}`
-    const hash = crypto.createHash('sha256').update(key).digest('hex')
-    return `rl:${hash.substring(0, 16)}` // Use first 16 chars for shorter keys
+  private async getUserId(req: NextRequest): Promise<string | null> {
+    try {
+      // Check for Authorization header (API tokens)
+      const authHeader = req.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        // For API tokens, we could decode the JWT to get user ID
+        // For now, return null to fall back to IP-based limiting
+        return null;
+      }
+
+      // Check for session cookies (Supabase auth)
+      const cookies = req.cookies.getAll();
+      const authCookie = cookies.find(c => c.name.includes('supabase'));
+      
+      if (authCookie) {
+        // We could decode the session to get user ID, but for simplicity
+        // we'll use a hash of the session cookie as user identifier
+        const hash = crypto.createHash('sha256').update(authCookie.value).digest('hex');
+        return `user:${hash.substring(0, 16)}`;
+      }
+
+      return null;
+    } catch (error) {
+      logError('Error extracting user ID for rate limiting', error as Error, { 
+        action: 'extract_user_id', 
+        endpoint: req.nextUrl.pathname 
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Generate a hashed key for rate limiting based on strategy
+   * Uses SHA-256 hash to protect IP/user privacy while maintaining uniqueness
+   */
+  private async generateKey(req: NextRequest, bucket: string, strategy: RateLimitStrategy): Promise<string[]> {
+    const ip = this.getClientIp(req);
+    const userId = await this.getUserId(req);
+    
+    const keys: string[] = [];
+    
+    switch (strategy) {
+      case 'ip':
+        keys.push(this.hashKey(`ip:${ip}:${bucket}`));
+        break;
+        
+      case 'user':
+        if (userId) {
+          keys.push(this.hashKey(`user:${userId}:${bucket}`));
+        } else {
+          // Fall back to IP if user not authenticated
+          keys.push(this.hashKey(`ip:${ip}:${bucket}`));
+        }
+        break;
+        
+      case 'combined':
+        // Check both IP and user limits
+        keys.push(this.hashKey(`ip:${ip}:${bucket}`));
+        if (userId) {
+          keys.push(this.hashKey(`user:${userId}:${bucket}`));
+        }
+        break;
+    }
+    
+    return keys;
+  }
+
+  /**
+   * Create hash for rate limit key
+   */
+  private hashKey(key: string): string {
+    const hash = crypto.createHash('sha256').update(key).digest('hex');
+    return `rl:${hash.substring(0, 16)}`;
   }
 
   /**
@@ -246,9 +324,27 @@ export class RateLimitService {
       return 'worlds.create'
     }
 
-    // Entity creation
+    // Entity operations
     if (method === 'POST' && /^\/api\/worlds\/[\w-]+\/entities$/.test(pathname)) {
       return 'entities.create'
+    }
+    if (method === 'DELETE' && /^\/api\/entities\/[\w-]+$/.test(pathname)) {
+      return 'entities.delete'
+    }
+
+    // Template operations  
+    if (method === 'DELETE' && /^\/api\/templates\/[\w-]+$/.test(pathname)) {
+      return 'templates.delete'
+    }
+
+    // Folder operations
+    if (method === 'DELETE' && /^\/api\/folders\/[\w-]+$/.test(pathname)) {
+      return 'folders.delete'
+    }
+
+    // Relationship operations
+    if (method === 'DELETE' && /^\/api\/relationships\/[\w-]+$/.test(pathname)) {
+      return 'relationships.delete'
     }
 
     // General API rate limiting for all other API endpoints
@@ -277,32 +373,50 @@ export class RateLimitService {
     }
 
     const config = this.getConfig(bucket)
-    const ip = this.getClientIp(req)
-    const key = this.generateKey(ip, bucket)
+    const keys = await this.generateKey(req, bucket, config.strategy)
 
     try {
-      // Try primary storage first
-      let record: { count: number; resetTime: number }
-      
-      try {
-        record = await this.storage.increment(key, config.windowSeconds)
-      } catch (error) {
-        console.warn('Primary storage failed, using fallback:', error)
-        record = await this.fallbackStorage.increment(key, config.windowSeconds)
+      // Check all keys and return the most restrictive result
+      let mostRestrictiveResult: RateLimitResult | null = null;
+
+      for (const key of keys) {
+        let record: { count: number; resetTime: number }
+        
+        try {
+          record = await this.storage.increment(key, config.windowSeconds)
+        } catch (error) {
+          console.warn('Primary storage failed, using fallback:', error)
+          record = await this.fallbackStorage.increment(key, config.windowSeconds)
+        }
+
+        const now = Date.now()
+        const remaining = Math.max(0, config.maxRequests - record.count)
+        const allowed = record.count <= config.maxRequests
+        const retryAfter = allowed ? 0 : Math.ceil((record.resetTime - now) / 1000)
+
+        const result: RateLimitResult = {
+          allowed,
+          count: record.count,
+          remaining,
+          resetTime: Math.floor(record.resetTime / 1000), // Convert to seconds
+          retryAfter
+        }
+
+        // If this key is rate limited, or it's more restrictive than previous results
+        if (!result.allowed || 
+            (mostRestrictiveResult && result.remaining < mostRestrictiveResult.remaining)) {
+          mostRestrictiveResult = result;
+        } else if (!mostRestrictiveResult) {
+          mostRestrictiveResult = result;
+        }
+
+        // Early exit if we hit a rate limit
+        if (!result.allowed) {
+          break;
+        }
       }
 
-      const now = Date.now()
-      const remaining = Math.max(0, config.maxRequests - record.count)
-      const allowed = record.count <= config.maxRequests
-      const retryAfter = allowed ? 0 : Math.ceil((record.resetTime - now) / 1000)
-
-      return {
-        allowed,
-        count: record.count,
-        remaining,
-        resetTime: Math.floor(record.resetTime / 1000), // Convert to seconds
-        retryAfter
-      }
+      return mostRestrictiveResult;
     } catch (error) {
       logError('Rate limit check error', error as Error, { action: 'rate_limit_check', endpoint: req.nextUrl.pathname })
       // On error, allow the request (fail open)

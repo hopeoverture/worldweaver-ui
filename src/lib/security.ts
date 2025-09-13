@@ -9,8 +9,8 @@ import DOMPurify from 'dompurify';
  */
 export function sanitizeHtml(dirty: string): string {
   if (typeof window === 'undefined') {
-    // Server-side: return as-is, will be sanitized on client
-    return dirty;
+    // Server-side: Use regex-based sanitization for security
+    return sanitizeHtmlServer(dirty);
   }
 
   return DOMPurify.sanitize(dirty, {
@@ -26,15 +26,105 @@ export function sanitizeHtml(dirty: string): string {
 }
 
 /**
+ * Server-side HTML sanitization using regex patterns
+ * More basic than DOMPurify but provides essential XSS protection
+ */
+function sanitizeHtmlServer(dirty: string): string {
+  if (!dirty || typeof dirty !== 'string') {
+    return '';
+  }
+
+  // Remove script tags and their content
+  let clean = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove dangerous tags
+  const dangerousTags = ['script', 'object', 'embed', 'form', 'input', 'iframe', 'link', 'style'];
+  dangerousTags.forEach(tag => {
+    const regex = new RegExp(`<${tag}\\b[^>]*>.*?<\\/${tag}>`, 'gis');
+    clean = clean.replace(regex, '');
+    // Also remove self-closing versions
+    const selfClosingRegex = new RegExp(`<${tag}\\b[^>]*\\/?>`, 'gi');
+    clean = clean.replace(selfClosingRegex, '');
+  });
+  
+  // Remove javascript: and data: URLs
+  clean = clean.replace(/(?:href|src)\s*=\s*["'](?:javascript|data|vbscript):[^"']*["']/gi, '');
+  
+  // Remove event handlers
+  const eventHandlers = [
+    'onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout', 
+    'onfocus', 'onblur', 'onchange', 'onsubmit', 'onkeydown', 
+    'onkeyup', 'onkeypress', 'onresize', 'onscroll'
+  ];
+  eventHandlers.forEach(handler => {
+    const regex = new RegExp(`\\s+${handler}\\s*=\\s*["'][^"']*["']`, 'gi');
+    clean = clean.replace(regex, '');
+  });
+  
+  // Allow only safe tags and attributes
+  const allowedTags = ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'];
+  const tagPattern = /<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/gi;
+  
+  clean = clean.replace(tagPattern, (match, tagName) => {
+    const tag = tagName.toLowerCase();
+    if (allowedTags.includes(tag)) {
+      // For allowed tags, keep only class attributes
+      return match.replace(/\s+(?!class\s*=)[a-zA-Z-]+\s*=\s*["'][^"']*["']/gi, '');
+    }
+    return ''; // Remove disallowed tags
+  });
+  
+  return clean.trim();
+}
+
+/**
  * Sanitize plain text content, removing any HTML tags
  */
 export function sanitizeText(dirty: string): string {
   if (typeof window === 'undefined') {
-    // Server-side: basic HTML tag removal
-    return dirty.replace(/<[^>]*>/g, '');
+    // Server-side: comprehensive HTML tag and entity removal
+    return sanitizeTextServer(dirty);
   }
 
   return DOMPurify.sanitize(dirty, { ALLOWED_TAGS: [] });
+}
+
+/**
+ * Server-side text sanitization - removes all HTML and dangerous content
+ */
+function sanitizeTextServer(dirty: string): string {
+  if (!dirty || typeof dirty !== 'string') {
+    return '';
+  }
+
+  let clean = dirty;
+  
+  // Remove all HTML tags
+  clean = clean.replace(/<[^>]*>/g, '');
+  
+  // Decode common HTML entities
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#x27;': "'",
+    '&#x2F;': '/',
+    '&#x60;': '`',
+    '&#x3D;': '='
+  };
+  
+  Object.entries(entities).forEach(([entity, char]) => {
+    clean = clean.replace(new RegExp(entity, 'g'), char);
+  });
+  
+  // Remove any remaining HTML entities
+  clean = clean.replace(/&[#\w]+;/g, '');
+  
+  // Remove dangerous protocols
+  clean = clean.replace(/(?:javascript|data|vbscript):/gi, '');
+  
+  return clean.trim();
 }
 
 /**

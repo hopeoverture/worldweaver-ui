@@ -3,11 +3,12 @@ import { sanitizeHtml, sanitizeText, validateJsonField, sanitizeTemplateField, s
 
 describe('Security Utilities', () => {
   describe('sanitizeHtml', () => {
-    it('should return input on server-side (no window)', () => {
+    it('should sanitize malicious HTML on server-side', () => {
       const maliciousHtml = '<p>Hello</p><script>alert("xss")</script>';
       const result = sanitizeHtml(maliciousHtml);
-      // On server-side, it returns as-is (since typeof window === 'undefined')
-      expect(result).toBe(maliciousHtml);
+      // On server-side, it now removes script tags and dangerous content
+      expect(result).toBe('<p>Hello</p>');
+      expect(result).not.toContain('<script>');
     });
 
     it('should preserve safe HTML tags', () => {

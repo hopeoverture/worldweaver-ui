@@ -239,3 +239,4 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - GIN indexes for JSONB field searches (entities.data, templates.fields, etc.)
 
 Always make sure all tests pass (especially typescript) before committing changes to git
+- npx supabase gen types typescript --project-id rkjtxcavocbhhwuywduj --schema public > src/lib/supabase/types.generated.ts
