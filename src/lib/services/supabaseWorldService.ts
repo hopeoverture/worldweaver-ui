@@ -27,12 +27,11 @@ export class SupabaseWorldService {
   async getUserWorlds(userId: string): Promise<World[]> {
     try {
       const supabase = await createServerSupabaseClient()
+
+      // First get worlds
       const { data: worlds, error } = await supabase
         .from('worlds')
-        .select(`
-          *,
-          entities(count)
-        `)
+        .select('*')
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
 
@@ -41,7 +40,33 @@ export class SupabaseWorldService {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      return worlds?.map(world => adaptWorldFromDatabase(world)) || [];
+      // For each world, get the entity count by fetching only valid entities
+      // This ensures the count matches what users actually see
+      const worldsWithEntityCounts = await Promise.all(
+        (worlds || []).map(async (world) => {
+          const { data: entities, error: entitiesError } = await supabase
+            .from('entities')
+            .select('id, name, world_id')
+            .eq('world_id', world.id)
+            .not('name', 'is', null) // Exclude entities with null names (invalid)
+            .not('id', 'is', null);   // Exclude entities with null ids (invalid)
+
+          let validEntityCount = 0;
+          if (!entitiesError && entities) {
+            // Apply the same validation as the entity service
+            validEntityCount = entities.filter(entity =>
+              entity.id && entity.name && entity.world_id
+            ).length;
+          }
+
+          return {
+            ...world,
+            entities: [{ count: validEntityCount }]
+          };
+        })
+      );
+
+      return worldsWithEntityCounts.map(world => adaptWorldFromDatabase(world));
     } catch (error) {
       logError('Error fetching user worlds', error as Error, { action: 'getUserWorlds', userId });
       throw new Error('Failed to fetch worlds');

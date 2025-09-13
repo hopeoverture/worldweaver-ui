@@ -22,7 +22,6 @@ export function adaptWorldFromDatabase(
 ): World {
   // Extract entity count from the entities array returned by Supabase count query
   const entityCount = Array.isArray(dbWorld.entities) ? dbWorld.entities[0]?.count || 0 : 0;
-  console.log(`🔍 World ${dbWorld.name} entity count from DB:`, entityCount, 'Raw entities data:', dbWorld.entities);
 
   return {
     id: dbWorld.id,

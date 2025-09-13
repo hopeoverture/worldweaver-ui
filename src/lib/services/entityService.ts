@@ -36,22 +36,13 @@ export class EntityService {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      console.log(`🔍 Raw entities from DB for world ${worldId}:`, entities?.length || 0);
-
-      const processedEntities = entities?.map((entity, index) => {
-        console.log(`🔍 Processing entity ${index + 1}:`, { id: entity.id, name: entity.name });
+      return entities?.map(entity => {
         const adaptedEntity = adaptEntityFromDatabase(entity);
-        const isValid = isValidEntity(adaptedEntity);
-        console.log(`🔍 Entity ${entity.id} valid:`, isValid);
-        if (!isValid) {
-          console.log(`🔍 Invalid entity data:`, adaptedEntity);
+        if (!isValidEntity(adaptedEntity)) {
           logError('Invalid entity data from database', new Error('Entity validation failed'), { entityId: entity.id, worldId });
         }
         return adaptedEntity;
       }).filter(isValidEntity) || [];
-
-      console.log(`🔍 Final valid entities for world ${worldId}:`, processedEntities.length);
-      return processedEntities;
     } catch (error) {
       logError('Error fetching world entities', error as Error, { action: 'getWorldEntities', worldId, userId });
       throw new Error('Failed to fetch entities');
