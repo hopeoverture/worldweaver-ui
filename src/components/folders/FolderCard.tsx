@@ -1,5 +1,5 @@
 'use client';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Folder } from '@/lib/types';
 import { useStore } from '@/lib/store';
 import { itemCardAnimation, gradientOverlay, iconBackgroundTransition } from '@/lib/animation-utils';
@@ -16,6 +16,10 @@ interface FolderCardProps {
   onRename?: (folder: Folder) => void;
   /** Optional handler for deleting the folder */
   onDelete?: (folder: Folder) => void;
+  /** Optional handler for when an entity is dropped onto this folder */
+  onEntityDrop?: (entityId: string, entityName: string) => void;
+  /** Optional handler for when a template is dropped onto this folder */
+  onTemplateDrop?: (templateId: string, templateName: string) => void;
 }
 
 const colorClasses = {
@@ -69,17 +73,61 @@ const colorClasses = {
   }
 };
 
-function FolderCardComponent({ folder, onClick, onRename, onDelete }: FolderCardProps) {
+function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop, onTemplateDrop }: FolderCardProps) {
   const { entities, templates } = useStore();
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Calculate dynamic count based on folder type
   const dynamicCount = folder.kind === 'entities' 
     ? entities.filter(e => e.folderId === folder.id).length
     : templates.filter(t => t.folderId === folder.id).length;
 
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Only set false if we're leaving the folder card entirely
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'entity' && folder.kind === 'entities' && onEntityDrop) {
+        onEntityDrop(data.id, data.name);
+      } else if (data.type === 'template' && folder.kind === 'templates' && onTemplateDrop) {
+        onTemplateDrop(data.id, data.name);
+      }
+    } catch (error) {
+      console.error('Failed to parse drag data:', error);
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Don't trigger click if we're in the middle of a drag operation
+    if (!isDragOver) {
+      onClick();
+    }
+  };
+
   // Get animation utilities
-  const folderGradient = gradientOverlay({ 
+  const folderGradient = gradientOverlay({
     from: colors.gradient,
     to: 'to-transparent',
     darkFrom: colors.gradient
@@ -88,9 +136,17 @@ function FolderCardComponent({ folder, onClick, onRename, onDelete }: FolderCard
 
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       data-testid="folder-card"
-      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card text-left w-full p-6 ${itemCardAnimation()}`}
+      className={`group relative rounded-xl border text-left w-full p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+        isDragOver
+          ? 'border-brand-500 dark:border-brand-400 bg-brand-50/50 dark:bg-brand-900/20 shadow-lg scale-105'
+          : 'border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card'
+      } ${(folder.kind === 'entities' && onEntityDrop) || (folder.kind === 'templates' && onTemplateDrop) ? '' : 'pointer-events-auto'}`}
+      onDragOver={(folder.kind === 'entities' && onEntityDrop) || (folder.kind === 'templates' && onTemplateDrop) ? handleDragOver : undefined}
+      onDragEnter={(folder.kind === 'entities' && onEntityDrop) || (folder.kind === 'templates' && onTemplateDrop) ? handleDragEnter : undefined}
+      onDragLeave={(folder.kind === 'entities' && onEntityDrop) || (folder.kind === 'templates' && onTemplateDrop) ? handleDragLeave : undefined}
+      onDrop={(folder.kind === 'entities' && onEntityDrop) || (folder.kind === 'templates' && onTemplateDrop) ? handleDrop : undefined}
     >
       {/* Gradient overlay for visual interest */}
       <div className={folderGradient.className} style={folderGradient.style} />

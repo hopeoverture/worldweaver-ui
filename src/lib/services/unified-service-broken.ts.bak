@@ -1,0 +1,370 @@
+/**
+ * Unified Service Layer Implementation
+ * 
+ * Consolidates all service operations into a single, type-safe service layer.
+ * Implements consistent error handling, logging, and data access patterns.
+ */
+
+import type { World, Entity, Template, Folder, RelationshipRow } from '@/lib/types';
+import type { 
+  IWorldService, 
+  IEntityService, 
+  ITemplateService, 
+  IFolderService, 
+  IRelationshipService,
+  IServiceLayer 
+} from './interfaces';
+import { 
+  ServiceError, 
+  NotFoundError, 
+  AccessDeniedError, 
+  DatabaseError,
+  ValidationError,
+  handleServiceErrors,
+  withErrorHandling 
+} from './errors';
+import { createClient as createServerSupabaseClient } from '@/lib/supabase/server';
+import { adminClient } from '@/lib/supabase/admin';
+import { 
+  adaptWorldFromDatabase, 
+  adaptEntityFromDatabase, 
+  adaptTemplateFromDatabase, 
+  adaptFolderFromDatabase,
+  adaptWorldToDatabase,
+  adaptEntityToDatabase,
+  adaptTemplateToDatabase,
+  adaptFolderToDatabase,
+  isValidWorld,
+  isValidEntity 
+} from '@/lib/adapters';
+import { logError } from '@/lib/logging';
+import { validateEnv } from '@/lib/env-validation';
+
+/**
+ * Unified World Service Implementation
+ */
+class UnifiedWorldService implements IWorldService {
+  async getUserWorlds(userId: string): Promise<World[]> {
+    try {
+    const supabase = await createServerSupabaseClient();
+    const { data: worlds, error } = await supabase
+      .from('worlds')
+      .select('*')
+      .eq('owner_id', userId)
+      .eq('is_archived', false)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new DatabaseError('getUserWorlds', error);
+    }
+
+      return (worlds || []).map((world: any) => adaptWorldFromDatabase(world));
+    } catch (error) {
+      return withErrorHandling('getUserWorlds', error);
+    }
+  }
+
+  @handleServiceErrors
+  async getWorldById(worldId: string, userId: string): Promise<World | null> {
+    const supabase = await createServerSupabaseClient();
+    const { data: world, error } = await supabase
+      .from('worlds')
+      .select('*')
+      .eq('id', worldId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new DatabaseError('getWorldById', error);
+    }
+
+    const adaptedWorld = adaptWorldFromDatabase(world);
+    if (!isValidWorld(adaptedWorld)) {
+      throw new DatabaseError('getWorldById', new Error('Invalid world data'));
+    }
+
+    return adaptedWorld;
+  }
+
+  @handleServiceErrors
+  async createWorld(worldData: Omit<World, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>, userId: string): Promise<World> {
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    // Validate required fields
+    if (!worldData.name) {
+      throw new ValidationError('name', 'World name is required');
+    }
+
+    const adaptedData = adaptWorldToDatabase(worldData);
+    const insertData = {
+      ...adaptedData,
+      name: worldData.name, // Ensure name is required
+      owner_id: userId,
+    };
+
+    const { data: world, error } = await adminClient
+      .from('worlds')
+      .insert(insertData)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new DatabaseError('createWorld', error);
+    }
+
+    return adaptWorldFromDatabase(world);
+  }
+
+  @handleServiceErrors
+  async updateWorld(worldId: string, updates: Partial<World>, userId: string): Promise<World> {
+    // Verify access
+    const existingWorld = await this.getWorldById(worldId, userId);
+    if (!existingWorld) {
+      throw new NotFoundError('World', worldId);
+    }
+
+    if (existingWorld.ownerId !== userId) {
+      throw new AccessDeniedError('World', 'update', userId);
+    }
+
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    const updateData = adaptWorldToDatabase(updates);
+    const { data: world, error } = await adminClient
+      .from('worlds')
+      .update(updateData)
+      .eq('id', worldId)
+      .select('*')
+      .single();
+
+    if (error) {
+      throw new DatabaseError('updateWorld', error);
+    }
+
+    return adaptWorldFromDatabase(world);
+  }
+
+  @handleServiceErrors
+  async deleteWorld(worldId: string, userId: string): Promise<void> {
+    // Verify access
+    const existingWorld = await this.getWorldById(worldId, userId);
+    if (!existingWorld) {
+      throw new NotFoundError('World', worldId);
+    }
+
+    if (existingWorld.ownerId !== userId) {
+      throw new AccessDeniedError('World', 'delete', userId);
+    }
+
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    const { error } = await adminClient
+      .from('worlds')
+      .delete()
+      .eq('id', worldId);
+
+    if (error) {
+      throw new DatabaseError('deleteWorld', error);
+    }
+  }
+
+  @handleServiceErrors
+  async archiveWorld(worldId: string, userId: string): Promise<World> {
+    return this.updateWorld(worldId, { isArchived: true }, userId);
+  }
+}
+
+/**
+ * Unified Entity Service Implementation
+ */
+class UnifiedEntityService implements IEntityService {
+  constructor(private worldService: IWorldService) {}
+
+  @handleServiceErrors
+  async getWorldEntities(worldId: string, userId: string): Promise<Entity[]> {
+    // Verify world access
+    const world = await this.worldService.getWorldById(worldId, userId);
+    if (!world) {
+      throw new NotFoundError('World', worldId);
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const { data: entities, error } = await supabase
+      .from('entities')
+      .select('*, templates(name, category)')
+      .eq('world_id', worldId)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      throw new DatabaseError('getWorldEntities', error);
+    }
+
+    return (entities || []).map((entity: any) => adaptEntityFromDatabase(entity));
+  }
+
+  @handleServiceErrors
+  async getEntityById(entityId: string, userId: string): Promise<Entity | null> {
+    const supabase = await createServerSupabaseClient();
+    const { data: entity, error } = await supabase
+      .from('entities')
+      .select('*, templates(name, category)')
+      .eq('id', entityId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new DatabaseError('getEntityById', error);
+    }
+
+    // Verify world access
+    const world = await this.worldService.getWorldById(entity.world_id, userId);
+    if (!world) {
+      throw new AccessDeniedError('Entity', 'read', userId);
+    }
+
+    const adaptedEntity = adaptEntityFromDatabase(entity);
+    if (!isValidEntity(adaptedEntity)) {
+      throw new DatabaseError('getEntityById', new Error('Invalid entity data'));
+    }
+
+    return adaptedEntity;
+  }
+
+  @handleServiceErrors
+  async createEntity(entityData: Omit<Entity, 'id' | 'createdAt' | 'updatedAt'>, userId: string): Promise<Entity> {
+    if (!entityData.worldId) {
+      throw new Error('World ID is required');
+    }
+
+    // Verify world access
+    const world = await this.worldService.getWorldById(entityData.worldId, userId);
+    if (!world) {
+      throw new NotFoundError('World', entityData.worldId);
+    }
+
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    // Validate required fields
+    if (!entityData.name) {
+      throw new ValidationError('name', 'Entity name is required');
+    }
+
+    const adaptedData = adaptEntityToDatabase(entityData);
+    const insertData = {
+      ...adaptedData,
+      name: entityData.name, // Ensure name is required
+    };
+    const { data: entity, error } = await adminClient
+      .from('entities')
+      .insert(insertData)
+      .select('*, templates(name, category)')
+      .single();
+
+    if (error) {
+      throw new DatabaseError('createEntity', error);
+    }
+
+    return adaptEntityFromDatabase(entity);
+  }
+
+  @handleServiceErrors
+  async updateEntity(entityId: string, updates: Partial<Entity>, userId: string): Promise<Entity> {
+    // Verify access
+    const existingEntity = await this.getEntityById(entityId, userId);
+    if (!existingEntity) {
+      throw new NotFoundError('Entity', entityId);
+    }
+
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    const updateData = adaptEntityToDatabase(updates);
+    const { data: entity, error } = await adminClient
+      .from('entities')
+      .update(updateData)
+      .eq('id', entityId)
+      .select('*, templates(name, category)')
+      .single();
+
+    if (error) {
+      throw new DatabaseError('updateEntity', error);
+    }
+
+    return adaptEntityFromDatabase(entity);
+  }
+
+  @handleServiceErrors
+  async deleteEntity(entityId: string, userId: string): Promise<void> {
+    // Verify access
+    const existingEntity = await this.getEntityById(entityId, userId);
+    if (!existingEntity) {
+      throw new NotFoundError('Entity', entityId);
+    }
+
+    if (!adminClient) {
+      throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+    }
+
+    const { error } = await adminClient
+      .from('entities')
+      .delete()
+      .eq('id', entityId);
+
+    if (error) {
+      throw new DatabaseError('deleteEntity', error);
+    }
+  }
+}
+
+/**
+ * Unified Service Layer - Main Export
+ */
+export class UnifiedServiceLayer implements IServiceLayer {
+  public readonly worlds: IWorldService;
+  public readonly entities: IEntityService;
+  public readonly templates: ITemplateService;
+  public readonly folders: IFolderService;
+  public readonly relationships: IRelationshipService;
+
+  constructor() {
+    // Validate environment on initialization
+    validateEnv();
+
+    // Initialize services with dependency injection
+    this.worlds = new UnifiedWorldService();
+    this.entities = new UnifiedEntityService(this.worlds);
+    
+    // TODO: Implement remaining services
+    this.templates = {} as ITemplateService;
+    this.folders = {} as IFolderService;
+    this.relationships = {} as IRelationshipService;
+  }
+}
+
+// Export singleton instance
+let serviceLayer: UnifiedServiceLayer | null = null;
+
+export function getServiceLayer(): UnifiedServiceLayer {
+  if (!serviceLayer) {
+    serviceLayer = new UnifiedServiceLayer();
+  }
+  return serviceLayer;
+}
+
+// Export for testing
+export function createServiceLayer(): UnifiedServiceLayer {
+  return new UnifiedServiceLayer();
+}

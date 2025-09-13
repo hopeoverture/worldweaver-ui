@@ -14,8 +14,202 @@ import { useDeleteTemplate } from '@/hooks/mutations/useDeleteTemplate';
 import { TabItem } from '@/components/ui/Tabs';
 import { useUpdateFolder } from '@/hooks/mutations/useUpdateFolder';
 import { useDeleteFolder } from '@/hooks/mutations/useDeleteFolder';
+import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
+import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
 import { useToast } from '@/components/ui/ToastProvider';
 import type { Entity, Template, Folder } from '@/lib/types';
+
+// Ungrouped Entities Drop Zone Component
+function UngroupedEntitiesDropZone({
+  entities,
+  onEntityDrop,
+  onCreateEntity,
+  onDragStart
+}: {
+  entities: Entity[];
+  onEntityDrop: (entityId: string, entityName: string) => void;
+  onCreateEntity: () => void;
+  onDragStart: (entity: Entity) => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'entity') {
+        onEntityDrop(data.id, data.name);
+      }
+    } catch (error) {
+      console.error('Failed to parse drag data:', error);
+    }
+  };
+
+  if (entities.length === 0) {
+    return (
+      <div
+        className={`text-center py-8 rounded-lg border-2 border-dashed transition-colors ${
+          isDragOver
+            ? 'border-brand-500 bg-brand-50/50 dark:border-brand-400 dark:bg-brand-900/20'
+            : 'border-gray-300 dark:border-neutral-700 text-gray-500 dark:text-gray-400'
+        }`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <p className="text-sm">
+          {isDragOver ? 'Drop here to ungroup entity' : 'Drag entities here to remove them from folders'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-lg transition-colors ${
+        isDragOver ? 'bg-brand-50/50 dark:bg-brand-900/20 p-4 border-2 border-dashed border-brand-500 dark:border-brand-400' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Ungrouped Entities
+        </h3>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          {entities.length} {entities.length === 1 ? 'entity' : 'entities'}
+        </span>
+      </div>
+      <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
+        <LazyEntityGrid
+          entities={entities}
+          onCreateEntity={onCreateEntity}
+          onDragStart={onDragStart}
+        />
+      </Suspense>
+    </div>
+  );
+}
+
+// Ungrouped Templates Drop Zone Component
+function UngroupedTemplatesDropZone({
+  templates,
+  onTemplateDrop,
+  onCreateTemplate,
+  onDragStart
+}: {
+  templates: Template[];
+  onTemplateDrop: (templateId: string, templateName: string) => void;
+  onCreateTemplate: () => void;
+  onDragStart: (template: Template) => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (data.type === 'template') {
+        onTemplateDrop(data.id, data.name);
+      }
+    } catch (error) {
+      console.error('Failed to parse drag data:', error);
+    }
+  };
+
+  if (templates.length === 0) {
+    return (
+      <div
+        className={`text-center py-8 rounded-lg border-2 border-dashed transition-colors ${
+          isDragOver
+            ? 'border-brand-500 bg-brand-50/50 dark:border-brand-400 dark:bg-brand-900/20'
+            : 'border-gray-300 dark:border-neutral-700 text-gray-500 dark:text-gray-400'
+        }`}
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <p className="text-sm">
+          {isDragOver ? 'Drop here to ungroup template' : 'Drag templates here to remove them from folders'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`rounded-lg transition-colors ${
+        isDragOver ? 'bg-brand-50/50 dark:bg-brand-900/20 p-4 border-2 border-dashed border-brand-500 dark:border-brand-400' : ''
+      }`}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Ungrouped Templates
+        </h3>
+        <span className="text-sm text-gray-500 dark:text-gray-400">
+          {templates.length} {templates.length === 1 ? 'template' : 'templates'}
+        </span>
+      </div>
+      <Suspense fallback={<SkeletonLoader type="templates" message="Loading templates..." />}>
+        <LazyTemplateGrid
+          templates={templates}
+          onEdit={(template: Template) => {}}
+          onDelete={undefined}
+          onCreateTemplate={onCreateTemplate}
+          onDragStart={onDragStart}
+        />
+      </Suspense>
+    </div>
+  );
+}
 
 // Lazy-loaded components for better performance
 import { 
@@ -50,6 +244,8 @@ export default function WorldDashboard() {
   const deleteTemplateMut = useDeleteTemplate(strWorldId);
   const updateFolderMut = useUpdateFolder();
   const deleteFolderMut = useDeleteFolder();
+  const updateEntityMut = useUpdateEntity(strWorldId);
+  const updateTemplateMut = useUpdateTemplate(strWorldId);
   const { toast } = useToast();
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [isCreateEntityModalOpen, setCreateEntityModalOpen] = useState(false);
@@ -84,12 +280,102 @@ export default function WorldDashboard() {
   };
 
   const handleFolderDelete = async (folder: Folder) => {
-    if (!confirm(`Delete folder “${folder.name}”? Items inside remain ungrouped.`)) return;
+    if (!confirm(`Delete folder "${folder.name}"? Items inside remain ungrouped.`)) return;
     try {
       await deleteFolderMut.mutateAsync({ id: folder.id, worldId: strWorldId });
       toast({ title: 'Folder deleted', variant: 'success' });
     } catch (e) {
       toast({ title: 'Failed to delete folder', description: String((e as Error)?.message || e), variant: 'error' });
+    }
+  };
+
+  // Drag and drop handlers
+  const handleEntityDragStart = (entity: Entity) => {
+    // Optional: Add any additional logic for drag start
+  };
+
+  const handleEntityDropOnFolder = async (entityId: string, entityName: string, folderId: string) => {
+    try {
+      await updateEntityMut.mutateAsync({
+        id: entityId,
+        patch: { folderId }
+      });
+      toast({
+        title: 'Entity moved',
+        description: `${entityName} moved to folder`,
+        variant: 'success'
+      });
+    } catch (e) {
+      toast({
+        title: 'Failed to move entity',
+        description: String((e as Error)?.message || e),
+        variant: 'error'
+      });
+    }
+  };
+
+  const handleEntityDropToUngrouped = async (entityId: string, entityName: string) => {
+    try {
+      await updateEntityMut.mutateAsync({
+        id: entityId,
+        patch: { folderId: undefined }
+      });
+      toast({
+        title: 'Entity ungrouped',
+        description: `${entityName} moved to ungrouped entities`,
+        variant: 'success'
+      });
+    } catch (e) {
+      toast({
+        title: 'Failed to ungroup entity',
+        description: String((e as Error)?.message || e),
+        variant: 'error'
+      });
+    }
+  };
+
+  // Template drag and drop handlers
+  const handleTemplateDragStart = (template: Template) => {
+    // Optional: Add any additional logic for drag start
+  };
+
+  const handleTemplateDropOnFolder = async (templateId: string, templateName: string, folderId: string) => {
+    try {
+      await updateTemplateMut.mutateAsync({
+        id: templateId,
+        patch: { folderId }
+      });
+      toast({
+        title: 'Template moved',
+        description: `${templateName} moved to folder`,
+        variant: 'success'
+      });
+    } catch (e) {
+      toast({
+        title: 'Failed to move template',
+        description: String((e as Error)?.message || e),
+        variant: 'error'
+      });
+    }
+  };
+
+  const handleTemplateDropToUngrouped = async (templateId: string, templateName: string) => {
+    try {
+      await updateTemplateMut.mutateAsync({
+        id: templateId,
+        patch: { folderId: undefined }
+      });
+      toast({
+        title: 'Template ungrouped',
+        description: `${templateName} moved to ungrouped templates`,
+        variant: 'success'
+      });
+    } catch (e) {
+      toast({
+        title: 'Failed to ungroup template',
+        description: String((e as Error)?.message || e),
+        variant: 'error'
+      });
     }
   };
 
@@ -150,7 +436,11 @@ export default function WorldDashboard() {
                 &larr; Back to folders
               </button>
               <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
-                <LazyEntityGrid entities={entitiesInFolder} onCreateEntity={() => setCreateEntityModalOpen(true)} />
+                <LazyEntityGrid
+                  entities={entitiesInFolder}
+                  onCreateEntity={() => setCreateEntityModalOpen(true)}
+                  onDragStart={handleEntityDragStart}
+                />
               </Suspense>
             </>
           ) : (
@@ -163,6 +453,7 @@ export default function WorldDashboard() {
                     onFolderClick={setSelectedFolder}
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
+                    onEntityDrop={(entityId, entityName, folderId) => handleEntityDropOnFolder(entityId, entityName, folderId)}
                   />
                 </Suspense>
               ) : (
@@ -187,21 +478,12 @@ export default function WorldDashboard() {
               )}
               
               {/* Ungrouped Entities */}
-              {ungroupedEntities.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Ungrouped Entities
-                    </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {ungroupedEntities.length} {ungroupedEntities.length === 1 ? 'entity' : 'entities'}
-                    </span>
-                  </div>
-                  <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
-                    <LazyEntityGrid entities={ungroupedEntities} onCreateEntity={() => setCreateEntityModalOpen(true)} />
-                  </Suspense>
-                </div>
-              )}
+              <UngroupedEntitiesDropZone
+                entities={ungroupedEntities}
+                onEntityDrop={handleEntityDropToUngrouped}
+                onCreateEntity={() => setCreateEntityModalOpen(true)}
+                onDragStart={handleEntityDragStart}
+              />
               
               {/* Helper text when there are folders but no ungrouped entities */}
               {entityFolders.length > 0 && ungroupedEntities.length === 0 && (
@@ -260,10 +542,11 @@ export default function WorldDashboard() {
                 &larr; Back to folders
               </button>
                   <Suspense fallback={<SkeletonLoader type="templates" message="Loading templates..." />}>
-                    <LazyTemplateGrid 
+                    <LazyTemplateGrid
                       templates={templatesInFolder}
                       onDelete={handleTemplateDelete}
                       onCreateTemplate={() => setCreateTemplateModalOpen(true)}
+                      onDragStart={handleTemplateDragStart}
                     />
                   </Suspense>
             </>
@@ -277,6 +560,7 @@ export default function WorldDashboard() {
                     onFolderClick={setSelectedFolder}
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
+                    onTemplateDrop={(templateId, templateName, folderId) => handleTemplateDropOnFolder(templateId, templateName, folderId)}
                   />
                 </Suspense>
               ) : (
@@ -301,25 +585,12 @@ export default function WorldDashboard() {
               )}
               
               {/* Ungrouped Templates */}
-              {ungroupedTemplates.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      Ungrouped Templates
-                    </h3>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      {ungroupedTemplates.length} {ungroupedTemplates.length === 1 ? 'template' : 'templates'}
-                    </span>
-                  </div>
-                  <Suspense fallback={<LazyComponentLoader message="Loading templates..." />}>
-                    <LazyTemplateGrid 
-                      templates={ungroupedTemplates}
-                      onDelete={handleTemplateDelete}
-                      onCreateTemplate={() => setCreateTemplateModalOpen(true)}
-                    />
-                  </Suspense>
-                </div>
-              )}
+              <UngroupedTemplatesDropZone
+                templates={ungroupedTemplates}
+                onTemplateDrop={handleTemplateDropToUngrouped}
+                onCreateTemplate={() => setCreateTemplateModalOpen(true)}
+                onDragStart={handleTemplateDragStart}
+              />
               
               {/* Helper text when there are folders but no ungrouped templates */}
               {templateFolders.length > 0 && ungroupedTemplates.length === 0 && (

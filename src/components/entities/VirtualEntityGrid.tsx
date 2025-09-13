@@ -8,6 +8,7 @@ import { ResponsiveVirtualGrid } from '../ui/VirtualGrid';
 interface VirtualEntityGridProps {
   entities: Entity[];
   onCreateEntity?: () => void;
+  onDragStart?: (entity: Entity) => void;
   /** Height of each entity card in pixels */
   itemHeight?: number;
   /** Minimum width for each entity card */
@@ -18,9 +19,10 @@ interface VirtualEntityGridProps {
   containerHeight?: number;
 }
 
-export function VirtualEntityGrid({ 
-  entities, 
+export function VirtualEntityGrid({
+  entities,
   onCreateEntity,
+  onDragStart,
   itemHeight = 200,
   minItemWidth = 280,
   maxColumns = 4,
@@ -62,10 +64,11 @@ export function VirtualEntityGrid({
 
   const renderEntity = (entity: Entity, index: number) => (
     <div className="h-full w-full p-1">
-      <EntityCard 
+      <EntityCard
         key={entity.id}
         entity={entity}
         onClick={() => setSelectedEntity(entity)}
+        onDragStart={onDragStart}
       />
     </div>
   );

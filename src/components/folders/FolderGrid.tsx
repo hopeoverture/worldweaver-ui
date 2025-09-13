@@ -7,9 +7,11 @@ interface FolderGridProps {
   onFolderClick: (folderId: string) => void;
   onRename?: (folder: Folder) => void;
   onDelete?: (folder: Folder) => void;
+  onEntityDrop?: (entityId: string, entityName: string, folderId: string) => void;
+  onTemplateDrop?: (templateId: string, templateName: string, folderId: string) => void;
 }
 
-export function FolderGrid({ folders, onFolderClick, onRename, onDelete }: FolderGridProps) {
+export function FolderGrid({ folders, onFolderClick, onRename, onDelete, onEntityDrop, onTemplateDrop }: FolderGridProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {folders.map(folder => (
@@ -19,6 +21,8 @@ export function FolderGrid({ folders, onFolderClick, onRename, onDelete }: Folde
           onClick={() => onFolderClick(folder.id)}
           onRename={onRename}
           onDelete={onDelete}
+          onEntityDrop={onEntityDrop ? (entityId, entityName) => onEntityDrop(entityId, entityName, folder.id) : undefined}
+          onTemplateDrop={onTemplateDrop ? (templateId, templateName) => onTemplateDrop(templateId, templateName, folder.id) : undefined}
         />
       ))}
     </div>

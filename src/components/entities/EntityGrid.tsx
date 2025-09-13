@@ -9,9 +9,10 @@ import { VirtualEntityGrid } from './VirtualEntityGrid';
 interface EntityGridProps {
   entities: Entity[];
   onCreateEntity?: () => void;
+  onDragStart?: (entity: Entity) => void;
 }
 
-export function EntityGrid({ entities, onCreateEntity }: EntityGridProps) {
+export function EntityGrid({ entities, onCreateEntity, onDragStart }: EntityGridProps) {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
 
   // Empty state component
@@ -46,14 +47,15 @@ export function EntityGrid({ entities, onCreateEntity }: EntityGridProps) {
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {items.map(entity => (
-          <EntityCard 
-            key={entity.id} 
-            entity={entity} 
+          <EntityCard
+            key={entity.id}
+            entity={entity}
             onClick={() => setSelectedEntity(entity)}
+            onDragStart={onDragStart}
           />
         ))}
       </div>
-      
+
       {selectedEntity && (
         <EntityDetailModal
           entity={selectedEntity}
@@ -68,6 +70,7 @@ export function EntityGrid({ entities, onCreateEntity }: EntityGridProps) {
     <VirtualEntityGrid
       entities={items}
       onCreateEntity={onCreateEntity}
+      onDragStart={onDragStart}
     />
   );
 

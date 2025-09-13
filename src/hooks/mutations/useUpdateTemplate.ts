@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Template } from "@/lib/types";
 
-type Patch = Partial<Pick<Template, 'name' | 'description' | 'icon' | 'category' | 'fields'>> & {
+type Patch = Partial<Pick<Template, 'name' | 'description' | 'icon' | 'category' | 'fields' | 'folderId'>> & {
   // When editing a system template, include the worldId to create a world-scoped override
   worldId?: string;
 };

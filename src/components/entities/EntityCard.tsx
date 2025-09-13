@@ -1,5 +1,5 @@
 'use client';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Entity } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
@@ -7,20 +7,43 @@ import { formatDate } from '@/lib/utils';
  * EntityCard component for displaying entity information
  * @param entity - The entity data to display
  * @param onClick - Optional click handler
+ * @param onDragStart - Optional drag start handler
  */
 interface EntityCardProps {
   /** The entity data to display */
   entity: Entity;
   /** Optional click handler for card interaction */
   onClick?: () => void;
+  /** Optional drag start handler for drag-and-drop */
+  onDragStart?: (entity: Entity) => void;
 }
 
-function EntityCardComponent({ entity, onClick }: EntityCardProps) {
+function EntityCardComponent({ entity, onClick, onDragStart }: EntityCardProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type: 'entity',
+      id: entity.id,
+      name: entity.name
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart?.(entity);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <div 
-      data-testid="entity-card" 
-      className="group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer"
+    <div
+      data-testid="entity-card"
+      className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer ${isDragging ? 'opacity-50 scale-95' : ''}`}
       onClick={onClick}
+      draggable={!!onDragStart}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       {/* Gradient overlay for visual interest */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

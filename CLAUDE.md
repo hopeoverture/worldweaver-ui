@@ -77,11 +77,15 @@ The application manages "worlds" containing entities, templates, folders, and re
 - **Relationship**: Links between entities with typed connections
 
 ### Data Layer Architecture
-- **SupabaseWorldService**: Main service class handling all database operations (`src/lib/services/worldService.ts`)
+- **Unified Service Layer**: Modern service abstraction with interface-based architecture (`src/lib/services/unified-service.ts`)
+  - **IWorldService, IEntityService, ITemplateService, IFolderService, IRelationshipService**: Clean service interfaces
+  - **UnifiedServiceLayer**: Orchestrates all service interactions with centralized error handling
+  - **ServiceError hierarchy**: NotFoundError, AccessDeniedError, DatabaseError, ValidationError for proper error handling
+- **SupabaseWorldService**: Legacy service class still used for complex operations (`src/lib/services/worldService.ts`)
 - **Type-safe database operations**: Uses generated types from Supabase schema
 - **Row Level Security (RLS)**: Enforced at database level for all tables with helper functions:
   - `user_has_world_access(world_id, user_id)`: Checks ownership, membership, or public access
-  - `user_can_edit_world(world_id)`: Checks if user can edit (owner or editor/admin member)  
+  - `user_can_edit_world(world_id)`: Checks if user can edit (owner or editor/admin member)
   - `user_is_world_admin(world_id)`: Checks if user is admin (owner or admin member)
   - `user_email_matches_invite(email)`: Checks if current user email matches invite
 - **JSONB fields**: Flexible custom data storage (entities.data, folders.data, profiles.data, etc.)
@@ -100,6 +104,11 @@ The application manages "worlds" containing entities, templates, folders, and re
 ### Component Patterns
 - **Domain-organized components**: `src/components/worlds/`, `entities/`, `templates/`, `folders/`
 - **Virtualized grids**: `VirtualWorldGrid.tsx`, `VirtualEntityGrid.tsx` with skeleton loaders for performance
+- **Drag-and-Drop Integration**: Comprehensive drag-and-drop across all content components
+  - **Draggable Components**: EntityCard, TemplateCard with `onDragStart` prop support
+  - **Drop Zones**: FolderCard accepts appropriate content types, UngroupedEntitiesDropZone, UngroupedTemplatesDropZone
+  - **Visual Feedback**: Hover states, drop indicators, smooth animations during drag operations
+  - **Type Safety**: Validates drop compatibility (entities → entity folders, templates → template folders)
 - **UI primitives**: `src/components/ui/` (Button, Card, FormField, Input, SmartGrid, VirtualGrid, etc.)
 - **Modal patterns**: Create/edit operations with consistent validation and error handling
 - **Error boundaries**: React Error Boundary integration with proper fallbacks
@@ -133,6 +142,13 @@ The application manages "worlds" containing entities, templates, folders, and re
 - **Custom fields**: Stored in JSONB columns (entities.data, folders.data, profiles.data)
 - **Field naming**: Database uses snake_case, domain uses camelCase (handled by adapters)
 - **Generated types**: `src/lib/supabase/types.generated.ts` must be kept in sync with schema changes
+
+### Drag-and-Drop System
+- **Native HTML5 API**: Uses native drag-and-drop with proper dataTransfer handling
+- **Component Integration**: All grid components support drag handlers via `onDragStart` props
+- **Folder Organization**: Entities and templates can be moved into appropriate folder types
+- **Mutation Hooks**: Uses `useUpdateEntity` and `useUpdateTemplate` for database updates with folderId changes
+- **Visual Feedback**: Consistent drag states, drop zones, and success notifications across all components
 
 ### Template System
 - System templates available globally, world-specific templates override them
@@ -188,6 +204,20 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 
 ## Recent Updates & Fixes
 
+### September 2025 - Drag-and-Drop & Unified Service Layer
+- **Comprehensive Drag-and-Drop Implementation**: Full drag-and-drop support for organizing content
+  - **Entity Drag-and-Drop**: Drag entities from grids into entity folders or back to ungrouped state
+  - **Template Drag-and-Drop**: Drag templates from grids into template folders or back to ungrouped state
+  - **Visual Feedback**: Smooth animations, hover states, and drop zone indicators
+  - **Type Safety**: Validates drop targets (entities only to entity folders, templates only to template folders)
+  - **Real-time Updates**: Uses TanStack Query mutations with optimistic updates and error handling
+  - **Cross-component Integration**: Consistent drag-and-drop across EntityCard, TemplateCard, FolderCard, EntityGrid, TemplateGrid, VirtualEntityGrid, VirtualTemplateGrid
+- **Unified Service Layer Implementation**: Comprehensive service abstraction layer (`src/lib/services/unified-service.ts`)
+  - **Interface-based Architecture**: Clear separation of concerns with IWorldService, IEntityService, ITemplateService, IFolderService, IRelationshipService
+  - **Error Handling**: Centralized error handling with ServiceError, NotFoundError, AccessDeniedError, DatabaseError, ValidationError
+  - **Database Adapter Pattern**: Consistent snake_case ↔ camelCase conversion across all data operations
+  - **Service Composition**: UnifiedServiceLayer class that orchestrates all service interactions
+
 ### September 2025 - Template Folders & Relationship System Fixes
 - **Template Folder System**: Added support for template folders with proper differentiation
   - Added `kind` column to folders table to differentiate between 'entities' and 'templates' folders
@@ -231,6 +261,8 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - **Relationship creation failures**: Check RLS policies have `service_role` exceptions, ensure `supabaseWorldService` is used for admin operations
 - **Template folder issues**: Ensure folders have correct `kind` field ('entities' or 'templates') for proper display
 - **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
+- **Drag-and-drop issues**: Ensure components have proper drag handlers (onDragStart) and drop handlers (onDrop), verify folder kind matching (entities to entity folders, templates to template folders)
+- **Service layer errors**: Use unified service interfaces and proper error handling - check `src/lib/services/unified-service.ts` for standardized patterns
 
 ### Performance Monitoring
 - Database optimization views available: `public.index_usage_stats`, `public.table_stats`

@@ -10,9 +10,10 @@ interface TemplateGridProps {
   onEdit?: (template: Template) => void;
   onDelete?: (templateId: string) => void;
   onCreateTemplate?: () => void;
+  onDragStart?: (template: Template) => void;
 }
 
-export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate }: TemplateGridProps) {
+export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate, onDragStart }: TemplateGridProps) {
   
   // Empty state component
   const emptyState = (
@@ -31,11 +32,12 @@ export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate }: 
   const renderRegular = (items: Template[]) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {items.map(template => (
-        <TemplateCard 
-          key={template.id} 
-          template={template} 
+        <TemplateCard
+          key={template.id}
+          template={template}
           onEdit={onEdit}
           onDelete={onDelete}
+          onDragStart={onDragStart}
         />
       ))}
     </div>
@@ -48,6 +50,7 @@ export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate }: 
       onEdit={onEdit}
       onDelete={onDelete}
       onCreateTemplate={onCreateTemplate}
+      onDragStart={onDragStart}
     />
   );
 

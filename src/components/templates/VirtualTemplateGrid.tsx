@@ -9,6 +9,7 @@ interface VirtualTemplateGridProps {
   onEdit?: (template: Template) => void;
   onDelete?: (templateId: string) => void;
   onCreateTemplate?: () => void;
+  onDragStart?: (template: Template) => void;
   /** Height of each template card in pixels */
   itemHeight?: number;
   /** Minimum width for each template card */
@@ -19,15 +20,16 @@ interface VirtualTemplateGridProps {
   containerHeight?: number;
 }
 
-export function VirtualTemplateGrid({ 
-  templates, 
-  onEdit, 
-  onDelete, 
+export function VirtualTemplateGrid({
+  templates,
+  onEdit,
+  onDelete,
   onCreateTemplate,
+  onDragStart,
   itemHeight = 220,
   minItemWidth = 300,
   maxColumns = 4,
-  containerHeight 
+  containerHeight
 }: VirtualTemplateGridProps) {
   
   // Empty state
@@ -50,6 +52,7 @@ export function VirtualTemplateGrid({
         template={template}
         onEdit={() => onEdit?.(template)}
         onDelete={() => onDelete?.(template.id)}
+        onDragStart={onDragStart}
       />
     </div>
   );

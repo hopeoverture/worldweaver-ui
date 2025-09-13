@@ -8,10 +8,12 @@ interface TemplateCardProps {
   template: Template;
   onEdit?: (template: Template) => void;
   onDelete?: (templateId: string) => void;
+  onDragStart?: (template: Template) => void;
 }
 
-export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) {
+export function TemplateCard({ template, onEdit, onDelete, onDragStart }: TemplateCardProps) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Check if this is a core template
   const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any);
@@ -20,11 +22,29 @@ export function TemplateCard({ template, onEdit, onDelete }: TemplateCardProps) 
     setIsDetailModalOpen(true);
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    setIsDragging(true);
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      type: 'template',
+      id: template.id,
+      name: template.name
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+    onDragStart?.(template);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
   return (
     <>
-      <div 
+      <div
         onClick={handleCardClick}
-        className="group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer"
+        className={`group relative rounded-xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-card hover:shadow-xl transition-all duration-300 p-6 hover:-translate-y-1 cursor-pointer ${isDragging ? 'opacity-50 scale-95' : ''}`}
+        draggable={!!onDragStart}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
       >
         {/* Gradient overlay for visual interest */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-50/50 to-transparent dark:from-purple-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
