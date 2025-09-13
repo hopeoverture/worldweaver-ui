@@ -201,7 +201,7 @@ export function adaptFolderFromDatabase(
     name: dbFolder.name,
     description: dbFolder.description || undefined,
     color: dbFolder.color || undefined,
-    kind: (dbFolder as any).kind || undefined, // Optional since not in database schema yet
+    kind: (dbFolder as any).kind || 'entities', // Default to entities if kind not specified
     count: 0, // Entity count will be fetched separately if needed
     parentFolderId: dbFolder.parent_folder_id || undefined,
     createdAt: dbFolder.created_at,

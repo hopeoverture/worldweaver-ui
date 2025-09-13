@@ -50,20 +50,15 @@ export class FolderService {
     if (!adminClient) throw new Error('Admin client not initialized');
     const supabase = adminClient;
     
-    // Build insert object without kind field (migration may not be applied yet)
     const insertData: any = {
       world_id: worldId,
       name: data.name,
       description: data.description || '',
       color: data.color || null,
+      kind: data.kind || 'entities', // Default to entities if not specified
     };
     
-    // Try to include kind field if database supports it
     try {
-      if (data.kind) {
-        insertData.kind = data.kind;
-      }
-      
       const { data: row, error } = await supabase
         .from('folders')
         .insert(insertData)
@@ -71,27 +66,8 @@ export class FolderService {
         .single();
         
       if (error) {
-        // If error includes 'kind' column, retry without it
-        if (error.message.includes('kind') || error.message.includes('column')) {
-          console.log('⚠️ Kind column not available, retrying without it');
-          delete insertData.kind;
-          
-          const { data: retryRow, error: retryError } = await supabase
-            .from('folders')
-            .insert(insertData)
-            .select('*')
-            .single();
-            
-          if (retryError) {
-            logError('Supabase error creating folder (retry)', retryError, { action: 'createFolder', worldId, userId, metadata: { folderData: data } });
-            throw new Error(`Database error: ${retryError.message}`);
-          }
-          
-          return adaptFolderFromDatabase(retryRow);
-        } else {
-          logError('Supabase error creating folder', error, { action: 'createFolder', worldId, userId, metadata: { folderData: data } });
-          throw new Error(`Database error: ${error.message}`);
-        }
+        logError('Supabase error creating folder', error, { action: 'createFolder', worldId, userId, metadata: { folderData: data } });
+        throw new Error(`Database error: ${error.message}`);
       }
       
       return adaptFolderFromDatabase(row);
