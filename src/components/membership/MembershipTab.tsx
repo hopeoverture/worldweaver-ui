@@ -81,7 +81,7 @@ export function MembershipTab({ world }: MembershipTabProps) {
   // Find current user member using auth context
   const currentUserMember = members.find((m: WorldMember) => m.email === user?.email || m.userId === user?.id);
   // Check if user is owner or has owner role in members
-  const isOwner = currentUserMember?.role === 'owner' || (world as any).owner_id === user?.id;
+  const isOwner = currentUserMember?.role === 'owner' || world.ownerId === user?.id;
   const canManageMembers = isOwner || (currentUserMember?.role && ['owner', 'admin'].includes(currentUserMember.role));
 
   const handleInviteMember = async (email: string, role: MemberRole) => {

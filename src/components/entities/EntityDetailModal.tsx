@@ -333,7 +333,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
                         {otherEntity.name}
                       </span>
                       <span className="text-sm text-gray-500 dark:text-gray-400">
-                        ({link.label})
+                        ({link.relationshipType})
                       </span>
                     </div>
                     

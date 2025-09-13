@@ -465,7 +465,7 @@ export class SupabaseWorldService {
     worldId: string;
     from: string;
     to: string;
-    label: string;
+    relationshipType: string;
     description?: string | null;
     metadata?: Json | null;
     updatedAt?: string;
@@ -491,7 +491,7 @@ export class SupabaseWorldService {
       worldId: r.world_id,
       from: r.from_entity_id,
       to: r.to_entity_id,
-      label: r.relationship_type,
+      relationshipType: r.relationship_type,
       description: r.description,
       metadata: r.metadata as Json | null,
       updatedAt: r.updated_at,
@@ -503,14 +503,14 @@ export class SupabaseWorldService {
    */
   async createRelationship(
     worldId: string,
-    data: { fromEntityId: string; toEntityId: string; label: string; description?: string | null; metadata?: Json | null; [key: string]: any },
+    data: { fromEntityId: string; toEntityId: string; relationshipType: string; description?: string | null; metadata?: Json | null; [key: string]: any },
     userId: string,
   ): Promise<{
     id: string;
     worldId: string;
     from: string;
     to: string;
-    label: string;
+    relationshipType: string;
     description?: string | null;
     metadata?: Json | null;
     created?: boolean;
@@ -520,7 +520,7 @@ export class SupabaseWorldService {
       worldId, 
       fromEntityId: data.fromEntityId, 
       toEntityId: data.toEntityId, 
-      label: data.label,
+      relationshipType: data.relationshipType,
       userId,
       environment: process.env.NODE_ENV,
       hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -634,7 +634,7 @@ export class SupabaseWorldService {
       .eq('world_id', worldId)
       .eq('from_entity_id', data.fromEntityId)
       .eq('to_entity_id', data.toEntityId)
-      .eq('relationship_type', data.label)
+      .eq('relationship_type', data.relationshipType)
       .limit(1)
     if (findErr) {
       console.log('❌ CreateRelationship: Error checking existing relationship', { error: findErr, fromEntityId: data.fromEntityId, toEntityId: data.toEntityId })
@@ -649,7 +649,7 @@ export class SupabaseWorldService {
         worldId: r.world_id,
         from: r.from_entity_id,
         to: r.to_entity_id,
-        label: r.relationship_type,
+        relationshipType: r.relationship_type,
         description: r.description,
         metadata: r.metadata as Json | null,
         created: false,
@@ -668,7 +668,7 @@ export class SupabaseWorldService {
       world_id: worldId,
       from_entity_id: data.fromEntityId,
       to_entity_id: data.toEntityId,
-      relationship_type: data.label,
+      relationship_type: data.relationshipType,
       description: data.description ?? null,
       metadata: customFields as Json,
     }
@@ -710,7 +710,7 @@ export class SupabaseWorldService {
       worldId: row.world_id,
       from: row.from_entity_id,
       to: row.to_entity_id,
-      label: row.relationship_type,
+      relationshipType: row.relationship_type,
       description: row.description,
       metadata: row.metadata as Json | null,
       created: true,
@@ -722,9 +722,9 @@ export class SupabaseWorldService {
    */
   async updateRelationship(
     relationshipId: string,
-    data: { label?: string; description?: string | null; metadata?: Json | null; [key: string]: any },
+    data: { relationshipType?: string; description?: string | null; metadata?: Json | null; [key: string]: any },
     userId: string,
-  ): Promise<{ id: string; worldId: string; from: string; to: string; label: string; description?: string | null; metadata?: Json | null; createdAt: string; updatedAt: string }> {
+  ): Promise<{ id: string; worldId: string; from: string; to: string; relationshipType: string; description?: string | null; metadata?: Json | null; createdAt: string; updatedAt: string }> {
     const supabase = await createServerSupabaseClient()
 
     // Fetch current to check access via world
@@ -749,7 +749,7 @@ export class SupabaseWorldService {
       }
     }
     const patch: any = {}
-    if (data.label !== undefined) patch.relationship_type = data.label
+    if (data.relationshipType !== undefined) patch.relationship_type = data.relationshipType
     if (data.description !== undefined) patch.description = data.description
     patch.metadata = customFields as Json
 
@@ -768,7 +768,7 @@ export class SupabaseWorldService {
       worldId: row.world_id,
       from: row.from_entity_id,
       to: row.to_entity_id,
-      label: row.relationship_type,
+      relationshipType: row.relationship_type,
       description: row.description,
       metadata: row.metadata as Json | null,
       createdAt: row.created_at,

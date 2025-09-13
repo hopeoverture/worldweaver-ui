@@ -130,7 +130,7 @@ export type EntityResponse = ApiResponse<{
     id: string
     fromEntityId: string
     toEntityId: string
-    label: string
+    relationshipType: string
   }>
   imageUrl?: string
   isArchived?: boolean
@@ -185,7 +185,7 @@ export type RelationshipResponse = ApiResponse<{
   worldId: string
   fromEntityId: string
   toEntityId: string
-  label: string
+  relationshipType: string
   description?: string
   metadata?: Record<string, unknown>
   createdAt: string
@@ -197,7 +197,7 @@ export type RelationshipsListResponse = ApiResponse<{
     id: string
     fromEntityId: string
     toEntityId: string
-    label: string
+    relationshipType: string
     description?: string
     metadata?: Record<string, unknown>
     updatedAt: string

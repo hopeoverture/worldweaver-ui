@@ -49,7 +49,7 @@ export const PUT = withApiErrorHandling(async (req: NextRequest, ctx: { params: 
     worldId: relationship.worldId,
     fromEntityId: relationship.from,
     toEntityId: relationship.to,
-    label: relationship.label,
+    relationshipType: relationship.relationshipType,
     description: relationship.description ?? undefined,
     metadata: relationship.metadata as Record<string, unknown> | undefined,
     createdAt: relationship.createdAt,

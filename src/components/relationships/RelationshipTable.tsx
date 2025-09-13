@@ -27,7 +27,7 @@ export function RelationshipTable({ worldId }: RelationshipTableProps) {
           {relationships.map(rel => (
             <tr key={rel.id}>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{getEntityName(rel.from)}</td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rel.label}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{rel.relationshipType}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{getEntityName(rel.to)}</td>
             </tr>
           ))}

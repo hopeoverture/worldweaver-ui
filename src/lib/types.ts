@@ -1,7 +1,5 @@
-// Re-export generated database types
-export * from './generated-types';
-export type { DatabaseTable, DatabaseFunction } from './generated-types';
-export { DATABASE_TABLES, DATABASE_FUNCTIONS } from './generated-types';
+// Re-export actual Supabase generated database types
+export type { Database, Tables, TablesInsert, TablesUpdate, Enums } from './supabase/types.generated';
 
 export type WorldInvite = {
   id: ID;
@@ -23,6 +21,56 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[]
+
+// ==============================================
+// JSONB Field Structure Interfaces
+// ==============================================
+
+// Template Field Structure - stored in templates.fields JSONB column
+export interface TemplateFieldData {
+  id: string;
+  name: string;
+  type: FieldType;
+  prompt?: string;
+  required?: boolean;
+  options?: string[];
+  referenceType?: string;
+}
+
+// Entity Data Structure - stored in entities.data JSONB column
+export interface EntityData {
+  [fieldName: string]: EntityFieldValue;
+}
+
+export type EntityFieldValue = 
+  | string 
+  | number 
+  | boolean 
+  | string[] 
+  | EntityReference[]
+  | null;
+
+export interface EntityReference {
+  id: string;
+  name: string;
+  type?: string;
+}
+
+// World Settings Structure - stored in worlds.settings JSONB column
+// Note: For type safety, cast values appropriately when reading from database
+export type WorldSettings = Record<string, Json>
+
+// Relationship Metadata Structure - stored in relationships.metadata JSONB column
+// Note: For type safety, cast values appropriately when reading from database
+export type RelationshipMetadata = Record<string, Json>
+
+// Folder Data Structure - stored in folders.data JSONB column
+// Note: For type safety, cast values appropriately when reading from database
+export type FolderData = Record<string, Json>
+
+// Profile Data Structure - stored in profiles.data JSONB column
+// Note: For type safety, cast values appropriately when reading from database
+export type ProfileData = Record<string, Json>
 
 export type World = {
   id: ID;
@@ -61,6 +109,9 @@ export type World = {
   aestheticDirection?: string;
 }
 
+// Note: 'owner' is a virtual role for UI purposes only
+// In the database, owners are stored in worlds.owner_id, not world_members table  
+// The database enum world_member_role only supports: 'admin' | 'editor' | 'viewer'
 export type MemberRole = 'owner' | 'admin' | 'editor' | 'viewer';
 
 export type Permission = 
@@ -118,27 +169,30 @@ export type WorldBan = {
 
 export type FolderKind = 'entities' | 'templates';
 
-// Folder type with custom fields
+// Folder type aligned with database schema
 export type Folder = {
   id: ID;
   worldId: ID;
   name: string;
   description?: string;
-  kind: FolderKind;
+  kind?: FolderKind; // Optional since not in database schema yet
   color?: string;
   count: number;
+  parentFolderId?: string; // From database schema
+  createdAt?: string; // From database schema
+  updatedAt?: string; // From database schema
   data?: Record<string, unknown>; // Custom fields
 };
 
-// Profile type with custom fields
+// Profile type aligned with database schema
 export type Profile = {
   id: ID;
   email: string;
-  fullName?: string;
-  avatarUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  data?: Record<string, unknown>; // Custom fields
+  fullName?: string; // Maps to full_name in database
+  avatarUrl?: string; // Maps to avatar_url in database
+  createdAt?: string; // Maps to created_at in database
+  updatedAt?: string; // Maps to updated_at in database
+  data?: ProfileData; // Typed JSONB field
 };
 
 export type FieldType =
@@ -177,7 +231,7 @@ export type Link = {
   id: ID;
   fromEntityId: ID;
   toEntityId: ID;
-  label: string;
+  relationshipType: string; // Changed from label for consistency
 };
 
 export type Entity = {
@@ -186,22 +240,27 @@ export type Entity = {
   folderId?: ID;
   templateId?: ID;
   name: string;
-  summary?: string;
-  description?: string;
-  fields: Record<string, unknown>; // key by TemplateField.id
-  links: Link[];
-  tags?: string[];
-  imageUrl?: string;
-  isArchived?: boolean;
-  updatedAt: string; // ISO
-  templateName?: string;
-  templateCategory?: string;
+  summary?: string; // Not in database schema
+  description?: string; // Not in database schema
+  fields: Record<string, unknown>; // Maps to data JSONB field in database
+  links: Link[]; // Computed from relationships
+  tags?: string[]; // From database schema
+  imageUrl?: string; // Not in database schema
+  isArchived?: boolean; // Not in database schema
+  createdAt?: string; // From database schema
+  updatedAt: string; // Maps to updated_at in database
+  templateName?: string; // Computed from template join
+  templateCategory?: string; // Computed from template join
 };
 
 export type RelationshipRow = {
   id: ID;
   worldId: ID;
-  from: ID; // entity id
-  to: ID;   // entity id
-  label: string;
+  from: ID; // entity id (maps to from_entity_id in database)
+  to: ID;   // entity id (maps to to_entity_id in database)
+  relationshipType: string; // Maps to relationship_type in database
+  description?: string; // From database schema
+  metadata?: RelationshipMetadata; // Typed JSONB field
+  createdAt?: string; // From database schema
+  updatedAt?: string; // From database schema
 };

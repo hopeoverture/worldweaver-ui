@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         {
           fromEntityId,
           toEntityId,
-          label,
+          relationshipType: label,
           description: null,
           metadata: null,
         },

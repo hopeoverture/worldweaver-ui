@@ -297,7 +297,7 @@ export class WorldService {
     worldId: string;
     from: string;
     to: string;
-    label: string;
+    relationshipType: string;
     description?: string | null;
     metadata?: any | null;
     updatedAt?: string;
@@ -324,7 +324,7 @@ export class WorldService {
         worldId: row.world_id,
         from: row.from_entity_id,
         to: row.to_entity_id,
-        label: row.relationship_type, // Map relationship_type to label
+        relationshipType: row.relationship_type, // Map relationship_type to relationshipType
         description: row.description,
         metadata: row.metadata,
         updatedAt: row.updated_at,
@@ -343,7 +343,7 @@ export class WorldService {
     data: {
       fromEntityId: string;
       toEntityId: string;
-      label: string;
+      relationshipType: string;
       description: string | null;
       metadata: any | null;
     },
@@ -361,7 +361,7 @@ export class WorldService {
           world_id: worldId,
           from_entity_id: data.fromEntityId,
           to_entity_id: data.toEntityId,
-          relationship_type: data.label, // Map label to relationship_type
+          relationship_type: data.relationshipType, // Map relationshipType to relationship_type
           description: data.description,
           metadata: data.metadata,
         })
@@ -378,7 +378,7 @@ export class WorldService {
         worldId: row.world_id,
         from: row.from_entity_id,
         to: row.to_entity_id,
-        label: row.relationship_type, // Map relationship_type to label
+        relationshipType: row.relationship_type, // Map relationship_type to relationshipType
         description: row.description,
         metadata: row.metadata,
         updatedAt: row.updated_at,

@@ -27,7 +27,7 @@ export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
       id: uuidv4(),
       fromEntityId: '', // Will be set when entity is created
       toEntityId: selectedEntityId,
-      label: relationshipLabel.trim()
+      relationshipType: relationshipLabel.trim()
     };
 
     const updatedLinks = [...links, newLink];
@@ -72,7 +72,7 @@ export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400">as</span>
                   <span className="px-2 py-1 bg-brand-100 dark:bg-brand-900/50 text-brand-800 dark:text-brand-200 rounded text-sm">
-                    {link.label}
+                    {link.relationshipType}
                   </span>
                 </div>
                 <Button

@@ -199,10 +199,13 @@ export function adaptFolderFromDatabase(
     id: dbFolder.id,
     worldId: dbFolder.world_id,
     name: dbFolder.name,
-    description: dbFolder.description || '',
+    description: dbFolder.description || undefined,
     color: dbFolder.color || undefined,
-    kind: (dbFolder as any).kind || 'entities', // Use kind from database, default to entities for backward compatibility
+    kind: (dbFolder as any).kind || undefined, // Optional since not in database schema yet
     count: Array.isArray(dbFolder.entities) ? dbFolder.entities.length : 0,
+    parentFolderId: dbFolder.parent_folder_id || undefined,
+    createdAt: dbFolder.created_at,
+    updatedAt: dbFolder.updated_at,
     data: {}, // Folders don't have custom data fields in current schema
   };
 }

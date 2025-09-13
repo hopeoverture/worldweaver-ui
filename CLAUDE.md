@@ -18,6 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing & Quality
 - `npm run test`: Run tests with Vitest (minimal test suite currently)
 - `npm run lint`: Run ESLint with flat config
+- `npm run typecheck`: Run TypeScript type checking (use this command frequently)
 - `npm run test:api`: Run API endpoint tests
 - `npm run test:mcp`: Test MCP server configuration and connectivity
 
@@ -187,7 +188,12 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 
 ## Recent Updates & Fixes
 
-### September 2025 - Relationship System & RLS Policy Fixes
+### September 2025 - Template Folders & Relationship System Fixes
+- **Template Folder System**: Added support for template folders with proper differentiation
+  - Added `kind` column to folders table to differentiate between 'entities' and 'templates' folders
+  - Applied migration `20250912185500_add_kind_to_folders.sql` with performance indexing
+  - Fixed template folder display issues and removed hardcoded empty arrays
+  - Updated folder creation workflow to properly handle template vs entity folder types
 - **Relationship Creation Fixed**: Resolved 500 errors when creating relationships between entities
   - Fixed RLS (Row Level Security) policy violations on relationships table with `service_role` checks
   - Applied migration `20250912150110_fix_relationships_rls_policy.sql` with comprehensive policies
@@ -223,6 +229,7 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - **Field consistency**: Database uses snake_case, domain uses camelCase - adapters handle conversion
 - **Windows compatibility**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
 - **Relationship creation failures**: Check RLS policies have `service_role` exceptions, ensure `supabaseWorldService` is used for admin operations
+- **Template folder issues**: Ensure folders have correct `kind` field ('entities' or 'templates') for proper display
 - **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
 
 ### Performance Monitoring
