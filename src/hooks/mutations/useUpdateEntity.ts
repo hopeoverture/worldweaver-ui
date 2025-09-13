@@ -14,6 +14,7 @@ export function useUpdateEntity(worldId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; patch: Patch }) => {
+      console.log(`🔄 useUpdateEntity attempting:`, { entityId: args.id, patch: args.patch });
       const res = await fetch(`/api/entities/${args.id}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -22,6 +23,27 @@ export function useUpdateEntity(worldId: string) {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
+        console.error(`🚨 useUpdateEntity failed:`, {
+          status: res.status,
+          statusText: res.statusText,
+          url: res.url,
+          responseText: text,
+          entityId: args.id,
+          patch: args.patch
+        });
+
+        // If authentication failed, try refreshing the page to sync session
+        if (res.status === 401) {
+          console.warn('🔄 Authentication failed, attempting session refresh...');
+          try {
+            // Test if session sync helps
+            await fetch('/api/worlds', { credentials: 'include' });
+            console.log('✅ Session test after auth failure completed');
+          } catch (e) {
+            console.warn('⚠️ Session test failed:', e);
+          }
+        }
+
         const error = new Error(text || "Failed to update entity");
         (error as any).status = res.status;
         (error as any).statusText = res.statusText;
