@@ -40,28 +40,43 @@ export class SupabaseWorldService {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      // For each world, get the entity count by fetching only valid entities
-      // This ensures the count matches what users actually see
+      // For each world, get the entity count by fetching only displayable entities
+      // This ensures the count matches what users actually see in the interface
       const worldsWithEntityCounts = await Promise.all(
         (worlds || []).map(async (world) => {
-          const { data: entities, error: entitiesError } = await supabase
-            .from('entities')
-            .select('id, name, world_id')
-            .eq('world_id', world.id)
-            .not('name', 'is', null) // Exclude entities with null names (invalid)
-            .not('id', 'is', null);   // Exclude entities with null ids (invalid)
+          // Get entities and folders for this world
+          const [entitiesResult, foldersResult] = await Promise.all([
+            supabase
+              .from('entities')
+              .select('id, name, world_id, folder_id')
+              .eq('world_id', world.id)
+              .not('name', 'is', null)
+              .not('id', 'is', null),
+            supabase
+              .from('folders')
+              .select('id, world_id, kind')
+              .eq('world_id', world.id)
+              .eq('kind', 'entities') // Only entity folders count
+          ]);
 
-          let validEntityCount = 0;
-          if (!entitiesError && entities) {
-            // Apply the same validation as the entity service
-            validEntityCount = entities.filter(entity =>
-              entity.id && entity.name && entity.world_id
-            ).length;
+          let displayableEntityCount = 0;
+
+          if (!entitiesResult.error && entitiesResult.data && !foldersResult.error && foldersResult.data) {
+            const entities = entitiesResult.data;
+            const validFolderIds = new Set(foldersResult.data.map(f => f.id));
+
+            // Count entities that are either:
+            // 1. Ungrouped (no folder_id)
+            // 2. In a valid entity folder
+            displayableEntityCount = entities.filter(entity => {
+              if (!entity.id || !entity.name || !entity.world_id) return false;
+              return !entity.folder_id || validFolderIds.has(entity.folder_id);
+            }).length;
           }
 
           return {
             ...world,
-            entities: [{ count: validEntityCount }]
+            entities: [{ count: displayableEntityCount }]
           };
         })
       );
