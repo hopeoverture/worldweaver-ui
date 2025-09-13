@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/browser'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import type { Profile } from '@/lib/supabase/types'
@@ -131,6 +132,7 @@ const getSupabaseClient = () => {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -365,7 +367,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           hint: (error as any)?.hint
         } : 'No error'
       })
-      
+
       if (error) {
         const authError = classifyAuthError(error)
         setError(authError)
@@ -387,7 +389,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         return { error: authError }
       }
-      
+
+      // Refresh the router to sync server-side session
+      console.log('✅ Login successful, refreshing router to sync server-side session')
+      router.refresh()
+
       return { error: null }
     } catch (error) {
       console.error('Unexpected error during sign-in:', error)
