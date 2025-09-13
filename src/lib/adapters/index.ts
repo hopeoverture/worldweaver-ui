@@ -202,7 +202,7 @@ export function adaptFolderFromDatabase(
     description: dbFolder.description || undefined,
     color: dbFolder.color || undefined,
     kind: (dbFolder as any).kind || undefined, // Optional since not in database schema yet
-    count: Array.isArray(dbFolder.entities) ? dbFolder.entities.length : 0,
+    count: 0, // Entity count will be fetched separately if needed
     parentFolderId: dbFolder.parent_folder_id || undefined,
     createdAt: dbFolder.created_at,
     updatedAt: dbFolder.updated_at,

@@ -23,7 +23,7 @@ export class FolderService {
       const supabase = await createServerSupabaseClient();
       const { data: folders, error } = await supabase
         .from('folders')
-        .select(`*, entities(count)`) // count entities per folder
+        .select('*')
         .eq('world_id', worldId)
         .order('updated_at', { ascending: false });
 
