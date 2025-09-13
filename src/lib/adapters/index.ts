@@ -26,7 +26,7 @@ export function adaptWorldFromDatabase(
     name: dbWorld.name,
     summary: dbWorld.description || undefined, // DB: description -> Domain: summary
     description: dbWorld.description || undefined,
-    entityCount: Array.isArray(dbWorld.entities) ? dbWorld.entities.length : 0,
+    entityCount: 0, // Entity count will be fetched separately if needed
     updatedAt: dbWorld.updated_at,
     isArchived: dbWorld.is_archived ?? false,
     archivedAt: dbWorld.is_archived ? dbWorld.updated_at : undefined,

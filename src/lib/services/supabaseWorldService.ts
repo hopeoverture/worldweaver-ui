@@ -30,11 +30,7 @@ export class SupabaseWorldService {
       const supabase = await createServerSupabaseClient()
       const { data: worlds, error } = await supabase
         .from('worlds')
-        .select(`
-          *,
-          entities(count),
-          world_members(count)
-        `)
+        .select('*')
         .eq('is_archived', false)
         .order('updated_at', { ascending: false });
 
@@ -80,10 +76,7 @@ export class SupabaseWorldService {
 
       const { data: world, error } = await supabase
         .from('worlds')
-        .select(`
-          *,
-          entities(count)
-        `)
+        .select('*')
         .eq('id', worldId)
         .single();
 
@@ -1193,7 +1186,7 @@ export class SupabaseWorldService {
       const supabase = await createServerSupabaseClient()
       const { data: folders, error } = await supabase
         .from('folders')
-        .select(`*, entities(count)`) // count entities per folder
+        .select('*')
         .eq('world_id', worldId)
         .order('updated_at', { ascending: false })
 
@@ -1202,7 +1195,7 @@ export class SupabaseWorldService {
         throw new Error(`Database error: ${error.message}`)
       }
 
-      type FolderRow = { id: string; world_id: string; name: string; description?: string | null; color?: string | null; entities?: number | unknown[] }
+      type FolderRow = { id: string; world_id: string; name: string; description?: string | null; color?: string | null }
       return (folders || []).map((f: FolderRow) => ({
         id: f.id,
         worldId: f.world_id,
@@ -1211,7 +1204,7 @@ export class SupabaseWorldService {
         color: f.color || undefined,
         // Current schema has one folders table; treat as entity folders for now
         kind: 'entities' as const,
-        count: Array.isArray(f.entities) ? f.entities.length : (typeof f.entities === 'number' ? f.entities : 0),
+        count: 0, // Entity count will be fetched separately if needed
       }))
     } catch (error) {
       logDatabaseError('Error fetching world folders', error as Error, { worldId, action: 'fetch_world_folders' })
