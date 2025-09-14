@@ -8,6 +8,7 @@ type Body = {
   folderId?: string;
   fields: Record<string, unknown>;
   tags?: string[];
+  imageUrl?: string;
 };
 
 export function useCreateEntity(worldId: string) {

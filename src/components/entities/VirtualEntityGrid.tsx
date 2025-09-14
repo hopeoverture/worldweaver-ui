@@ -23,7 +23,7 @@ export function VirtualEntityGrid({
   entities,
   onCreateEntity,
   onDragStart,
-  itemHeight = 200,
+  itemHeight = 280,
   minItemWidth = 280,
   maxColumns = 4,
   containerHeight

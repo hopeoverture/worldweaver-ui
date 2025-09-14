@@ -49,6 +49,7 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
         folderId: targetFolderId,
         fields: entityData.fields,
         tags: entityData.tags,
+        imageUrl: entityData.imageUrl,
       });
       
       // Note: Links creation would be a follow-up mutation if needed

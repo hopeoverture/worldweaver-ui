@@ -67,10 +67,10 @@ export class EntityService {
 
     const supabase = await createServerSupabaseClient();
     
-    // Merge custom fields with regular fields for data JSONB column
-    const { templateId, folderId, name, fields, tags, ...customFields } = data;
+    // Extract imageUrl for proper column, merge rest with regular fields for data JSONB column
+    const { templateId, folderId, name, fields, tags, imageUrl, ...customFields } = data;
     const allCustomFields = { ...(fields || {}), ...customFields };
-    
+
     const { data: row, error } = await supabase
       .from('entities')
       .insert({
@@ -80,6 +80,7 @@ export class EntityService {
         name: name,
         data: allCustomFields as Database['public']['Tables']['entities']['Row']['data'],
         tags: tags || [],
+        image_url: imageUrl || null,
       })
       .select('*')
       .single();

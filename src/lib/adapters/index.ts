@@ -122,7 +122,7 @@ export function adaptEntityFromDatabase(
     tags: dbEntity.tags ?? [],
     templateName: dbEntity.templates?.name || undefined,
     templateCategory: dbEntity.templates?.category || undefined,
-    imageUrl: undefined,
+    imageUrl: dbEntity.image_url || undefined,
     isArchived: false, // Not in current schema
   };
 }
@@ -145,7 +145,8 @@ export function adaptEntityToDatabase(
   if (name !== undefined) dbEntity.name = name;
   if (Object.keys(allCustomFields).length > 0) dbEntity.data = allCustomFields as Database['public']['Tables']['entities']['Row']['data'];
   if (tags !== undefined) dbEntity.tags = tags;
-  
+  if (imageUrl !== undefined) dbEntity.image_url = imageUrl;
+
   return dbEntity;
 }
 

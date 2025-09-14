@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
+import Image from 'next/image';
 import { Entity } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
@@ -47,8 +48,19 @@ function EntityCardComponent({ entity, onClick, onDragStart }: EntityCardProps) 
     >
       {/* Gradient overlay for visual interest */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-900/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      
+
       <div className="relative">
+        {entity.imageUrl && (
+          <div className="relative w-full h-32 mb-3 overflow-hidden rounded-lg">
+            <Image
+              src={entity.imageUrl}
+              alt={entity.name}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
+        )}
         <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">{entity.name}</h3>
         {entity.summary && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{entity.summary}</p>}
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Updated {formatDate(entity.updatedAt)}</p>

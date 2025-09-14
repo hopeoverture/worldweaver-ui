@@ -43,6 +43,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       folderId: z.string().uuid().optional().or(z.literal('')),
       fields: z.record(z.unknown()).default({}),
       tags: z.array(z.string()).optional(),
+      imageUrl: z.string().url().optional(),
     })
 
     let body: z.infer<typeof schema>
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       folderId: body.folderId || undefined,
       fields: body.fields,
       tags: body.tags,
+      imageUrl: body.imageUrl,
     }, user.id)
 
     // Log entity creation activity

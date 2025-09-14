@@ -7,6 +7,7 @@ import { logError } from '@/lib/logging';
 import { LinkEditor } from './LinkEditor';
 import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
+import { ImageUpload } from '../../ui/ImageUpload';
 
 interface StepFillFormProps {
   template: Template;
@@ -23,7 +24,8 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
     summary: '',
     folderId: initialFolderId || '', // Use initialFolderId if provided, otherwise default to no folder
     fields: {} as Record<string, any>,
-    links: [] as Link[]
+    links: [] as Link[],
+    imageFile: null as File | null
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -69,6 +71,14 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
     }
   };
 
+  const handleImageChange = (file: File | null) => {
+    setFormData(prev => ({
+      ...prev,
+      imageFile: file
+    }));
+  };
+
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
     
@@ -98,6 +108,33 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
     setIsSubmitting(true);
     
     try {
+      // Upload image first if provided
+      let imageUrl: string | undefined = undefined;
+      if (formData.imageFile) {
+        const formDataForUpload = new FormData();
+        formDataForUpload.append('file', formData.imageFile);
+
+        const response = await fetch(`/api/worlds/${worldId}/files/upload?kind=entity-images`, {
+          method: 'POST',
+          body: formDataForUpload,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const result = await response.json();
+
+        // Get public URL for the uploaded image
+        const { createClient } = await import('@/lib/supabase/browser');
+        const supabase = createClient();
+        const { data: urlData } = supabase.storage
+          .from('world-assets')
+          .getPublicUrl(result.file.path);
+
+        imageUrl = urlData.publicUrl;
+      }
+
       await onSave({
         worldId,
         templateId: template.id,
@@ -106,6 +143,7 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
         summary: formData.summary.trim(),
         fields: formData.fields,
         links: formData.links,
+        imageUrl,
       });
     } catch (error) {
       logError('Error saving entity', error as Error, {
@@ -279,6 +317,16 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
             placeholder="Enter a brief description"
           />
         </div>
+
+        {/* Image Upload */}
+        <ImageUpload
+          value={undefined}
+          onChange={handleImageChange}
+          label="Entity Image"
+          description="Upload an image to represent this entity. Drag and drop or click to select."
+          error={errors.image}
+          disabled={isSubmitting}
+        />
 
         {/* Folder Selection - Make it more prominent */}
         <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">

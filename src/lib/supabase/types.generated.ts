@@ -74,6 +74,7 @@ export type Database = {
           data: Json
           folder_id: string | null
           id: string
+          image_url: string | null
           name: string
           tags: string[] | null
           template_id: string | null
@@ -85,6 +86,7 @@ export type Database = {
           data?: Json
           folder_id?: string | null
           id?: string
+          image_url?: string | null
           name: string
           tags?: string[] | null
           template_id?: string | null
@@ -96,6 +98,7 @@ export type Database = {
           data?: Json
           folder_id?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           tags?: string[] | null
           template_id?: string | null
@@ -180,48 +183,27 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          banner_url: string | null
-          bio: string | null
           created_at: string
-          data: Json | null
           email: string
           full_name: string | null
           id: string
-          location: string | null
-          preferences: Json | null
-          social_links: Json | null
           updated_at: string
-          website: string | null
         }
         Insert: {
           avatar_url?: string | null
-          banner_url?: string | null
-          bio?: string | null
           created_at?: string
-          data?: Json | null
           email: string
           full_name?: string | null
           id: string
-          location?: string | null
-          preferences?: Json | null
-          social_links?: Json | null
           updated_at?: string
-          website?: string | null
         }
         Update: {
           avatar_url?: string | null
-          banner_url?: string | null
-          bio?: string | null
           created_at?: string
-          data?: Json | null
           email?: string
           full_name?: string | null
           id?: string
-          location?: string | null
-          preferences?: Json | null
-          social_links?: Json | null
           updated_at?: string
-          website?: string | null
         }
         Relationships: []
       }
@@ -504,7 +486,6 @@ export type Database = {
           description: string | null
           genre_blend: string[] | null
           id: string
-          invite_link_enabled: boolean | null
           is_archived: boolean | null
           is_public: boolean | null
           key_themes: string[] | null
@@ -532,7 +513,6 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
-          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
@@ -560,7 +540,6 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
-          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
