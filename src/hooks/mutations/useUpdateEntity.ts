@@ -14,7 +14,25 @@ export function useUpdateEntity(worldId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { id: string; patch: Patch }) => {
-      console.log(`🔄 useUpdateEntity attempting:`, { entityId: args.id, patch: args.patch });
+      const startTime = Date.now();
+      console.log(`🔄 useUpdateEntity attempting:`, {
+        entityId: args.id,
+        patch: args.patch,
+        timestamp: new Date().toISOString()
+      });
+
+      // Pre-flight auth check to ensure session is valid
+      try {
+        const authCheck = await fetch('/api/worlds', { credentials: 'include' });
+        if (!authCheck.ok) {
+          console.warn('⚠️ Pre-flight auth check failed, attempting anyway...');
+        } else {
+          console.log('✅ Pre-flight auth check passed');
+        }
+      } catch (e) {
+        console.warn('⚠️ Pre-flight auth check error:', e);
+      }
+
       const res = await fetch(`/api/entities/${args.id}`, {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -23,24 +41,47 @@ export function useUpdateEntity(worldId: string) {
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        console.error(`🚨 useUpdateEntity failed:`, {
+        const errorDetails = {
           status: res.status,
           statusText: res.statusText,
           url: res.url,
           responseText: text,
           entityId: args.id,
           patch: args.patch
+        };
+        console.error(`🚨 useUpdateEntity failed:`, errorDetails);
+        console.error(`🚨 Individual properties:`, {
+          'Status': res.status,
+          'Status Text': res.statusText,
+          'Response': text,
+          'Entity ID': args.id
         });
 
-        // If authentication failed, try refreshing the page to sync session
+        // If authentication failed, try one retry after session refresh
         if (res.status === 401) {
-          console.warn('🔄 Authentication failed, attempting session refresh...');
+          console.warn('🔄 Authentication failed, attempting retry with session refresh...');
           try {
-            // Test if session sync helps
-            await fetch('/api/worlds', { credentials: 'include' });
-            console.log('✅ Session test after auth failure completed');
+            // Force session refresh by calling a working endpoint
+            const refreshResult = await fetch('/api/worlds', { credentials: 'include' });
+            console.log('🔄 Session refresh result:', refreshResult.status);
+
+            // Retry the original request once
+            console.log('🔄 Retrying original request after session refresh...');
+            const retryRes = await fetch(`/api/entities/${args.id}`, {
+              method: "PUT",
+              headers: { "content-type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(args.patch),
+            });
+
+            if (retryRes.ok) {
+              console.log('✅ Retry successful after session refresh!');
+              return retryRes.json();
+            } else {
+              console.error('🚨 Retry also failed:', retryRes.status, retryRes.statusText);
+            }
           } catch (e) {
-            console.warn('⚠️ Session test failed:', e);
+            console.warn('⚠️ Session refresh/retry failed:', e);
           }
         }
 

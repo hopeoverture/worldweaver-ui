@@ -24,7 +24,7 @@ CREATE TABLE public.profiles (
 -- =====================================================
 
 CREATE TABLE public.worlds (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
@@ -42,7 +42,7 @@ CREATE TABLE public.worlds (
 CREATE TYPE world_member_role AS ENUM ('viewer', 'editor', 'admin');
 
 CREATE TABLE public.world_members (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     role world_member_role DEFAULT 'viewer',
@@ -55,7 +55,7 @@ CREATE TABLE public.world_members (
 -- =====================================================
 
 CREATE TABLE public.folders (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
     parent_folder_id UUID REFERENCES public.folders(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -70,7 +70,7 @@ CREATE TABLE public.folders (
 -- =====================================================
 
 CREATE TABLE public.templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
@@ -87,7 +87,7 @@ CREATE TABLE public.templates (
 -- =====================================================
 
 CREATE TABLE public.entities (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
     template_id UUID REFERENCES public.templates(id) ON DELETE SET NULL,
     folder_id UUID REFERENCES public.folders(id) ON DELETE SET NULL,
@@ -103,7 +103,7 @@ CREATE TABLE public.entities (
 -- =====================================================
 
 CREATE TABLE public.relationships (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
     from_entity_id UUID REFERENCES public.entities(id) ON DELETE CASCADE NOT NULL,
     to_entity_id UUID REFERENCES public.entities(id) ON DELETE CASCADE NOT NULL,
@@ -120,7 +120,7 @@ CREATE TABLE public.relationships (
 -- =====================================================
 
 CREATE TABLE public.world_bans (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     world_id UUID REFERENCES public.worlds(id) ON DELETE CASCADE NOT NULL,
     banned_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     banned_by_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
