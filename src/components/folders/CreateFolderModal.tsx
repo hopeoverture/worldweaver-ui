@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -31,6 +31,14 @@ export function CreateFolderModal({ open, worldId, folderType, currentParentFold
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form data when currentParentFolderId changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      parentFolderId: currentParentFolderId || ''
+    }));
+  }, [currentParentFolderId]);
 
   // Filter folders to only show appropriate parent folders
   const availableParentFolders = folders.filter(folder =>

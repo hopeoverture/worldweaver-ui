@@ -505,13 +505,40 @@ export default function WorldDashboard() {
                 folderPath={currentFolderPath}
                 onNavigate={navigateToFolder}
               />
-              <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
-                <LazyEntityGrid
-                  entities={entitiesInFolder}
-                  onCreateEntity={() => setCreateEntityModalOpen(true)}
-                  onDragStart={handleEntityDragStart}
-                />
-              </Suspense>
+              <div className="space-y-8">
+                {/* Subfolders within current folder */}
+                {entityFolders.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                      Subfolders
+                    </h3>
+                    <Suspense fallback={<SkeletonLoader type="folders" message="Loading subfolders..." />}>
+                      <LazyFolderGrid
+                        folders={entityFolders}
+                        onFolderClick={navigateToFolder}
+                        onRename={handleFolderRename}
+                        onDelete={handleFolderDelete}
+                        onEntityDrop={(entityId, entityName, folderId) => handleEntityDropOnFolder(entityId, entityName, folderId)}
+                        entities={remoteEntities}
+                      />
+                    </Suspense>
+                  </div>
+                )}
+
+                {/* Entities within current folder */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    Entities
+                  </h3>
+                  <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
+                    <LazyEntityGrid
+                      entities={entitiesInFolder}
+                      onCreateEntity={() => setCreateEntityModalOpen(true)}
+                      onDragStart={handleEntityDragStart}
+                    />
+                  </Suspense>
+                </div>
+              </div>
             </>
           ) : (
             <div className="space-y-8">
@@ -613,6 +640,36 @@ export default function WorldDashboard() {
                 folderPath={currentFolderPath}
                 onNavigate={navigateToFolder}
               />
+              <div className="space-y-8">
+                {/* Subfolders within current folder */}
+                {regularTemplateFolders.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                      Subfolders
+                    </h3>
+                    <Suspense fallback={<SkeletonLoader type="folders" message="Loading subfolders..." />}>
+                      <LazyFolderGrid
+                        folders={regularTemplateFolders}
+                        onFolderClick={navigateToFolder}
+                        onRename={handleFolderRename}
+                        onDelete={handleFolderDelete}
+                        onTemplateDrop={(templateId, templateName, folderId) => handleTemplateDropOnFolder(templateId, templateName, folderId)}
+                        templates={[
+                          // Map system templates to core-folder for counting
+                          ...systemTemplates.map(t => ({ ...t, folderId: 'core-folder' })),
+                          // Include world templates as-is
+                          ...worldTemplates
+                        ]}
+                      />
+                    </Suspense>
+                  </div>
+                )}
+
+                {/* Templates within current folder */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                    Templates
+                  </h3>
                   <Suspense fallback={<SkeletonLoader type="templates" message="Loading templates..." />}>
                     <LazyTemplateGrid
                       templates={templatesInFolder}
@@ -622,6 +679,8 @@ export default function WorldDashboard() {
                       customizedTemplateIds={customizedTemplateIds}
                     />
                   </Suspense>
+                </div>
+              </div>
             </>
           ) : (
             <div className="space-y-8">
