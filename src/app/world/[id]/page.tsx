@@ -19,6 +19,7 @@ import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
 import type { Entity, Template, Folder } from '@/lib/types';
 
@@ -265,6 +266,12 @@ export default function WorldDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
+  // Sort state management
+  const [entitySortBy, setEntitySortBy] = useState<'name' | 'updated' | 'template'>('name');
+  const [entitySortOrder, setEntitySortOrder] = useState<'asc' | 'desc'>('asc');
+  const [templateSortBy, setTemplateSortBy] = useState<'name' | 'updated'>('name');
+  const [templateSortOrder, setTemplateSortOrder] = useState<'asc' | 'desc'>('asc');
+
   // Debounce search term for performance
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -297,6 +304,60 @@ export default function WorldDashboard() {
       }
 
       return nameMatch || descriptionMatch;
+    });
+  };
+
+  // Helper function to sort entities
+  const sortEntities = (
+    entities: Entity[],
+    sortBy: 'name' | 'updated' | 'template',
+    order: 'asc' | 'desc'
+  ): Entity[] => {
+    return [...entities].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'name':
+          compareValue = a.name.localeCompare(b.name);
+          break;
+        case 'updated':
+          const aDate = new Date(a.updatedAt).getTime();
+          const bDate = new Date(b.updatedAt).getTime();
+          compareValue = bDate - aDate; // Most recent first by default
+          break;
+        case 'template':
+          const aTemplate = a.templateName || '';
+          const bTemplate = b.templateName || '';
+          compareValue = aTemplate.localeCompare(bTemplate);
+          break;
+      }
+
+      return order === 'asc' ? compareValue : -compareValue;
+    });
+  };
+
+  // Helper function to sort templates
+  const sortTemplates = (
+    templates: Template[],
+    sortBy: 'name' | 'updated',
+    order: 'asc' | 'desc'
+  ): Template[] => {
+    return [...templates].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'name':
+          compareValue = a.name.localeCompare(b.name);
+          break;
+        case 'updated':
+          // Templates might not have updatedAt, fallback to name comparison
+          const aDate = new Date((a as any).updatedAt || 0).getTime();
+          const bDate = new Date((b as any).updatedAt || 0).getTime();
+          compareValue = aDate === bDate ? a.name.localeCompare(b.name) : bDate - aDate;
+          break;
+      }
+
+      return order === 'asc' ? compareValue : -compareValue;
     });
   };
 
@@ -471,18 +532,42 @@ export default function WorldDashboard() {
   const baseWorldTemplates = remoteTemplates.filter((template: Template) => !template.isSystem && template.worldId === strWorldId);
   const baseUngroupedTemplates = baseWorldTemplates.filter((template: Template) => !template.folderId);
 
-  // Apply search filtering
-  const ungroupedEntities = filterBySearch(baseUngroupedEntities, debouncedSearchTerm) as Entity[];
-  const systemTemplates = filterBySearch(baseSystemTemplates, debouncedSearchTerm) as Template[];
-  const worldTemplates = filterBySearch(baseWorldTemplates, debouncedSearchTerm) as Template[];
-  const ungroupedTemplates = filterBySearch(baseUngroupedTemplates, debouncedSearchTerm) as Template[];
+  // Apply search filtering and sorting
+  const ungroupedEntities = sortEntities(
+    filterBySearch(baseUngroupedEntities, debouncedSearchTerm) as Entity[],
+    entitySortBy,
+    entitySortOrder
+  );
+  const systemTemplates = sortTemplates(
+    filterBySearch(baseSystemTemplates, debouncedSearchTerm) as Template[],
+    templateSortBy,
+    templateSortOrder
+  );
+  const worldTemplates = sortTemplates(
+    filterBySearch(baseWorldTemplates, debouncedSearchTerm) as Template[],
+    templateSortBy,
+    templateSortOrder
+  );
+  const ungroupedTemplates = sortTemplates(
+    filterBySearch(baseUngroupedTemplates, debouncedSearchTerm) as Template[],
+    templateSortBy,
+    templateSortOrder
+  );
 
   // Global search filtering - search ALL items regardless of folder location
   const allWorldEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId);
   const allWorldTemplatesIncludingSystem = [...remoteTemplates.filter((template: Template) => template.isSystem), ...baseWorldTemplates];
 
-  const allFilteredEntities = filterBySearch(allWorldEntities, debouncedSearchTerm) as Entity[];
-  const allFilteredTemplates = filterBySearch(allWorldTemplatesIncludingSystem, debouncedSearchTerm) as Template[];
+  const allFilteredEntities = sortEntities(
+    filterBySearch(allWorldEntities, debouncedSearchTerm) as Entity[],
+    entitySortBy,
+    entitySortOrder
+  );
+  const allFilteredTemplates = sortTemplates(
+    filterBySearch(allWorldTemplatesIncludingSystem, debouncedSearchTerm) as Template[],
+    templateSortBy,
+    templateSortOrder
+  );
 
   // Identify customized templates (world-specific overrides of system templates)
   const customizedTemplateIds = worldTemplates
@@ -510,9 +595,17 @@ export default function WorldDashboard() {
       : remoteTemplates.filter((template: Template) => template.folderId === selectedFolder)
     : [];
 
-  // Apply search filtering to folder contents
-  const entitiesInFolder = filterBySearch(baseEntitiesInFolder, debouncedSearchTerm) as Entity[];
-  const templatesInFolder = filterBySearch(baseTemplatesInFolder, debouncedSearchTerm) as Template[];
+  // Apply search filtering and sorting to folder contents
+  const entitiesInFolder = sortEntities(
+    filterBySearch(baseEntitiesInFolder, debouncedSearchTerm) as Entity[],
+    entitySortBy,
+    entitySortOrder
+  );
+  const templatesInFolder = sortTemplates(
+    filterBySearch(baseTemplatesInFolder, debouncedSearchTerm) as Template[],
+    templateSortBy,
+    templateSortOrder
+  );
 
   const tabs: TabItem[] = [
     {
@@ -527,7 +620,33 @@ export default function WorldDashboard() {
       render: (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <div></div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
+                <Select
+                  value={entitySortBy}
+                  onChange={(e) => setEntitySortBy(e.target.value as 'name' | 'updated' | 'template')}
+                  className="text-sm"
+                >
+                  <option value="name">Name</option>
+                  <option value="updated">Recently Updated</option>
+                  <option value="template">Template</option>
+                </Select>
+                <button
+                  onClick={() => setEntitySortOrder(entitySortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  title={entitySortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {entitySortOrder === 'asc' ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
@@ -674,7 +793,32 @@ export default function WorldDashboard() {
       render: (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <div></div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Sort by:</span>
+                <Select
+                  value={templateSortBy}
+                  onChange={(e) => setTemplateSortBy(e.target.value as 'name' | 'updated')}
+                  className="text-sm"
+                >
+                  <option value="name">Name</option>
+                  <option value="updated">Recently Updated</option>
+                </Select>
+                <button
+                  onClick={() => setTemplateSortOrder(templateSortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  title={templateSortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    {templateSortOrder === 'asc' ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                    )}
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={() => {
