@@ -184,6 +184,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          data: Json | null
           email: string
           full_name: string | null
           id: string
@@ -192,6 +193,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          data?: Json | null
           email: string
           full_name?: string | null
           id: string
@@ -200,6 +202,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          data?: Json | null
           email?: string
           full_name?: string | null
           id?: string
@@ -486,6 +489,10 @@ export type Database = {
           description: string | null
           genre_blend: string[] | null
           id: string
+          invite_link_enabled: boolean | null
+          invite_link_expires: string | null
+          invite_link_max_uses: number | null
+          invite_link_role: string | null
           is_archived: boolean | null
           is_public: boolean | null
           key_themes: string[] | null
@@ -513,6 +520,10 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          invite_link_enabled?: boolean | null
+          invite_link_expires?: string | null
+          invite_link_max_uses?: number | null
+          invite_link_role?: string | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
@@ -540,6 +551,10 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          invite_link_enabled?: boolean | null
+          invite_link_expires?: string | null
+          invite_link_max_uses?: number | null
+          invite_link_role?: string | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null

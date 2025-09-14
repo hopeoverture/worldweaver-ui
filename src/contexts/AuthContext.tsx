@@ -484,22 +484,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const operation = async () => {
       const supabase = getSupabaseClient()
 
-      // Handle JSONB fields properly - merge with existing data instead of replacing
+      // Handle JSONB data field properly - merge with existing data instead of replacing
       const processedUpdates = { ...updates }
-
-      if (updates.social_links && profile?.social_links) {
-        processedUpdates.social_links = {
-          ...(typeof profile.social_links === 'object' ? profile.social_links as Record<string, any> : {}),
-          ...(typeof updates.social_links === 'object' ? updates.social_links as Record<string, any> : {})
-        }
-      }
-
-      if (updates.preferences && profile?.preferences) {
-        processedUpdates.preferences = {
-          ...(typeof profile.preferences === 'object' ? profile.preferences as Record<string, any> : {}),
-          ...(typeof updates.preferences === 'object' ? updates.preferences as Record<string, any> : {})
-        }
-      }
 
       if (updates.data && profile?.data) {
         processedUpdates.data = {

@@ -6,7 +6,7 @@
  */
 
 import type { Database } from '../supabase/types.generated';
-import type { World, Entity, Template, Folder, Profile, TemplateField } from '../types';
+import type { World, Entity, Template, Folder, Profile, TemplateField, MemberRole } from '../types';
 
 type DatabaseWorld = Database['public']['Tables']['worlds']['Row'];
 type DatabaseEntity = Database['public']['Tables']['entities']['Row'];
@@ -56,9 +56,9 @@ export function adaptWorldFromDatabase(
     coverImage: undefined,
     seatLimit: undefined,
     inviteLinkEnabled: dbWorld.invite_link_enabled ?? false,
-    inviteLinkRole: undefined,
-    inviteLinkExpires: undefined,
-    inviteLinkMaxUses: undefined,
+    inviteLinkRole: dbWorld.invite_link_role as MemberRole | undefined,
+    inviteLinkExpires: dbWorld.invite_link_expires || undefined,
+    inviteLinkMaxUses: dbWorld.invite_link_max_uses || undefined,
   };
 }
 
@@ -98,6 +98,9 @@ export function adaptWorldToDatabase(
   
   // Invite link settings
   if (domainWorld.inviteLinkEnabled !== undefined) dbWorld.invite_link_enabled = domainWorld.inviteLinkEnabled;
+  if (domainWorld.inviteLinkRole !== undefined) dbWorld.invite_link_role = domainWorld.inviteLinkRole;
+  if (domainWorld.inviteLinkExpires !== undefined) dbWorld.invite_link_expires = domainWorld.inviteLinkExpires;
+  if (domainWorld.inviteLinkMaxUses !== undefined) dbWorld.invite_link_max_uses = domainWorld.inviteLinkMaxUses;
   
   return dbWorld;
 }

@@ -37,10 +37,29 @@ export const PUT = withApiErrorHandling(async (request: NextRequest): Promise<Ne
 
   const updates = bodyResult
 
+  // Separate basic profile fields from data fields
+  const { bio, location, website, social_links, banner_url, data, ...basicFields } = updates
+
+  // Prepare data JSONB field with extended profile fields
+  const extendedFields = {
+    ...(bio !== undefined && { bio }),
+    ...(location !== undefined && { location }),
+    ...(website !== undefined && { website }),
+    ...(social_links !== undefined && { social_links }),
+    ...(banner_url !== undefined && { banner_url }),
+    ...(data && typeof data === 'object' ? data : {})
+  }
+
+  // Prepare update object
+  const profileUpdates: any = {
+    ...basicFields,
+    ...(Object.keys(extendedFields).length > 0 && { data: extendedFields })
+  }
+
   // Update profile in database
   const { data: updatedProfile, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update(profileUpdates)
     .eq('id', user.id)
     .select()
     .single()
