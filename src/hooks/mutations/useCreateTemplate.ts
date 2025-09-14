@@ -9,6 +9,7 @@ type Body = {
   icon?: string;
   category?: string;
   fields: TemplateField[];
+  folderId?: string;
 };
 
 export function useCreateTemplate(worldId: string) {

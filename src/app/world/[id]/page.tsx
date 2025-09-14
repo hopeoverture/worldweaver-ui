@@ -736,6 +736,7 @@ export default function WorldDashboard() {
         <LazyCreateEntityModal
           open={isCreateEntityModalOpen}
           worldId={world.id}
+          folderId={selectedFolder && remoteFolders.find(f => f.id === selectedFolder && f.kind === 'entities') ? selectedFolder : undefined}
           onClose={() => setCreateEntityModalOpen(false)}
         />
       </Suspense>
@@ -752,6 +753,7 @@ export default function WorldDashboard() {
           open={isCreateTemplateModalOpen}
           worldId={world.id}
           onClose={() => setCreateTemplateModalOpen(false)}
+          currentFolderId={selectedFolder && remoteFolders.find(f => f.id === selectedFolder && f.kind === 'templates') ? selectedFolder : undefined}
         />
       </Suspense>
       <Suspense fallback={<LazyComponentLoader message="Loading..." />}>

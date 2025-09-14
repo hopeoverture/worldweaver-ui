@@ -49,6 +49,7 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
       description: z.string().max(5000).optional(),
       icon: z.string().optional(),
       category: z.string().optional(),
+      folderId: z.string().optional(),
       fields: z.array(z.object({
         id: z.string(),
         name: z.string(),
@@ -86,6 +87,7 @@ const templatePostHandler = async (req: NextRequest, ctx: { params: Promise<{ id
       icon: body.icon,
       category: body.category,
       fields: body.fields,
+      folderId: body.folderId,
     }, user.id, supabase)
 
     debugSteps.push('TEMPLATE_CREATED')

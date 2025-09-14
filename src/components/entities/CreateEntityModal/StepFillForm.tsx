@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
-import { useStore } from '@/lib/store';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { sanitizeTemplateField, validateJsonField } from '@/lib/security';
 import { logError } from '@/lib/logging';
@@ -12,25 +11,25 @@ import { Button } from '../../ui/Button';
 interface StepFillFormProps {
   template: Template;
   worldId: string;
+  initialFolderId?: string;
   onSave: (entityData: Omit<Entity, 'id' | 'updatedAt'>) => void;
   onBack: () => void;
 }
 
-export function StepFillForm({ template, worldId, onSave, onBack }: StepFillFormProps) {
-  const { folders } = useStore();
-  const { data: remoteFolders = [] } = useWorldFolders(worldId);
+export function StepFillForm({ template, worldId, initialFolderId, onSave, onBack }: StepFillFormProps) {
+  const { data: folders = [] } = useWorldFolders(worldId);
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
-    folderId: '', // Default to no folder (ungrouped) - don't inherit template's folder
+    folderId: initialFolderId || '', // Use initialFolderId if provided, otherwise default to no folder
     fields: {} as Record<string, any>,
     links: [] as Link[]
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get entity folders for this world (prefer remote)
-  const entityFolders = (remoteFolders.length ? remoteFolders : folders).filter((f: any) => f.worldId === worldId && f.kind === 'entities');
+  // Get entity folders for this world
+  const entityFolders = folders.filter(f => f.kind === 'entities');
 
   const handleFieldChange = (fieldId: string, value: any) => {
     // Find the field definition to get its type

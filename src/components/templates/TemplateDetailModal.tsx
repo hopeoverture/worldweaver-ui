@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Template } from '@/lib/types';
-import { useStore } from '@/lib/store';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { TemplateEditor } from './TemplateEditor';
@@ -22,7 +21,6 @@ interface TemplateDetailModalProps {
 
 export function TemplateDetailModal({ template, isOpen, onClose, onDelete, isCustomized }: TemplateDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const updateTemplate = useStore(state => state.updateTemplate);
   const params = useParams();
   const worldId = String(params?.id || '');
   const updateTemplateMut = useUpdateTemplate(worldId);
@@ -33,8 +31,6 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete, isCus
   const isCoreTemplate = Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any);
 
   const handleSave = (updatedTemplate: Template) => {
-    // Optimistic local update for snappy UI
-    updateTemplate(template.id, updatedTemplate);
     // Persist to API; include worldId so system templates create per‑world overrides
     updateTemplateMut.mutate(
       { id: template.id, patch: {

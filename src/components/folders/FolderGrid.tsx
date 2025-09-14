@@ -27,8 +27,8 @@ export function FolderGrid({ folders, onFolderClick, onRename, onDelete, onEntit
           onDelete={onDelete}
           onEntityDrop={onEntityDrop ? (entityId, entityName) => onEntityDrop(entityId, entityName, folder.id) : undefined}
           onTemplateDrop={onTemplateDrop ? (templateId, templateName) => onTemplateDrop(templateId, templateName, folder.id) : undefined}
-          entities={entities}
-          templates={templates}
+          entities={entities || []}
+          templates={templates || []}
         />
       ))}
     </div>

@@ -7,7 +7,10 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Entity, Template, Folder, TemplateField, Link } from '@/lib/types';
-import { useStore } from '@/lib/store';
+import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
+import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
 import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate } from '@/lib/utils';
@@ -18,24 +21,34 @@ interface EntityDetailModalProps {
 }
 
 export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
-  const { templates, folders, entities, links, addLink, removeLink } = useStore();
+  const worldId = entity?.worldId || '';
+  const { data: templates = [] } = useWorldTemplates(worldId);
+  const { data: folders = [] } = useWorldFolders(worldId);
+  const { data: entities = [] } = useWorldEntities(worldId);
+  const { data: relationships = [] } = useWorldRelationships(worldId);
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const updateEntityMut = useUpdateEntity(entity?.worldId || '');
+  const updateEntityMut = useUpdateEntity(worldId);
   const { toast } = useToast();
 
   // Get the template for this entity
   const template = entity ? templates.find(t => t.id === entity.templateId) : null;
-  
+
   // Get the folder for this entity
   const folder = entity?.folderId ? folders.find(f => f.id === entity.folderId) : null;
-  
-  // Get entity links (relationships)
-  const entityLinks = entity ? links.filter(l => l.fromEntityId === entity.id || l.toEntityId === entity.id) : [];
-  
+
+  // Get entity links (relationships) - convert to old format temporarily
+  const entityLinks = entity ? relationships.filter(r => r.from === entity.id || r.to === entity.id).map(r => ({
+    id: r.id,
+    fromEntityId: r.from,
+    toEntityId: r.to,
+    relationshipType: r.relationshipType
+  })) : [];
+
   // Get other entities in the same world for linking
-  const worldEntities = entity ? entities.filter(e => e.worldId === entity.worldId && e.id !== entity.id) : [];
+  const worldEntities = entity ? entities.filter((e: any) => e.id !== entity.id) : [];
 
   useEffect(() => {
     if (entity) {
@@ -111,7 +124,8 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   };
 
   const handleRemoveLink = (linkId: string) => {
-    removeLink(linkId);
+    // TODO: Replace with useDeleteRelationship mutation
+    console.log('Remove link:', linkId);
   };
 
   const renderFieldInput = (field: TemplateField) => {
@@ -317,7 +331,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
             <div className="space-y-2">
               {entityLinks.map(link => {
                 const otherEntityId = link.fromEntityId === entity.id ? link.toEntityId : link.fromEntityId;
-                const otherEntity = entities.find(e => e.id === otherEntityId);
+                const otherEntity = entities.find((e: any) => e.id === otherEntityId);
                 const isOutgoing = link.fromEntityId === entity.id;
                 
                 if (!otherEntity) return null;

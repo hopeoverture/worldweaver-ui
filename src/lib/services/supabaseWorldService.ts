@@ -1050,6 +1050,7 @@ export class SupabaseWorldService {
     icon?: string;
     category?: string;
     fields: TemplateField[];
+    folderId?: string;
     [key: string]: any;
   }, userId: string, supabase?: any): Promise<Template> {
     const dbClient = supabase || await createServerSupabaseClient()
@@ -1087,6 +1088,7 @@ export class SupabaseWorldService {
         category: data.category || 'general',
         fields: (data.fields as unknown) as Json,
         is_system: false,
+        folder_id: data.folderId || null,
       }
       
       console.log('🎯 Template creation - insert data prepared', insertData)

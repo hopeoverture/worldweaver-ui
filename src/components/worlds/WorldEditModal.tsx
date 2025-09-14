@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useStore } from '@/lib/store';
+import { useWorld } from '@/hooks/query/useWorld';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -63,11 +63,11 @@ const climateOptions = [
 ];
 
 export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps) {
-  const { worlds } = useStore();
+  const { data: world } = useWorld(worldId);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateWorldMut = useUpdateWorld(worldId);
-  
+
   // Form state - using same structure as CreateWorldModal
   const [formData, setFormData] = useState({
     name: '',
@@ -87,9 +87,6 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
     rulesConstraints: '',
     aestheticDirection: ''
   });
-
-  // Find the world to edit
-  const world = worlds.find(w => w.id === worldId);
 
   // Load world data when modal opens
   useEffect(() => {

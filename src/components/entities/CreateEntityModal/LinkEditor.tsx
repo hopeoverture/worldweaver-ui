@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useStore } from '@/lib/store';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 import { Link } from '@/lib/types';
 import { Button } from '../../ui/Button';
 import { v4 as uuidv4 } from 'uuid';
@@ -12,11 +12,11 @@ interface LinkEditorProps {
 }
 
 export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
-  const { entities } = useStore();
+  const { data: entities = [] } = useWorldEntities(worldId);
   const [selectedEntityId, setSelectedEntityId] = useState('');
   const [relationshipLabel, setRelationshipLabel] = useState('');
-  
-  const worldEntities = entities.filter(e => e.worldId === worldId);
+
+  const worldEntities = entities;
 
   const addLink = () => {
     if (!selectedEntityId || !relationshipLabel.trim()) {
@@ -59,7 +59,7 @@ export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
         <div className="space-y-2">
           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300">Current Relationships:</h5>
           {links.map(link => {
-            const targetEntity = worldEntities.find(e => e.id === link.toEntityId);
+            const targetEntity = worldEntities.find((e: any) => e.id === link.toEntityId);
             return (
               <div
                 key={link.id}
@@ -104,7 +104,7 @@ export function LinkEditor({ worldId, links = [], onChange }: LinkEditorProps) {
                 className="block w-full rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-2 text-sm focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
               >
                 <option value="">Select entity...</option>
-                {worldEntities.map(entity => (
+                {worldEntities.map((entity: any) => (
                   <option key={entity.id} value={entity.id}>
                     {entity.name}
                   </option>

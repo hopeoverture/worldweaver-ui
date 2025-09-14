@@ -1,10 +1,10 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { useStore } from '@/lib/store';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useCreateTemplate } from '@/hooks/mutations/useCreateTemplate';
 import { TemplateField, FieldType } from '@/lib/types';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -15,22 +15,39 @@ interface CreateTemplateModalProps {
   open: boolean;
   worldId: string;
   onClose: () => void;
+  currentFolderId?: string;
 }
 
-export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateModalProps) {
-  const { folders } = useStore();
+export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }: CreateTemplateModalProps) {
+  const { data: folders = [] } = useWorldFolders(worldId);
   const createTemplate = useCreateTemplate(worldId);
+
+  // Memoize templateFolders to prevent infinite loop
+  const templateFolders = useMemo(
+    () => folders.filter(f => f.kind === 'templates'),
+    [folders]
+  );
+
   const [formData, setFormData] = useState({
     name: '',
     folderId: ''
   });
+
+  // Update form data when modal opens or currentFolderId changes
+  useEffect(() => {
+    if (open) {
+      const defaultFolderId = currentFolderId && templateFolders.some(f => f.id === currentFolderId) ? currentFolderId : '';
+      setFormData({
+        name: '',
+        folderId: defaultFolderId
+      });
+    }
+  }, [open, currentFolderId, templateFolders]);
   const [fields, setFields] = useState<Omit<TemplateField, 'id'>[]>([
     { name: 'Name', type: 'shortText' as FieldType, required: true }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-
-  const templateFolders = folders.filter(f => f.worldId === worldId && f.kind === 'templates');
 
   const fieldTypeOptions = [
     { value: 'shortText', label: 'Short Text' },
@@ -59,6 +76,7 @@ export function CreateTemplateModal({ open, worldId, onClose }: CreateTemplateMo
         name: formData.name.trim(),
         description: undefined,
         fields: templateFields,
+        folderId: formData.folderId || undefined,
       });
 
       // Reset form and close modal

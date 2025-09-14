@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { useStore } from '@/lib/store';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
 import { useCreateEntity } from '@/hooks/mutations/useCreateEntity';
 import { StepChooseTemplate } from './StepChooseTemplate';
@@ -18,7 +18,7 @@ interface CreateEntityModalProps {
 }
 
 export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEntityModalProps) {
-  const { folders } = useStore();
+  const { data: folders = [] } = useWorldFolders(worldId);
   const { data: worldTemplates = [] } = useWorldTemplates(worldId);
   const createEntity = useCreateEntity(worldId);
   const { toast } = useToast();
@@ -26,7 +26,7 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const worldFolders = folders.filter(f => f.worldId === worldId && f.kind === 'entities');
+  const worldFolders = folders.filter(f => f.kind === 'entities');
 
   const handleSelectTemplate = (templateId: string) => {
     const template = worldTemplates.find(t => t.id === templateId);
@@ -101,6 +101,7 @@ export function CreateEntityModal({ open, worldId, folderId, onClose }: CreateEn
           <StepFillForm
             template={selectedTemplate}
             worldId={worldId}
+            initialFolderId={folderId}
             onSave={handleSave}
             onBack={() => setStep(1)}
           />

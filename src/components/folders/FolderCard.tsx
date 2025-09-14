@@ -1,7 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
 import { Folder } from '@/lib/types';
-import { useStore } from '@/lib/store';
 import { itemCardAnimation, gradientOverlay, iconBackgroundTransition } from '@/lib/animation-utils';
 
 /**
@@ -20,10 +19,10 @@ interface FolderCardProps {
   onEntityDrop?: (entityId: string, entityName: string) => void;
   /** Optional handler for when a template is dropped onto this folder */
   onTemplateDrop?: (templateId: string, templateName: string) => void;
-  /** Optional entities array for calculating count (overrides store data) */
-  entities?: Array<{ id: string; folderId?: string }>;
-  /** Optional templates array for calculating count (overrides store data) */
-  templates?: Array<{ id: string; folderId?: string }>;
+  /** Entities array for calculating count (required) */
+  entities: Array<{ id: string; folderId?: string }>;
+  /** Templates array for calculating count (required) */
+  templates: Array<{ id: string; folderId?: string }>;
 }
 
 const colorClasses = {
@@ -77,19 +76,14 @@ const colorClasses = {
   }
 };
 
-function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop, onTemplateDrop, entities: propsEntities, templates: propsTemplates }: FolderCardProps) {
-  const { entities: storeEntities, templates: storeTemplates } = useStore();
+function FolderCardComponent({ folder, onClick, onRename, onDelete, onEntityDrop, onTemplateDrop, entities, templates }: FolderCardProps) {
   const colors = colorClasses[folder.color as keyof typeof colorClasses] || colorClasses.blue;
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Use provided entities/templates or fallback to store data
-  const entitiesData = propsEntities || storeEntities;
-  const templatesData = propsTemplates || storeTemplates;
-
   // Calculate dynamic count based on folder type
   const dynamicCount = folder.kind === 'entities'
-    ? entitiesData.filter(e => e.folderId === folder.id).length
-    : templatesData.filter(t => t.folderId === folder.id).length;
+    ? entities.filter(e => e.folderId === folder.id).length
+    : templates.filter(t => t.folderId === folder.id).length;
 
   // Drag and drop handlers
   const handleDragOver = (e: React.DragEvent) => {
