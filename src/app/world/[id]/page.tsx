@@ -380,11 +380,8 @@ export default function WorldDashboard() {
   };
 
   const entityFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'entities');
-  const templateFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'templates');
+  const regularTemplateFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'templates');
 
-  const entitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
-  const templatesInFolder = selectedFolder ? remoteTemplates.filter((template: Template) => template.folderId === selectedFolder) : [];
-  
   // Get ungrouped entities (entities without a folder)
   const ungroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
 
@@ -394,6 +391,27 @@ export default function WorldDashboard() {
 
   // Get ungrouped world templates (world templates without a folder)
   const ungroupedTemplates = worldTemplates.filter((template: Template) => !template.folderId);
+
+  // Create virtual Core folder for system templates
+  const coreFolder: Folder = {
+    id: 'core-folder',
+    worldId: '', // Virtual folder doesn't belong to specific world
+    name: 'Core',
+    description: 'Core system templates',
+    kind: 'templates',
+    color: 'purple',
+    count: systemTemplates.length
+  };
+
+  // Combine Core folder with regular template folders (Core folder first)
+  const templateFolders = systemTemplates.length > 0 ? [coreFolder, ...regularTemplateFolders] : regularTemplateFolders;
+
+  const entitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
+  const templatesInFolder = selectedFolder
+    ? selectedFolder === 'core-folder'
+      ? systemTemplates // Show system templates when Core folder is selected
+      : remoteTemplates.filter((template: Template) => template.folderId === selectedFolder)
+    : [];
 
   const tabs: TabItem[] = [
     {
@@ -588,43 +606,6 @@ export default function WorldDashboard() {
                   >
                     Create First Template Folder
                   </button>
-                </div>
-              )}
-
-              {/* Core Templates Section */}
-              {systemTemplates.length > 0 && (
-                <div className="rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/50 dark:to-indigo-950/50 border border-purple-200 dark:border-purple-800">
-                  <div className="flex items-center justify-between mb-4 p-4 pb-0">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded bg-gradient-to-r from-purple-600 to-indigo-600 flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                        </svg>
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Core Templates
-                      </h3>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
-                        System
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {systemTemplates.length} {systemTemplates.length === 1 ? 'template' : 'templates'}
-                    </span>
-                  </div>
-                  <div className="p-4 pt-0">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Core templates provided by the system. These can be customized for this world without affecting other worlds.
-                    </p>
-                    <Suspense fallback={<SkeletonLoader type="templates" message="Loading core templates..." />}>
-                      <LazyTemplateGrid
-                        templates={systemTemplates}
-                        onDelete={handleTemplateDelete}
-                        onCreateTemplate={() => setCreateTemplateModalOpen(true)}
-                        onDragStart={handleTemplateDragStart}
-                      />
-                    </Suspense>
-                  </div>
                 </div>
               )}
 
