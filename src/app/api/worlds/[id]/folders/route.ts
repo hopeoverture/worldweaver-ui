@@ -36,6 +36,7 @@ export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params:
     description: z.string().max(5000).optional(),
     color: z.string().max(32).optional(),
     kind: z.enum(['entities', 'templates']).optional().default('entities'),
+    parentFolderId: z.string().uuid().optional(),
   })
 
   const bodyResult = await parseRequestBody(req, schema)
@@ -50,6 +51,7 @@ export const POST = withApiErrorHandling(async (req: NextRequest, ctx: { params:
     description: body.description,
     color: body.color,
     kind: body.kind,
+    parentFolderId: body.parentFolderId,
   }, user.id)
 
   return NextResponse.json({ folder }, { headers: { 'X-Request-ID': requestId } })

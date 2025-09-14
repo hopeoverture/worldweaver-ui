@@ -7,6 +7,7 @@ import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
 import { folderColorOptions } from './folderColors';
 import { useCreateFolder } from '@/hooks/mutations/useCreateFolder';
+import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useToast } from '@/components/ui/ToastProvider';
 import { logError } from '@/lib/logging';
 
@@ -14,19 +15,28 @@ interface CreateFolderModalProps {
   open: boolean;
   worldId: string;
   folderType: 'entities' | 'templates';
+  currentParentFolderId?: string;
   onClose: () => void;
 }
 
-export function CreateFolderModal({ open, worldId, folderType, onClose }: CreateFolderModalProps) {
+export function CreateFolderModal({ open, worldId, folderType, currentParentFolderId, onClose }: CreateFolderModalProps) {
   const createFolder = useCreateFolder(worldId);
+  const { data: folders = [] } = useWorldFolders(worldId);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: 'blue'
+    color: 'blue',
+    parentFolderId: currentParentFolderId || ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Filter folders to only show appropriate parent folders
+  const availableParentFolders = folders.filter(folder =>
+    folder.kind === folderType && // Same type (entities/templates)
+    folder.id !== currentParentFolderId // Don't show current folder as option
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,9 +50,10 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
         description: formData.description.trim() || undefined,
         color: formData.color,
         kind: folderType,
+        parentFolderId: formData.parentFolderId || undefined,
       });
-      toast({ title: 'Folder created', description: `“${formData.name.trim()}” added`, variant: 'success' });
-      setFormData({ name: '', description: '', color: 'blue' });
+      toast({ title: 'Folder created', description: `"${formData.name.trim()}" added`, variant: 'success' });
+      setFormData({ name: '', description: '', color: 'blue', parentFolderId: currentParentFolderId || '' });
       onClose();
     } catch (error) {
       logError('Error creating folder', error as Error, { 
@@ -58,7 +69,7 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', description: '', color: 'blue' });
+    setFormData({ name: '', description: '', color: 'blue', parentFolderId: currentParentFolderId || '' });
     onClose();
   };
 
@@ -110,6 +121,27 @@ export function CreateFolderModal({ open, worldId, folderType, onClose }: Create
             placeholder={`Describe what this folder will contain...`}
             rows={3}
           />
+        </div>
+
+        <div>
+          <label htmlFor="parentFolder" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Parent Folder (optional)
+          </label>
+          <Select
+            id="parentFolder"
+            value={formData.parentFolderId}
+            onChange={(e) => setFormData(prev => ({ ...prev, parentFolderId: e.target.value }))}
+          >
+            <option value="">📁 No parent folder (create at root level)</option>
+            {availableParentFolders.map(folder => (
+              <option key={folder.id} value={folder.id}>
+                📁 {folder.name}
+              </option>
+            ))}
+          </Select>
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Choose a parent folder to create a subfolder, or leave empty to create at the root level.
+          </p>
         </div>
 
         <div>

@@ -10,6 +10,7 @@ import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
 import { useWorldMembers } from '@/hooks/query/useWorldMembers';
 import { WorldContextBar } from '@/components/dashboard/WorldContextBar';
 import { TabNav } from '@/components/dashboard/TabNav';
+import { FolderBreadcrumb } from '@/components/folders/FolderBreadcrumb';
 import { useDeleteTemplate } from '@/hooks/mutations/useDeleteTemplate';
 import { TabItem } from '@/components/ui/Tabs';
 import { useUpdateFolder } from '@/hooks/mutations/useUpdateFolder';
@@ -252,6 +253,7 @@ export default function WorldDashboard() {
   const updateTemplateMut = useUpdateTemplate(strWorldId);
   const { toast } = useToast();
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState<string[]>([]); // Array of folder IDs from root to current
   const [isCreateEntityModalOpen, setCreateEntityModalOpen] = useState(false);
   const [isCreateFolderModalOpen, setCreateFolderModalOpen] = useState(false);
   const [isCreateTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
@@ -292,6 +294,32 @@ export default function WorldDashboard() {
       toast({ title: 'Failed to delete folder', description: String((e as Error)?.message || e), variant: 'error' });
     }
   };
+
+  // Folder navigation helpers
+  const buildFolderPath = (folderId: string | null): Folder[] => {
+    if (!folderId) return [];
+
+    const path: Folder[] = [];
+    let currentId: string | null = folderId;
+
+    while (currentId) {
+      const folder = remoteFolders.find(f => f.id === currentId);
+      if (!folder) break;
+
+      path.unshift(folder); // Add to beginning of array
+      currentId = folder.parentFolderId || null;
+    }
+
+    return path;
+  };
+
+  const navigateToFolder = (folderId: string | null) => {
+    setSelectedFolder(folderId);
+    setFolderPath(folderId ? buildFolderPath(folderId).map(f => f.id) : []);
+  };
+
+  // Get the path of folder objects for breadcrumb
+  const currentFolderPath = buildFolderPath(selectedFolder);
 
   // Drag and drop handlers
   const handleEntityDragStart = (entity: Entity) => {
@@ -383,8 +411,17 @@ export default function WorldDashboard() {
     }
   };
 
-  const entityFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'entities');
-  const regularTemplateFolders = remoteFolders.filter((f) => f.worldId === strWorldId && f.kind === 'templates');
+  // Filter folders to show only direct children of current folder
+  const entityFolders = remoteFolders.filter((f) =>
+    f.worldId === strWorldId &&
+    f.kind === 'entities' &&
+    f.parentFolderId === selectedFolder
+  );
+  const regularTemplateFolders = remoteFolders.filter((f) =>
+    f.worldId === strWorldId &&
+    f.kind === 'templates' &&
+    f.parentFolderId === selectedFolder
+  );
 
   // Get ungrouped entities (entities without a folder)
   const ungroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
@@ -464,9 +501,10 @@ export default function WorldDashboard() {
           </div>
           {selectedFolder ? (
             <>
-              <button onClick={() => setSelectedFolder(null)} className="mb-4 text-sm text-brand-600 hover:underline">
-                &larr; Back to folders
-              </button>
+              <FolderBreadcrumb
+                folderPath={currentFolderPath}
+                onNavigate={navigateToFolder}
+              />
               <Suspense fallback={<SkeletonLoader type="entities" message="Loading entities..." />}>
                 <LazyEntityGrid
                   entities={entitiesInFolder}
@@ -482,7 +520,7 @@ export default function WorldDashboard() {
                 <Suspense fallback={<SkeletonLoader type="folders" message="Loading folders..." />}>
                   <LazyFolderGrid
                     folders={entityFolders}
-                    onFolderClick={setSelectedFolder}
+                    onFolderClick={navigateToFolder}
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
                     onEntityDrop={(entityId, entityName, folderId) => handleEntityDropOnFolder(entityId, entityName, folderId)}
@@ -571,9 +609,10 @@ export default function WorldDashboard() {
           
           {selectedFolder ? (
             <>
-              <button onClick={() => setSelectedFolder(null)} className="mb-4 text-sm text-brand-600 hover:underline">
-                &larr; Back to folders
-              </button>
+              <FolderBreadcrumb
+                folderPath={currentFolderPath}
+                onNavigate={navigateToFolder}
+              />
                   <Suspense fallback={<SkeletonLoader type="templates" message="Loading templates..." />}>
                     <LazyTemplateGrid
                       templates={templatesInFolder}
@@ -591,7 +630,7 @@ export default function WorldDashboard() {
                 <Suspense fallback={<SkeletonLoader type="folders" message="Loading template folders..." />}>
                   <LazyFolderGrid
                     folders={templateFolders}
-                    onFolderClick={setSelectedFolder}
+                    onFolderClick={navigateToFolder}
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
                     onTemplateDrop={(templateId, templateName, folderId) => handleTemplateDropOnFolder(templateId, templateName, folderId)}
@@ -745,6 +784,7 @@ export default function WorldDashboard() {
           open={isCreateFolderModalOpen}
           worldId={world.id}
           folderType={folderType}
+          currentParentFolderId={selectedFolder || undefined}
           onClose={() => setCreateFolderModalOpen(false)}
         />
       </Suspense>
