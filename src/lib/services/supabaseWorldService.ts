@@ -1252,6 +1252,7 @@ export class SupabaseWorldService {
         fields: (data as any).fields !== undefined ? ((data as any).fields as unknown as Json) : (current.fields as Json),
         is_system: false,
         world_id: worldId,
+        folder_id: patch.folder_id, // Include folder_id from patch
       }
       const { data: ins, error: insErr } = await supabase
         .from('templates')
