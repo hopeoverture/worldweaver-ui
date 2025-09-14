@@ -42,9 +42,35 @@ export function CreateFolderModal({ open, worldId, folderType, currentParentFold
 
   // Filter folders to only show appropriate parent folders
   const availableParentFolders = folders.filter(folder =>
-    folder.kind === folderType && // Same type (entities/templates)
-    folder.id !== currentParentFolderId // Don't show current folder as option
+    folder.kind === folderType // Same type (entities/templates)
   );
+
+  // Helper function to build folder hierarchy display
+  const buildFolderPath = (folderId: string, folders: typeof availableParentFolders): string => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return '';
+
+    if (!folder.parentFolderId) {
+      return folder.name;
+    }
+
+    const parentPath = buildFolderPath(folder.parentFolderId, folders);
+    return parentPath ? `${parentPath} > ${folder.name}` : folder.name;
+  };
+
+  // Helper function to get folder depth for indentation
+  const getFolderDepth = (folderId: string, folders: typeof availableParentFolders): number => {
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder || !folder.parentFolderId) return 0;
+    return 1 + getFolderDepth(folder.parentFolderId, folders);
+  };
+
+  // Sort folders by hierarchy (parents before children)
+  const sortedParentFolders = [...availableParentFolders].sort((a, b) => {
+    const pathA = buildFolderPath(a.id, availableParentFolders);
+    const pathB = buildFolderPath(b.id, availableParentFolders);
+    return pathA.localeCompare(pathB);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,11 +109,20 @@ export function CreateFolderModal({ open, worldId, folderType, currentParentFold
 
   const colorOptions = folderColorOptions;
 
+  // Get current folder name for title context
+  const currentFolderName = currentParentFolderId
+    ? availableParentFolders.find(f => f.id === currentParentFolderId)?.name
+    : null;
+
   return (
     <Modal
       open={open}
       onClose={handleCancel}
-      title={`Create ${folderType === 'entities' ? 'Entity' : 'Template'} Folder`}
+      title={
+        currentFolderName
+          ? `Create ${folderType === 'entities' ? 'Entity' : 'Template'} Folder in "${currentFolderName}"`
+          : `Create ${folderType === 'entities' ? 'Entity' : 'Template'} Folder`
+      }
       footer={
         <div className="flex gap-3">
           <Button variant="outline" onClick={handleCancel} disabled={isSubmitting}>
@@ -133,7 +168,7 @@ export function CreateFolderModal({ open, worldId, folderType, currentParentFold
 
         <div>
           <label htmlFor="parentFolder" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Parent Folder (optional)
+            Create folder inside
           </label>
           <Select
             id="parentFolder"
@@ -141,14 +176,20 @@ export function CreateFolderModal({ open, worldId, folderType, currentParentFold
             onChange={(e) => setFormData(prev => ({ ...prev, parentFolderId: e.target.value }))}
           >
             <option value="">📁 No parent folder (create at root level)</option>
-            {availableParentFolders.map(folder => (
-              <option key={folder.id} value={folder.id}>
-                📁 {folder.name}
-              </option>
-            ))}
+            {sortedParentFolders.map(folder => {
+              const depth = getFolderDepth(folder.id, availableParentFolders);
+              const indentation = '  '.repeat(depth); // Two spaces per level
+              const isCurrentFolder = folder.id === currentParentFolderId;
+              return (
+                <option key={folder.id} value={folder.id}>
+                  {indentation}📁 {folder.name}
+                  {isCurrentFolder ? ' (current location)' : ''}
+                </option>
+              );
+            })}
           </Select>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            Choose a parent folder to create a subfolder, or leave empty to create at the root level.
+            Select where to create this folder. Current location is automatically selected, or choose "No parent folder" to create at the root level.
           </p>
         </div>
 
