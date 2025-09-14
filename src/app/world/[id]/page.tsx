@@ -477,6 +477,13 @@ export default function WorldDashboard() {
   const worldTemplates = filterBySearch(baseWorldTemplates, debouncedSearchTerm) as Template[];
   const ungroupedTemplates = filterBySearch(baseUngroupedTemplates, debouncedSearchTerm) as Template[];
 
+  // Global search filtering - search ALL items regardless of folder location
+  const allWorldEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId);
+  const allWorldTemplatesIncludingSystem = [...remoteTemplates.filter((template: Template) => template.isSystem), ...baseWorldTemplates];
+
+  const allFilteredEntities = filterBySearch(allWorldEntities, debouncedSearchTerm) as Entity[];
+  const allFilteredTemplates = filterBySearch(allWorldTemplatesIncludingSystem, debouncedSearchTerm) as Template[];
+
   // Identify customized templates (world-specific overrides of system templates)
   const customizedTemplateIds = worldTemplates
     .filter((template: Template) => Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any))
@@ -623,16 +630,28 @@ export default function WorldDashboard() {
                 </div>
               )}
               
-              {/* Ungrouped Entities */}
+              {/* Search Results Header */}
+              {debouncedSearchTerm && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                    Search Results for "{debouncedSearchTerm}"
+                  </h3>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Showing all matching entities from across your world, including those in folders
+                  </p>
+                </div>
+              )}
+
+              {/* Entities Display */}
               <UngroupedEntitiesDropZone
-                entities={ungroupedEntities}
+                entities={debouncedSearchTerm ? allFilteredEntities : ungroupedEntities}
                 onEntityDrop={handleEntityDropToUngrouped}
                 onCreateEntity={() => setCreateEntityModalOpen(true)}
                 onDragStart={handleEntityDragStart}
               />
               
               {/* Helper text when there are folders but no ungrouped entities */}
-              {entityFolders.length > 0 && ungroupedEntities.length === 0 && (
+              {!debouncedSearchTerm && entityFolders.length > 0 && ungroupedEntities.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <p className="text-sm">All entities are organized in folders.</p>
                   <p className="text-xs mt-1">Create a new entity without selecting a folder to see it here.</p>
@@ -770,9 +789,21 @@ export default function WorldDashboard() {
                 </div>
               )}
 
-              {/* Ungrouped Templates */}
+              {/* Search Results Header */}
+              {debouncedSearchTerm && (
+                <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <h3 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-1">
+                    Search Results for "{debouncedSearchTerm}"
+                  </h3>
+                  <p className="text-xs text-purple-700 dark:text-purple-300">
+                    Showing all matching templates from across your world, including those in folders
+                  </p>
+                </div>
+              )}
+
+              {/* Templates Display */}
               <UngroupedTemplatesDropZone
-                templates={ungroupedTemplates}
+                templates={debouncedSearchTerm ? allFilteredTemplates : ungroupedTemplates}
                 onTemplateDrop={handleTemplateDropToUngrouped}
                 onCreateTemplate={() => setCreateTemplateModalOpen(true)}
                 onDragStart={handleTemplateDragStart}
@@ -780,7 +811,7 @@ export default function WorldDashboard() {
               />
               
               {/* Helper text when there are folders but no ungrouped templates */}
-              {templateFolders.length > 0 && ungroupedTemplates.length === 0 && (
+              {!debouncedSearchTerm && templateFolders.length > 0 && ungroupedTemplates.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   <p className="text-sm">All templates are organized in folders.</p>
                   <p className="text-xs mt-1">Create a new template without selecting a folder to see it here.</p>
@@ -903,7 +934,12 @@ export default function WorldDashboard() {
           {debouncedSearchTerm && (
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
               {(() => {
-                const totalResults = ungroupedEntities.length + entityFolders.length + ungroupedTemplates.length + regularTemplateFolders.length + systemTemplates.length;
+                // Count all filtered items including those in folders
+                const entityCount = allFilteredEntities.length;
+                const templateCount = allFilteredTemplates.length;
+                const folderCount = entityFolders.length + regularTemplateFolders.length;
+                const totalResults = entityCount + templateCount + folderCount;
+
                 if (totalResults === 0) {
                   return (
                     <span className="text-gray-500 dark:text-gray-500">
@@ -911,9 +947,15 @@ export default function WorldDashboard() {
                     </span>
                   );
                 }
+
+                const parts = [];
+                if (entityCount > 0) parts.push(`${entityCount} entit${entityCount === 1 ? 'y' : 'ies'}`);
+                if (templateCount > 0) parts.push(`${templateCount} template${templateCount === 1 ? '' : 's'}`);
+                if (folderCount > 0) parts.push(`${folderCount} folder${folderCount === 1 ? '' : 's'}`);
+
                 return (
                   <span>
-                    Found {totalResults} result{totalResults !== 1 ? 's' : ''} for "{debouncedSearchTerm}"
+                    Found {parts.join(', ')} for "{debouncedSearchTerm}"
                   </span>
                 );
               })()}

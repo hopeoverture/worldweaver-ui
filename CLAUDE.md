@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing & Quality
 - `npm run test`: Run tests with Vitest (minimal test suite currently)
 - `npm run lint`: Run ESLint with flat config
-- `npm run typecheck`: Run TypeScript type checking (use this command frequently)
+- `npm run typecheck`: Run TypeScript type checking (use this command frequently, after every change)
 - `npm run test:api`: Run API endpoint tests
 - `npm run test:mcp`: Test MCP server configuration and connectivity
 
