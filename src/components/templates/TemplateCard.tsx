@@ -9,9 +9,11 @@ interface TemplateCardProps {
   onEdit?: (template: Template) => void;
   onDelete?: (templateId: string) => void;
   onDragStart?: (template: Template) => void;
+  /** Whether this template is a world-specific customization of a system template */
+  isCustomized?: boolean;
 }
 
-export function TemplateCard({ template, onEdit, onDelete, onDragStart }: TemplateCardProps) {
+export function TemplateCard({ template, onEdit, onDelete, onDragStart, isCustomized }: TemplateCardProps) {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -58,6 +60,11 @@ export function TemplateCard({ template, onEdit, onDelete, onDragStart }: Templa
               {isCoreTemplate && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
                   Core
+                </span>
+              )}
+              {isCustomized && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200">
+                  Customized
                 </span>
               )}
             </div>
@@ -115,6 +122,7 @@ export function TemplateCard({ template, onEdit, onDelete, onDragStart }: Templa
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         onDelete={onDelete}
+        isCustomized={isCustomized}
       />
     </>
   );

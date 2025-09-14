@@ -18,6 +18,8 @@ interface VirtualTemplateGridProps {
   maxColumns?: number;
   /** Container height (optional, defaults to viewport-based) */
   containerHeight?: number;
+  /** List of template IDs that are customized versions of system templates */
+  customizedTemplateIds?: string[];
 }
 
 export function VirtualTemplateGrid({
@@ -29,7 +31,8 @@ export function VirtualTemplateGrid({
   itemHeight = 220,
   minItemWidth = 300,
   maxColumns = 4,
-  containerHeight
+  containerHeight,
+  customizedTemplateIds = []
 }: VirtualTemplateGridProps) {
   
   // Empty state
@@ -53,6 +56,7 @@ export function VirtualTemplateGrid({
         onEdit={() => onEdit?.(template)}
         onDelete={() => onDelete?.(template.id)}
         onDragStart={onDragStart}
+        isCustomized={customizedTemplateIds.includes(template.id)}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { Button } from '../ui/Button';
 import { TemplateEditor } from './TemplateEditor';
 import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
 import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
+import { useDeleteTemplate } from '@/hooks/mutations/useDeleteTemplate';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface TemplateDetailModalProps {
@@ -15,14 +16,17 @@ interface TemplateDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete?: (templateId: string) => void;
+  /** Whether this template is a customized version of a system template */
+  isCustomized?: boolean;
 }
 
-export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: TemplateDetailModalProps) {
+export function TemplateDetailModal({ template, isOpen, onClose, onDelete, isCustomized }: TemplateDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const updateTemplate = useStore(state => state.updateTemplate);
   const params = useParams();
   const worldId = String(params?.id || '');
   const updateTemplateMut = useUpdateTemplate(worldId);
+  const deleteTemplateMut = useDeleteTemplate(worldId);
   const { toast } = useToast();
 
   // Check if this is a core template
@@ -33,7 +37,7 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
     updateTemplate(template.id, updatedTemplate);
     // Persist to API; include worldId so system templates create per‑world overrides
     updateTemplateMut.mutate(
-      { id: template.id, patch: { 
+      { id: template.id, patch: {
         name: updatedTemplate.name,
         description: (updatedTemplate as any).description,
         icon: (updatedTemplate as any).icon,
@@ -42,7 +46,20 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
       } },
       {
         onSuccess: () => {
-          toast({ title: 'Template saved', variant: 'success' });
+          if (isCoreTemplate) {
+            // Check if this is the first customization of the system template
+            // If template.worldId exists, it means it was already customized
+            const isFirstCustomization = !template.worldId;
+            toast({
+              title: isFirstCustomization
+                ? `Created world customization of ${template.name}`
+                : `Updated world customization of ${template.name}`,
+              description: 'Your changes only apply to this world',
+              variant: 'success'
+            });
+          } else {
+            toast({ title: 'Template saved', variant: 'success' });
+          }
           setIsEditing(false);
         },
         onError: (e) => {
@@ -61,6 +78,30 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
       if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
         onDelete(template.id);
         onClose();
+      }
+    }
+  };
+
+  const handleResetToDefault = () => {
+    if (isCustomized && isCoreTemplate) {
+      if (confirm('Reset this template to the original core template version? Your customizations will be lost.')) {
+        deleteTemplateMut.mutate(template.id, {
+          onSuccess: () => {
+            toast({
+              title: `Reset ${template.name} to default`,
+              description: 'Template reverted to original core template version',
+              variant: 'success'
+            });
+            onClose();
+          },
+          onError: (e) => {
+            toast({
+              title: 'Failed to reset template',
+              description: String((e as Error)?.message || e),
+              variant: 'error'
+            });
+          }
+        });
       }
     }
   };
@@ -112,9 +153,14 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
         {isCoreTemplate && (
           <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              This is a core template that provides essential fields for world-building. 
+              This is a core template that provides essential fields for world-building.
               You can customize it for this world without affecting other worlds or users.
             </p>
+            {isCustomized && (
+              <p className="text-sm text-orange-700 dark:text-orange-300 mt-2 font-medium">
+                ⚠️ This template has been customized for this world.
+              </p>
+            )}
           </div>
         )}
 
@@ -183,7 +229,7 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
 
         {/* Action Buttons */}
         <div className="flex justify-between pt-4 border-t border-gray-200 dark:border-neutral-700">
-          <div>
+          <div className="flex gap-2">
             {onDelete && !isCoreTemplate && (
               <Button
                 variant="outline"
@@ -191,6 +237,15 @@ export function TemplateDetailModal({ template, isOpen, onClose, onDelete }: Tem
                 className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/20"
               >
                 Delete Template
+              </Button>
+            )}
+            {isCustomized && isCoreTemplate && (
+              <Button
+                variant="outline"
+                onClick={handleResetToDefault}
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:text-orange-400 dark:hover:text-orange-300 dark:hover:bg-orange-950/20"
+              >
+                Reset to Default
               </Button>
             )}
           </div>

@@ -17,6 +17,7 @@ import { useDeleteFolder } from '@/hooks/mutations/useDeleteFolder';
 import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
 import { useToast } from '@/components/ui/ToastProvider';
+import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
 import type { Entity, Template, Folder } from '@/lib/types';
 
 // Ungrouped Entities Drop Zone Component
@@ -119,12 +120,14 @@ function UngroupedTemplatesDropZone({
   templates,
   onTemplateDrop,
   onCreateTemplate,
-  onDragStart
+  onDragStart,
+  customizedTemplateIds = []
 }: {
   templates: Template[];
   onTemplateDrop: (templateId: string, templateName: string) => void;
   onCreateTemplate: () => void;
   onDragStart: (template: Template) => void;
+  customizedTemplateIds?: string[];
 }) {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -205,6 +208,7 @@ function UngroupedTemplatesDropZone({
           onDelete={undefined}
           onCreateTemplate={onCreateTemplate}
           onDragStart={onDragStart}
+          customizedTemplateIds={customizedTemplateIds}
         />
       </Suspense>
     </div>
@@ -392,6 +396,11 @@ export default function WorldDashboard() {
   // Get ungrouped world templates (world templates without a folder)
   const ungroupedTemplates = worldTemplates.filter((template: Template) => !template.folderId);
 
+  // Identify customized templates (world-specific overrides of system templates)
+  const customizedTemplateIds = worldTemplates
+    .filter((template: Template) => Object.values(CORE_TEMPLATE_NAMES).includes(template.name as any))
+    .map((template: Template) => template.id);
+
   // Create virtual Core folder for system templates
   const coreFolder: Folder = {
     id: 'core-folder',
@@ -571,6 +580,7 @@ export default function WorldDashboard() {
                       onDelete={handleTemplateDelete}
                       onCreateTemplate={() => setCreateTemplateModalOpen(true)}
                       onDragStart={handleTemplateDragStart}
+                      customizedTemplateIds={customizedTemplateIds}
                     />
                   </Suspense>
             </>
@@ -620,6 +630,7 @@ export default function WorldDashboard() {
                 onTemplateDrop={handleTemplateDropToUngrouped}
                 onCreateTemplate={() => setCreateTemplateModalOpen(true)}
                 onDragStart={handleTemplateDragStart}
+                customizedTemplateIds={customizedTemplateIds}
               />
               
               {/* Helper text when there are folders but no ungrouped templates */}
