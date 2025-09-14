@@ -14,60 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      activity_logs: {
-        Row: {
-          action: string
-          created_at: string | null
-          description: string
-          id: string
-          metadata: Json | null
-          resource_id: string | null
-          resource_name: string | null
-          resource_type: string | null
-          user_id: string
-          world_id: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string | null
-          description: string
-          id?: string
-          metadata?: Json | null
-          resource_id?: string | null
-          resource_name?: string | null
-          resource_type?: string | null
-          user_id: string
-          world_id?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string | null
-          description?: string
-          id?: string
-          metadata?: Json | null
-          resource_id?: string | null
-          resource_name?: string | null
-          resource_type?: string | null
-          user_id?: string
-          world_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "activity_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "activity_logs_world_id_fkey"
-            columns: ["world_id"]
-            isOneToOne: false
-            referencedRelation: "worlds"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       entities: {
         Row: {
           created_at: string
@@ -180,48 +126,27 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          banner_url: string | null
-          bio: string | null
           created_at: string
-          data: Json | null
           email: string
           full_name: string | null
           id: string
-          location: string | null
-          preferences: Json | null
-          social_links: Json | null
           updated_at: string
-          website: string | null
         }
         Insert: {
           avatar_url?: string | null
-          banner_url?: string | null
-          bio?: string | null
           created_at?: string
-          data?: Json | null
           email: string
           full_name?: string | null
           id: string
-          location?: string | null
-          preferences?: Json | null
-          social_links?: Json | null
           updated_at?: string
-          website?: string | null
         }
         Update: {
           avatar_url?: string | null
-          banner_url?: string | null
-          bio?: string | null
           created_at?: string
-          data?: Json | null
           email?: string
           full_name?: string | null
           id?: string
-          location?: string | null
-          preferences?: Json | null
-          social_links?: Json | null
           updated_at?: string
-          website?: string | null
         }
         Relationships: []
       }
@@ -504,7 +429,6 @@ export type Database = {
           description: string | null
           genre_blend: string[] | null
           id: string
-          invite_link_enabled: boolean | null
           is_archived: boolean | null
           is_public: boolean | null
           key_themes: string[] | null
@@ -532,7 +456,6 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
-          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
@@ -560,7 +483,6 @@ export type Database = {
           description?: string | null
           genre_blend?: string[] | null
           id?: string
-          invite_link_enabled?: boolean | null
           is_archived?: boolean | null
           is_public?: boolean | null
           key_themes?: string[] | null
