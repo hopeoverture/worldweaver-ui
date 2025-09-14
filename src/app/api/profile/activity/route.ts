@@ -31,7 +31,8 @@ export const GET = withApiErrorHandling(async (request: NextRequest) => {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // Get user activities with pagination
-    const { data: activities, error: activitiesError, count } = await supabase
+    // Note: Using type assertion since activity_logs table may not be in generated types
+    const { data: activities, error: activitiesError, count } = await (supabase as any)
       .from('activity_logs')
       .select('*', { count: 'exact' })
       .eq('user_id', user.id)
