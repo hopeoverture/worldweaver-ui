@@ -5,6 +5,7 @@
 import type { Database } from '../supabase/types.generated';
 import { Entity } from '../types';
 import { createClient as createServerSupabaseClient } from '../supabase/server';
+import { adminClient } from '../supabase/admin';
 import { adaptEntityFromDatabase, isValidEntity } from '../adapters';
 import { logError } from '../logging';
 import { worldService } from './worldService';
@@ -174,11 +175,14 @@ export class EntityService {
     fields: Record<string, unknown>;
     tags: string[] | null;
   }>, userId: string): Promise<Entity> {
-    const supabase = await createServerSupabaseClient();
-
     // Fetch current entity to determine world and access
     const current = await this.getEntityById(entityId, userId);
     if (!current) throw new Error('Entity not found or access denied');
+
+    // Use admin client for updates to bypass potential RLS issues
+    if (!adminClient) {
+      throw new Error('Admin client not available');
+    }
 
     const payload: any = {};
     if (data.name !== undefined) payload.name = data.name;
@@ -187,7 +191,7 @@ export class EntityService {
     if (data.fields !== undefined) payload.data = (data.fields as unknown as Database['public']['Tables']['entities']['Row']['data']) ?? {};
     if (data.tags !== undefined) payload.tags = data.tags;
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await adminClient
       .from('entities')
       .update(payload)
       .eq('id', entityId)

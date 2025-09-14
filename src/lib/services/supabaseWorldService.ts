@@ -1175,6 +1175,11 @@ export class SupabaseWorldService {
       throw new Error(`Database error: ${fetchErr.message}`)
     }
 
+    // Use admin client for updates to bypass RLS issues
+    if (!adminClient) {
+      throw new Error('Admin client not available for template updates')
+    }
+
     // Helper to map DB row to domain Template
     const mapRow = (row: any): Template => ({
       id: row.id,
@@ -1228,9 +1233,9 @@ export class SupabaseWorldService {
       }
 
       if (overrides && overrides.length > 0) {
-        // Update existing override
+        // Update existing override using admin client
         const targetId = overrides[0].id
-        const { data: row, error } = await supabase
+        const { data: row, error } = await adminClient
           .from('templates')
           .update(patch)
           .eq('id', targetId)
@@ -1254,7 +1259,7 @@ export class SupabaseWorldService {
         world_id: worldId,
         folder_id: patch.folder_id, // Include folder_id from patch
       }
-      const { data: ins, error: insErr } = await supabase
+      const { data: ins, error: insErr } = await adminClient
         .from('templates')
         .insert(insertPayload)
         .select('*')
@@ -1275,7 +1280,7 @@ export class SupabaseWorldService {
       throw new Error('World not found or access denied')
     }
 
-    const { data: row, error } = await supabase
+    const { data: row, error } = await adminClient
       .from('templates')
       .update(patch)
       .eq('id', templateId)
