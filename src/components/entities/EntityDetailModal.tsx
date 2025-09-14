@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { Entity, Template, Folder, TemplateField, Link } from '@/lib/types';
 import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
@@ -30,6 +31,8 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null | undefined>(undefined);
   const updateEntityMut = useUpdateEntity(worldId);
   const { toast } = useToast();
 
@@ -58,6 +61,8 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
         folderId: entity.folderId,
         fields: { ...entity.fields }
       });
+      setCurrentImageUrl(entity.imageUrl);
+      setImageFile(null);
       setErrors({});
     }
   }, [entity]);
@@ -85,17 +90,50 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     }
 
     try {
+      // Handle image upload or removal
+      let finalImageUrl = currentImageUrl;
+      if (imageFile) {
+        // Upload new image
+        const formDataForUpload = new FormData();
+        formDataForUpload.append('file', imageFile);
+
+        const response = await fetch(`/api/worlds/${worldId}/files/upload?kind=entity-images`, {
+          method: 'POST',
+          body: formDataForUpload,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const result = await response.json();
+
+        // Get public URL for the uploaded image
+        const { createClient } = await import('@/lib/supabase/browser');
+        const supabase = createClient();
+        const { data: urlData } = supabase.storage
+          .from('world-assets')
+          .getPublicUrl(result.file.path);
+
+        finalImageUrl = urlData.publicUrl;
+      } else if (currentImageUrl === null && entity.imageUrl) {
+        // User explicitly removed the image
+        finalImageUrl = null;
+      }
+
       await updateEntityMut.mutateAsync({
         id: entity.id,
         patch: {
           name: formData.name!,
           folderId: (formData.folderId ?? null) as string | null,
           fields: formData.fields || {},
+          imageUrl: finalImageUrl || null,
           // tags and templateId unchanged here
         },
       });
       setIsEditing(false);
       setErrors({});
+      setImageFile(null);
       toast({ title: 'Entity updated', variant: 'success' });
     } catch (e) {
       toast({ title: 'Failed to update entity', description: String((e as Error)?.message || e), variant: 'error' });
@@ -109,6 +147,8 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
       folderId: entity.folderId,
       fields: { ...entity.fields }
     });
+    setCurrentImageUrl(entity.imageUrl);
+    setImageFile(null);
     setIsEditing(false);
     setErrors({});
   };
@@ -121,6 +161,14 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
         [fieldId]: value
       }
     }));
+  };
+
+  const handleImageChange = (file: File | null) => {
+    setImageFile(file);
+    if (!file) {
+      // If removing image, set current URL to null to indicate removal
+      setCurrentImageUrl(null);
+    }
   };
 
   const handleRemoveLink = (linkId: string) => {
@@ -244,8 +292,12 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
           <div className="flex items-center gap-2 ml-4">
             {isEditing ? (
               <>
-                <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Save Changes
+                <Button
+                  onClick={handleSave}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={updateEntityMut.isPending}
+                >
+                  {updateEntityMut.isPending ? 'Saving...' : 'Save Changes'}
                 </Button>
                 <Button onClick={handleCancel} variant="outline">
                   Cancel
@@ -272,6 +324,35 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
           ) : (
             <div className="text-gray-700 dark:text-gray-300">
               {entity.summary || <span className="text-gray-400 italic">No summary provided</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Image */}
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Image</h3>
+          {isEditing ? (
+            <ImageUpload
+              value={currentImageUrl || undefined}
+              onChange={handleImageChange}
+              label=""
+              description="Upload an image to represent this entity. Drag and drop or click to select."
+              error={errors.image}
+              disabled={updateEntityMut.isPending}
+            />
+          ) : (
+            <div className="text-gray-700 dark:text-gray-300">
+              {currentImageUrl ? (
+                <div className="max-w-sm">
+                  <img
+                    src={currentImageUrl}
+                    alt={entity.name}
+                    className="w-full h-auto rounded-lg border border-gray-200 dark:border-neutral-700"
+                  />
+                </div>
+              ) : (
+                <span className="text-gray-400 italic">No image uploaded</span>
+              )}
             </div>
           )}
         </div>

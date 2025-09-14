@@ -8,6 +8,7 @@ type Patch = {
   folderId?: string | null;
   fields?: Record<string, unknown>;
   tags?: string[] | null;
+  imageUrl?: string | null;
 };
 
 export function useUpdateEntity(worldId: string) {

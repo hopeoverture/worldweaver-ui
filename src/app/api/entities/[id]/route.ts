@@ -47,6 +47,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       folderId: z.string().uuid().nullable().optional().or(z.literal('')),
       fields: z.record(z.unknown()).optional(),
       tags: z.array(z.string()).nullable().optional(),
+      imageUrl: z.string().url().nullable().optional(),
     })
 
     let body: z.infer<typeof schema>
@@ -69,6 +70,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
         folderId: body.folderId === '' ? undefined : (body.folderId ?? undefined),
         fields: body.fields,
         tags: body.tags ?? undefined,
+        imageUrl: body.imageUrl ?? undefined,
       },
       user.id,
     )

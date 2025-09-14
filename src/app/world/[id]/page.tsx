@@ -234,6 +234,7 @@ import {
   LazyComponentLoader,
   SkeletonLoader
 } from '@/components/lazy';
+import { EditWorldModal } from '@/components/worlds/EditWorldModal';
 
 export default function WorldDashboard() {
   const { id: worldId } = useParams();
@@ -260,6 +261,7 @@ export default function WorldDashboard() {
   const [isCreateFolderModalOpen, setCreateFolderModalOpen] = useState(false);
   const [isCreateTemplateModalOpen, setCreateTemplateModalOpen] = useState(false);
   const [isCreateRelationshipModalOpen, setCreateRelationshipModalOpen] = useState(false);
+  const [isEditWorldModalOpen, setEditWorldModalOpen] = useState(false);
   const [folderType, setFolderType] = useState<'entities' | 'templates'>('entities');
   const [editFolder, setEditFolder] = useState<Folder | null>(null);
   const [isEditOpen, setEditOpen] = useState(false);
@@ -1044,7 +1046,12 @@ export default function WorldDashboard() {
 
   return (
     <main>
-      <WorldContextBar world={world} />
+      <WorldContextBar
+        world={world}
+        onEditWorld={() => setEditWorldModalOpen(true)}
+        memberCount={members.length}
+        templateCount={remoteTemplates.length}
+      />
 
       {/* Search Bar */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-neutral-800">
@@ -1155,6 +1162,11 @@ export default function WorldDashboard() {
           onClose={() => { setEditOpen(false); setEditFolder(null); }}
         />
       </Suspense>
+      <EditWorldModal
+        open={isEditWorldModalOpen}
+        world={world}
+        onClose={() => setEditWorldModalOpen(false)}
+      />
     </main>
   );
 }
