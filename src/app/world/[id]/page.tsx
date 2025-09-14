@@ -1,5 +1,5 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 // Removed useStore - now using TanStack Query hooks exclusively
 import { useWorld } from '@/hooks/query/useWorld';
@@ -18,6 +18,7 @@ import { useDeleteFolder } from '@/hooks/mutations/useDeleteFolder';
 import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useUpdateTemplate } from '@/hooks/mutations/useUpdateTemplate';
 import { useToast } from '@/components/ui/ToastProvider';
+import { Input } from '@/components/ui/Input';
 import { CORE_TEMPLATE_NAMES } from '@/lib/coreTemplates';
 import type { Entity, Template, Folder } from '@/lib/types';
 
@@ -261,6 +262,43 @@ export default function WorldDashboard() {
   const [folderType, setFolderType] = useState<'entities' | 'templates'>('entities');
   const [editFolder, setEditFolder] = useState<Folder | null>(null);
   const [isEditOpen, setEditOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+  // Debounce search term for performance
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Helper function to filter items by search term
+  const filterBySearch = <T,>(
+    items: T[],
+    searchTerm: string
+  ): T[] => {
+    if (!searchTerm.trim()) return items;
+
+    const term = searchTerm.toLowerCase().trim();
+    return items.filter(item => {
+      const itemWithName = item as any;
+      const nameMatch = itemWithName.name?.toLowerCase().includes(term);
+      const descriptionMatch = itemWithName.description?.toLowerCase().includes(term);
+
+      // For entities, also search in custom field values
+      if ('data' in itemWithName && typeof itemWithName.data === 'object' && itemWithName.data) {
+        const dataValues = Object.values(itemWithName.data as Record<string, unknown>);
+        const dataMatch = dataValues.some(value =>
+          typeof value === 'string' && value.toLowerCase().includes(term)
+        );
+        return nameMatch || descriptionMatch || dataMatch;
+      }
+
+      return nameMatch || descriptionMatch;
+    });
+  };
 
   if (isLoading) return (
     <div className="min-h-[50vh] flex items-center justify-center">
@@ -412,26 +450,32 @@ export default function WorldDashboard() {
   };
 
   // Filter folders to show only direct children of current folder
-  const entityFolders = remoteFolders.filter((f) =>
+  const baseEntityFolders = remoteFolders.filter((f) =>
     f.worldId === strWorldId &&
     f.kind === 'entities' &&
     (selectedFolder ? f.parentFolderId === selectedFolder : (!f.parentFolderId))
   );
-  const regularTemplateFolders = remoteFolders.filter((f) =>
+  const baseRegularTemplateFolders = remoteFolders.filter((f) =>
     f.worldId === strWorldId &&
     f.kind === 'templates' &&
     (selectedFolder ? f.parentFolderId === selectedFolder : (!f.parentFolderId))
   );
 
-  // Get ungrouped entities (entities without a folder)
-  const ungroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
+  // Apply search filtering to folders
+  const entityFolders = filterBySearch(baseEntityFolders, debouncedSearchTerm) as Folder[];
+  const regularTemplateFolders = filterBySearch(baseRegularTemplateFolders, debouncedSearchTerm) as Folder[];
 
-  // Separate system templates (Core templates) from world templates
-  const systemTemplates = remoteTemplates.filter((template: Template) => template.isSystem && !template.folderId);
-  const worldTemplates = remoteTemplates.filter((template: Template) => !template.isSystem && template.worldId === strWorldId);
+  // Get base entities and templates
+  const baseUngroupedEntities = remoteEntities.filter((entity: Entity) => entity.worldId === strWorldId && !entity.folderId);
+  const baseSystemTemplates = remoteTemplates.filter((template: Template) => template.isSystem && !template.folderId);
+  const baseWorldTemplates = remoteTemplates.filter((template: Template) => !template.isSystem && template.worldId === strWorldId);
+  const baseUngroupedTemplates = baseWorldTemplates.filter((template: Template) => !template.folderId);
 
-  // Get ungrouped world templates (world templates without a folder)
-  const ungroupedTemplates = worldTemplates.filter((template: Template) => !template.folderId);
+  // Apply search filtering
+  const ungroupedEntities = filterBySearch(baseUngroupedEntities, debouncedSearchTerm) as Entity[];
+  const systemTemplates = filterBySearch(baseSystemTemplates, debouncedSearchTerm) as Template[];
+  const worldTemplates = filterBySearch(baseWorldTemplates, debouncedSearchTerm) as Template[];
+  const ungroupedTemplates = filterBySearch(baseUngroupedTemplates, debouncedSearchTerm) as Template[];
 
   // Identify customized templates (world-specific overrides of system templates)
   const customizedTemplateIds = worldTemplates
@@ -452,12 +496,16 @@ export default function WorldDashboard() {
   // Combine Core folder with regular template folders (Core folder first)
   const templateFolders = systemTemplates.length > 0 ? [coreFolder, ...regularTemplateFolders] : regularTemplateFolders;
 
-  const entitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
-  const templatesInFolder = selectedFolder
+  const baseEntitiesInFolder = selectedFolder ? remoteEntities.filter((entity: Entity) => entity.folderId === selectedFolder) : [];
+  const baseTemplatesInFolder = selectedFolder
     ? selectedFolder === 'core-folder'
-      ? systemTemplates // Show system templates when Core folder is selected
+      ? baseSystemTemplates // Show system templates when Core folder is selected
       : remoteTemplates.filter((template: Template) => template.folderId === selectedFolder)
     : [];
+
+  // Apply search filtering to folder contents
+  const entitiesInFolder = filterBySearch(baseEntitiesInFolder, debouncedSearchTerm) as Entity[];
+  const templatesInFolder = filterBySearch(baseTemplatesInFolder, debouncedSearchTerm) as Template[];
 
   const tabs: TabItem[] = [
     {
@@ -822,6 +870,58 @@ export default function WorldDashboard() {
   return (
     <main>
       <WorldContextBar world={world} />
+
+      {/* Search Bar */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-neutral-800">
+        <div className="relative max-w-2xl mx-auto">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <Input
+              placeholder="Search entities, templates, folders..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-r-md transition-colors"
+                title="Clear search"
+              >
+                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Search Results Indicator */}
+          {debouncedSearchTerm && (
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
+              {(() => {
+                const totalResults = ungroupedEntities.length + entityFolders.length + ungroupedTemplates.length + regularTemplateFolders.length + systemTemplates.length;
+                if (totalResults === 0) {
+                  return (
+                    <span className="text-gray-500 dark:text-gray-500">
+                      No results found for "{debouncedSearchTerm}"
+                    </span>
+                  );
+                }
+                return (
+                  <span>
+                    Found {totalResults} result{totalResults !== 1 ? 's' : ''} for "{debouncedSearchTerm}"
+                  </span>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      </div>
+
       <TabNav
         tabs={tabs}
         activeTab={activeTab}
