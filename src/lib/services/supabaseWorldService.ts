@@ -1029,7 +1029,7 @@ export class SupabaseWorldService {
       return templates?.map(template => ({
         id: template.id,
         worldId: '', // System templates don't belong to a specific world
-        folderId: undefined,
+        folderId: template.folder_id || undefined, // Read folder_id from database
         name: template.name,
         description: template.description || '',
         icon: template.icon || undefined,

@@ -28,11 +28,9 @@ export async function POST(req: NextRequest) {
 
     const results: Array<{ action: string; name: string }> = []
 
-    // System templates don't use folders since they're global
-    // Instead, we'll organize them by just updating their folder_id to null
-    // and ensure they're properly marked as system templates
-
-    results.push({ action: 'info', name: 'System templates organized globally (no folder needed)' })
+    // System templates will be organized in a virtual "Core" group at the UI level
+    // No need for a database folder since folders must belong to worlds
+    results.push({ action: 'info', name: 'System templates will be organized in Core section' })
 
     // Get core template definitions (pass empty string for system templates)
     const coreTemplates = createCoreTemplates('')
@@ -52,11 +50,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (existing) {
-        // Update existing template to ensure it's properly marked as system
+        // Update existing template, ensuring it's properly marked as system
         const { error: updateError } = await adminClient
           .from('templates')
           .update({
-            folder_id: null, // System templates don't use folders
+            folder_id: null, // System templates don't have folder_id
             description: template.description,
             icon: template.icon,
             category: template.category,
@@ -71,12 +69,12 @@ export async function POST(req: NextRequest) {
 
         results.push({ action: 'updated', name: template.name })
       } else {
-        // Create new template
+        // Create new system template
         const { error: createError } = await adminClient
           .from('templates')
           .insert({
             world_id: null, // System templates have world_id = null
-            folder_id: null, // System templates don't use folders
+            folder_id: null, // System templates don't have folder_id
             name: template.name,
             description: template.description,
             icon: template.icon,
@@ -96,8 +94,8 @@ export async function POST(req: NextRequest) {
     return Response.json({
       success: true,
       summary: {
-        approach: 'System templates organized globally (no folder needed)',
-        templatesProcessed: results.length - 1, // Subtract 1 for the info message
+        approach: 'System templates organized in virtual Core section',
+        templatesProcessed: results.filter(r => r.action !== 'info').length,
         actions: results.reduce((acc, r) => {
           acc[r.action] = (acc[r.action] || 0) + 1
           return acc
