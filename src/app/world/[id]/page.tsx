@@ -585,7 +585,12 @@ export default function WorldDashboard() {
                     onRename={handleFolderRename}
                     onDelete={handleFolderDelete}
                     onTemplateDrop={(templateId, templateName, folderId) => handleTemplateDropOnFolder(templateId, templateName, folderId)}
-                    templates={remoteTemplates}
+                    templates={[
+                      // Map system templates to core-folder for counting
+                      ...systemTemplates.map(t => ({ ...t, folderId: 'core-folder' })),
+                      // Include world templates as-is
+                      ...worldTemplates
+                    ]}
                   />
                 </Suspense>
               ) : (
