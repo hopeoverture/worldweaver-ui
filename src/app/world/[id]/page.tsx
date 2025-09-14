@@ -415,12 +415,12 @@ export default function WorldDashboard() {
   const entityFolders = remoteFolders.filter((f) =>
     f.worldId === strWorldId &&
     f.kind === 'entities' &&
-    f.parentFolderId === selectedFolder
+    (selectedFolder ? f.parentFolderId === selectedFolder : (!f.parentFolderId))
   );
   const regularTemplateFolders = remoteFolders.filter((f) =>
     f.worldId === strWorldId &&
     f.kind === 'templates' &&
-    f.parentFolderId === selectedFolder
+    (selectedFolder ? f.parentFolderId === selectedFolder : (!f.parentFolderId))
   );
 
   // Get ungrouped entities (entities without a folder)

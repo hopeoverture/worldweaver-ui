@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
 import { Tabs, TabItem } from '@/components/ui/Tabs';
 import { Card } from '@/components/ui/Card';
+import { ProgressBar } from '@/components/ui/ProgressBar';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -321,9 +322,7 @@ export default function SettingsPage() {
                   <span className="text-gray-600 dark:text-gray-400">Worlds</span>
                   <span className="font-medium">2.4 MB</span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: '24%' }}></div>
-                </div>
+                <ProgressBar value={24} variant="primary" />
               </div>
               
               <div className="space-y-2">
@@ -331,9 +330,7 @@ export default function SettingsPage() {
                   <span className="text-gray-600 dark:text-gray-400">Assets</span>
                   <span className="font-medium">1.8 MB</span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
-                  <div className="bg-green-600 h-2 rounded-full" style={{ width: '18%' }}></div>
-                </div>
+                <ProgressBar value={18} variant="success" />
               </div>
               
               <div className="space-y-2">
@@ -341,9 +338,7 @@ export default function SettingsPage() {
                   <span className="text-gray-600 dark:text-gray-400">Backups</span>
                   <span className="font-medium">5.2 MB</span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
-                  <div className="bg-purple-600 h-2 rounded-full" style={{ width: '52%' }}></div>
-                </div>
+                <ProgressBar value={52} variant="primary" />
               </div>
               
               <div className="pt-2 border-t border-gray-200 dark:border-neutral-700">

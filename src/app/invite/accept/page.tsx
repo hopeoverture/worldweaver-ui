@@ -1,5 +1,8 @@
 "use client"
 import { useEffect, useState } from 'react'
+import { Card } from '@/components/ui/Card'
+import { Alert } from '@/components/ui/Alert'
+import { layout, typography } from '@/lib/component-utils'
 
 export default function AcceptInvitePage() {
   const [status, setStatus] = useState<'idle'|'working'|'success'|'error'>('idle')
@@ -38,17 +41,31 @@ export default function AcceptInvitePage() {
   }, [])
 
   return (
-    <div style={{ maxWidth: 520, margin: '40px auto', padding: 24 }}>
-      <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>Accept Invite</h1>
-      {status === 'idle' || status === 'working' ? (
-        <p>Processing your invite...</p>
-      ) : null}
-      {status === 'success' ? (
-        <p style={{ color: 'green' }}>{message}</p>
-      ) : null}
-      {status === 'error' ? (
-        <p style={{ color: 'crimson' }}>{message}</p>
-      ) : null}
+    <div className={layout.containerSmall}>
+      <div className="py-10">
+        <Card className="max-w-lg mx-auto">
+          <h1 className={`${typography.h2} mb-6`}>Accept Invite</h1>
+
+          {status === 'idle' || status === 'working' ? (
+            <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-brand-600"></div>
+              <p>Processing your invite...</p>
+            </div>
+          ) : null}
+
+          {status === 'success' && (
+            <Alert variant="success" className="mt-4">
+              <p>{message}</p>
+            </Alert>
+          )}
+
+          {status === 'error' && (
+            <Alert variant="error" className="mt-4">
+              <p>{message}</p>
+            </Alert>
+          )}
+        </Card>
+      </div>
     </div>
   )
 }
