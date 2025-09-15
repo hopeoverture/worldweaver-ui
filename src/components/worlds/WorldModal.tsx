@@ -204,10 +204,16 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
   };
 
   const handleAIGenerate = async (prompt: string) => {
+    console.log('🚀 Starting AI generation for world summary');
+    console.log('📋 AI Generation Target:', aiGenerationTarget);
+    console.log('💬 User Prompt:', prompt);
+
     try {
       const fieldsToGenerate = Array.isArray(aiGenerationTarget)
         ? aiGenerationTarget
         : [aiGenerationTarget];
+
+      console.log('🎯 Fields to Generate:', fieldsToGenerate);
 
       // Transform form data to include ALL fields for comprehensive AI context
       const existingData = {
@@ -224,22 +230,88 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
         climateBiomes: [...formData.travelDifficulty.filter(t => t !== 'Custom'), ...formData.customTravelDifficulty.filter(t => t.trim())],
       };
 
+      console.log('📊 Existing Data Context:', {
+        ...existingData,
+        // Log arrays and strings differently for clarity
+        genreBlend: existingData.genreBlend,
+        keyThemes: existingData.keyThemes,
+        conflictDrivers: existingData.conflictDrivers,
+        climateBiomes: existingData.climateBiomes,
+        hasName: !!existingData.name,
+        hasSummary: !!existingData.summary,
+        contextFieldsCount: Object.keys(existingData).filter(key => existingData[key as keyof typeof existingData]).length
+      });
+
+      console.log('📡 Making API request to generate world fields...');
+      const requestStartTime = Date.now();
+
       const result = await generateWorldFields.mutateAsync({
         prompt,
         fieldsToGenerate,
         existingData
       });
 
-      // Update form data with generated fields directly
-      setFormData(prev => ({
-        ...prev,
-        ...result.fields
-      }));
+      const requestDuration = Date.now() - requestStartTime;
+      console.log(`✅ AI generation completed in ${requestDuration}ms`);
+      console.log('📄 Generated Result:', {
+        fieldsGenerated: Object.keys(result.fields || {}),
+        resultKeys: Object.keys(result || {}),
+        hasFields: !!result.fields,
+        fieldsCount: Object.keys(result.fields || {}).length
+      });
 
+      if (result.fields) {
+        console.log('📝 Generated Field Values:', result.fields);
+      }
+
+      // Update form data with generated fields directly
+      setFormData(prev => {
+        const newFormData = {
+          ...prev,
+          ...result.fields
+        };
+        console.log('🔄 Updating form data with generated fields');
+        console.log('📋 Form data before update:', { summary: prev.summary });
+        console.log('📋 Form data after update:', { summary: newFormData.summary });
+        return newFormData;
+      });
+
+      console.log('✨ AI generation process completed successfully');
       setShowAIModal(false);
     } catch (error) {
-      // Error handling is done by the mutation hook
-      console.error('AI generation failed:', error);
+      console.error('❌ AI generation failed with error:', error);
+
+      // Enhanced error logging
+      if (error instanceof Error) {
+        console.error('❌ Error Details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.split('\n').slice(0, 5).join('\n'), // First 5 lines of stack
+        });
+      }
+
+      // Check if it's a network/fetch error
+      if (error && typeof error === 'object' && 'cause' in error) {
+        console.error('❌ Error Cause:', error.cause);
+      }
+
+      // Log the current state for debugging
+      console.error('❌ Current State:', {
+        aiGenerationTarget,
+        fieldsToGenerate: Array.isArray(aiGenerationTarget) ? aiGenerationTarget : [aiGenerationTarget],
+        hasPrompt: !!prompt,
+        promptLength: prompt?.length || 0,
+        formDataKeys: Object.keys(formData),
+        isPending: generateWorldFields.isPending,
+        timestamp: new Date().toISOString()
+      });
+
+      // Additional error context
+      console.error('❌ Generation Context:', {
+        worldId: worldId || 'new-world',
+        isEditMode: !!worldId,
+        existingDataFieldCount: Object.keys(formData).filter(key => formData[key as keyof typeof formData]).length
+      });
     }
   };
 

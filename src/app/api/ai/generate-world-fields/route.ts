@@ -30,18 +30,37 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`🔄 [${requestId}] Starting AI world fields generation request`);
+
   try {
+    console.log(`🔐 [${requestId}] Initializing Supabase client`);
     const supabase = await createClient();
 
     // Check authentication
+    console.log(`🔍 [${requestId}] Checking user authentication`);
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error(`❌ [${requestId}] Authentication failed:`, { authError, hasUser: !!user });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    console.log(`✅ [${requestId}] User authenticated:`, { userId: user.id, email: user.email });
 
     // Parse and validate request body
+    console.log(`📋 [${requestId}] Parsing request body`);
     const body = await req.json();
+    console.log(`📊 [${requestId}] Request body structure:`, {
+      hasPrompt: !!body.prompt,
+      promptLength: body.prompt?.length || 0,
+      fieldsToGenerate: body.fieldsToGenerate,
+      fieldsToGenerateCount: Array.isArray(body.fieldsToGenerate) ? body.fieldsToGenerate.length : 0,
+      hasExistingData: !!body.existingData,
+      existingDataKeys: body.existingData ? Object.keys(body.existingData) : [],
+      worldId: body.worldId || 'none'
+    });
+
     const validatedData = schema.parse(body);
+    console.log(`✅ [${requestId}] Request validation successful`);
 
     // If worldId is provided, check permissions
     if (validatedData.worldId) {
@@ -72,8 +91,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Check user's AI quota before generation
+    console.log(`🔍 [${requestId}] Checking AI quota for user`);
     const hasQuota = await checkAIQuota(user.id);
     if (!hasQuota) {
+      console.warn(`⚠️ [${requestId}] AI quota exceeded for user ${user.id}`);
+
       // Track the rate-limited attempt
       await aiUsageService.trackUsage({
         userId: user.id,
@@ -86,7 +108,7 @@ export async function POST(req: NextRequest) {
           costUsd: 0,
           currency: 'USD',
           success: false,
-          metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
+          metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate, requestId }
         },
         error: 'AI quota exceeded'
       });
@@ -96,31 +118,53 @@ export async function POST(req: NextRequest) {
         { status: 429 }
       );
     }
+    console.log(`✅ [${requestId}] AI quota check passed`);
 
     // Generate world fields using AI service
     let generationResult;
     try {
-      console.log('🔍 Starting AI generation with data:', {
+      console.log(`🤖 [${requestId}] Starting AI generation with data:`, {
         prompt: validatedData.prompt,
+        promptLength: validatedData.prompt?.length || 0,
         fieldsToGenerate: validatedData.fieldsToGenerate,
-        hasExistingData: !!validatedData.existingData
+        fieldsToGenerateCount: validatedData.fieldsToGenerate?.length || 0,
+        hasExistingData: !!validatedData.existingData,
+        existingDataFieldCount: validatedData.existingData ? Object.keys(validatedData.existingData).length : 0
       });
 
+      const aiStartTime = Date.now();
       generationResult = await aiService.generateWorldFields({
         prompt: validatedData.prompt,
         fieldsToGenerate: validatedData.fieldsToGenerate,
         existingData: validatedData.existingData || {},
       });
+      const aiDuration = Date.now() - aiStartTime;
 
-      console.log('✅ AI generation successful:', {
+      console.log(`✅ [${requestId}] AI generation successful in ${aiDuration}ms:`, {
         hasResult: !!generationResult.result,
-        hasUsage: !!generationResult.usage
+        hasUsage: !!generationResult.usage,
+        resultFields: generationResult.result ? Object.keys(generationResult.result.fields || {}) : [],
+        fieldsGenerated: generationResult.result?.fields ? Object.keys(generationResult.result.fields).length : 0
       });
+
+      if (generationResult.result?.fields) {
+        console.log(`📝 [${requestId}] Generated field values:`, generationResult.result.fields);
+      }
     } catch (error) {
-      console.error('❌ AI generation failed:', error);
+      console.error(`❌ [${requestId}] AI generation failed:`, error);
+
+      // Enhanced error logging for AI service failures
+      if (error instanceof Error) {
+        console.error(`❌ [${requestId}] Error details:`, {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.split('\n').slice(0, 3).join('\n')
+        });
+      }
 
       // Track the failed attempt
       try {
+        console.log(`📊 [${requestId}] Tracking failed AI usage`);
         await aiUsageService.trackUsage({
           userId: user.id,
           usage: {
@@ -132,12 +176,18 @@ export async function POST(req: NextRequest) {
             costUsd: 0,
             currency: 'USD',
             success: false,
-            metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
+            metadata: {
+              worldId: validatedData.worldId,
+              fieldsToGenerate: validatedData.fieldsToGenerate,
+              requestId,
+              errorName: error instanceof Error ? error.name : 'Unknown',
+              errorMessage: error instanceof Error ? error.message : String(error)
+            }
           },
           error: (error as Error).message
         });
       } catch (trackingError) {
-        console.error('❌ Failed to track usage:', trackingError);
+        console.error(`❌ [${requestId}] Failed to track usage:`, trackingError);
       }
 
       throw error; // Re-throw to handle in outer catch block
@@ -145,26 +195,41 @@ export async function POST(req: NextRequest) {
 
     // Track successful usage
     try {
-      console.log('📊 Tracking successful usage...');
+      console.log(`📊 [${requestId}] Tracking successful usage...`);
       await aiUsageService.trackUsage({
         userId: user.id,
-        usage: generationResult.usage
+        usage: {
+          ...generationResult.usage,
+          metadata: {
+            ...generationResult.usage.metadata,
+            requestId
+          }
+        }
       });
-      console.log('✅ Usage tracking successful');
+      console.log(`✅ [${requestId}] Usage tracking successful`);
     } catch (trackingError) {
-      console.error('❌ Failed to track successful usage:', trackingError);
+      console.error(`❌ [${requestId}] Failed to track successful usage:`, trackingError);
       // Don't throw here - we still want to return the result
     }
 
-    console.log('🎉 Returning result to client');
+    console.log(`🎉 [${requestId}] Returning result to client`);
     return NextResponse.json(generationResult.result);
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error(`❌ [${requestId}] Validation error:`, {
+        errors: error.errors,
+        errorPaths: error.errors.map(e => ({ path: e.path, code: e.code, message: e.message }))
+      });
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
       );
+    }
+
+    console.error(`❌ [${requestId}] Unexpected error in generate-world-fields API:`, error);
+    if (error instanceof Error) {
+      console.error(`❌ [${requestId}] Error stack:`, error.stack);
     }
 
     logError('Error in generate-world-fields API', error as Error, {
@@ -172,7 +237,7 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(
-      { error: 'Failed to generate world fields' },
+      { error: 'Failed to generate world fields', requestId },
       { status: 500 }
     );
   }
