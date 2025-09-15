@@ -194,10 +194,24 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
         ? aiGenerationTarget
         : [aiGenerationTarget];
 
+      // Transform form data to match API expectations
+      const existingData = {
+        name: formData.name,
+        logline: formData.summary,
+        genreBlend: formData.genre === 'Custom' ? [formData.customGenre.trim()] : formData.genre ? [formData.genre] : undefined,
+        overallTone: [...formData.tone.filter(t => t !== 'Custom'), ...formData.customTone.filter(t => t.trim())].join(', ') || undefined,
+        keyThemes: [...formData.theme.filter(t => t !== 'Custom'), ...formData.customTheme.filter(t => t.trim())],
+        audienceRating: formData.audienceRating === 'Custom' ? formData.customAudienceRating.trim() : formData.audienceRating || undefined,
+        technologyLevel: formData.technologyLevel === 'Custom' ? [formData.customTechnologyLevel.trim()] : formData.technologyLevel ? [formData.technologyLevel] : undefined,
+        magicLevel: formData.magicLevel === 'Custom' ? [formData.customMagicLevel.trim()] : formData.magicLevel ? [formData.magicLevel] : undefined,
+        cosmologyModel: [...formData.cosmologyModel.filter(c => c !== 'Custom'), ...formData.customCosmologyModel.filter(c => c.trim())].join(', ') || undefined,
+        conflictDrivers: [...formData.conflictDrivers.filter(c => c !== 'Custom'), ...formData.customConflictDrivers.filter(c => c.trim())],
+      };
+
       const result = await generateWorldFields.mutateAsync({
         prompt,
         fieldsToGenerate,
-        existingData: formData as any
+        existingData
       });
 
       setFormData(prev => ({
