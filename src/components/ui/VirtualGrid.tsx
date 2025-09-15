@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 
 /**
  * Virtual Grid component for efficient rendering of large lists
@@ -29,7 +29,7 @@ export interface VirtualGridProps<T> {
   className?: string;
 }
 
-export function VirtualGrid<T>({
+const VirtualGridComponent = <T,>({
   items,
   itemHeight,
   columns,
@@ -40,7 +40,7 @@ export function VirtualGrid<T>({
   isLoading = false,
   emptyState,
   className = ''
-}: VirtualGridProps<T>) {
+}: VirtualGridProps<T>) => {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,12 +79,14 @@ export function VirtualGrid<T>({
     };
   }, [items.length, columns, itemHeight, gap, scrollTop, containerSize, containerHeight, overscan]);
 
-  // Handle scroll events
+  // Handle scroll events with throttling for better performance
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+    const newScrollTop = e.currentTarget.scrollTop;
+    // Only update if scroll position changed significantly (reduces unnecessary re-renders)
+    setScrollTop(prev => Math.abs(prev - newScrollTop) > 5 ? newScrollTop : prev);
   }, []);
 
-  // Measure container size
+  // Measure container size with proper cleanup
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -92,15 +94,22 @@ export function VirtualGrid<T>({
     const resizeObserver = new ResizeObserver(entries => {
       const entry = entries[0];
       if (entry) {
-        setContainerSize({
+        const newSize = {
           width: entry.contentRect.width,
           height: entry.contentRect.height
-        });
+        };
+        // Only update if size changed significantly (reduces unnecessary re-renders)
+        setContainerSize(prev =>
+          Math.abs(prev.width - newSize.width) > 1 || Math.abs(prev.height - newSize.height) > 1
+            ? newSize : prev
+        );
       }
     });
 
     resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
+    return () => {
+      resizeObserver.disconnect();
+    };
   }, []);
 
   // Generate visible items with positioning
@@ -182,7 +191,10 @@ export function VirtualGrid<T>({
       </div>
     </div>
   );
-}
+};
+
+// Memoize the VirtualGrid component to prevent unnecessary re-renders
+export const VirtualGrid = memo(VirtualGridComponent) as typeof VirtualGridComponent;
 
 /**
  * Hook for responsive column calculation

@@ -234,7 +234,7 @@ import {
   LazyComponentLoader,
   SkeletonLoader
 } from '@/components/lazy';
-import { EditWorldModal } from '@/components/worlds/EditWorldModal';
+import { WorldModal } from '@/components/worlds/WorldModal';
 
 export default function WorldDashboard() {
   const { id: worldId } = useParams();
@@ -1160,9 +1160,9 @@ export default function WorldDashboard() {
           onClose={() => { setEditOpen(false); setEditFolder(null); }}
         />
       </Suspense>
-      <EditWorldModal
-        open={isEditWorldModalOpen}
-        world={world}
+      <WorldModal
+        isOpen={isEditWorldModalOpen}
+        worldId={world?.id}
         onClose={() => setEditWorldModalOpen(false)}
       />
     </main>

@@ -297,4 +297,71 @@ export function useOptimizedImage(src: string, alt: string) {
   };
 }
 
+/**
+ * Production-safe logging utilities
+ * Only logs in development or when explicitly enabled
+ */
+const isDevelopment = process.env.NODE_ENV === 'development';
+const isLoggingEnabled = isDevelopment || process.env.ENABLE_PERFORMANCE_LOGS === 'true';
+
+export const performanceLog = {
+  /**
+   * Log performance-related information only in development
+   */
+  log: (message: string, data?: any) => {
+    if (isLoggingEnabled) {
+      console.log(`[PERF] ${message}`, data);
+    }
+  },
+
+  /**
+   * Time a function execution and log the result
+   */
+  time: <T>(label: string, fn: () => T): T => {
+    if (isLoggingEnabled) {
+      const start = performance.now();
+      const result = fn();
+      const end = performance.now();
+      console.log(`[PERF] ${label}: ${(end - start).toFixed(2)}ms`);
+      return result;
+    }
+    return fn();
+  },
+
+  /**
+   * Time an async function execution and log the result
+   */
+  timeAsync: async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
+    if (isLoggingEnabled) {
+      const start = performance.now();
+      const result = await fn();
+      const end = performance.now();
+      console.log(`[PERF] ${label}: ${(end - start).toFixed(2)}ms`);
+      return result;
+    }
+    return await fn();
+  }
+};
+
+/**
+ * Development-only console logging that gets stripped in production
+ */
+export const devLog = {
+  log: (message: string, ...args: any[]) => {
+    if (isDevelopment) {
+      console.log(message, ...args);
+    }
+  },
+  warn: (message: string, ...args: any[]) => {
+    if (isDevelopment) {
+      console.warn(message, ...args);
+    }
+  },
+  error: (message: string, ...args: any[]) => {
+    if (isDevelopment) {
+      console.error(message, ...args);
+    }
+  }
+};
+
 // Note: React is already imported and available

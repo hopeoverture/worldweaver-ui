@@ -1,18 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { useCreateWorld } from '@/hooks/mutations/useCreateWorld';
+import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
+import { useWorld } from '@/hooks/query/useWorld';
 import { useGenerateWorldFields } from '@/hooks/mutations/useGenerateWorldFields';
-import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
-import { AIPromptModal } from '@/components/ai/AIPromptModal';
+import { LazyAIGenerateButton, LazyAIPromptModal, AILoadingFallback } from '@/components/ai';
+import { Suspense } from 'react';
+import type { World } from '@/lib/types';
 
-interface CreateWorldModalProps {
+interface WorldModalProps {
   isOpen: boolean;
+  worldId?: string; // If provided, edit mode. If not, create mode
   onClose: () => void;
 }
 
@@ -127,11 +131,57 @@ const cosmologyOptions = [
   'Custom'
 ];
 
-export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
-  const [formData, setFormData] = useState<WorldFormData>(initialFormData);
+const getInitialFormData = (world?: World): WorldFormData => {
+  if (!world) {
+    return initialFormData;
+  }
+
+  return {
+    name: world.name || '',
+    summary: world.description || world.summary || '',
+    genre: world.genreBlend?.[0] || '',
+    customGenre: '',
+    tone: Array.isArray(world.overallTone) ? world.overallTone : (world.overallTone ? world.overallTone.split(', ') : []),
+    customTone: [],
+    theme: world.keyThemes || [],
+    customTheme: [],
+    magicLevel: world.magicLevel?.[0] || '',
+    customMagicLevel: '',
+    technologyLevel: world.technologyLevel?.[0] || '',
+    customTechnologyLevel: '',
+    audienceRating: world.audienceRating || '',
+    customAudienceRating: '',
+    conflictDrivers: world.conflictDrivers || [],
+    customConflictDrivers: [],
+    travelDifficulty: world.climateBiomes || [],
+    customTravelDifficulty: [],
+    cosmologyModel: world.cosmologyModel ? (typeof world.cosmologyModel === 'string' ? world.cosmologyModel.split(', ') : world.cosmologyModel) : [],
+    customCosmologyModel: [],
+  };
+};
+
+export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
+  // Determine if we're in edit mode
+  const isEditMode = !!worldId;
+
+  // Fetch world data for edit mode
+  const { data: world } = useWorld(worldId || '');
+
+  // Initialize form data
+  const [formData, setFormData] = useState<WorldFormData>(getInitialFormData(world));
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Hooks for create/update operations
   const createWorld = useCreateWorld();
+  const updateWorld = useUpdateWorld(worldId || '');
   const generateWorldFields = useGenerateWorldFields();
+
+  // Update form data when world data changes (edit mode)
+  useEffect(() => {
+    if (world && isEditMode) {
+      setFormData(getInitialFormData(world));
+    }
+  }, [world, isEditMode]);
 
   // AI generation state
   const [showAIModal, setShowAIModal] = useState(false);
@@ -225,7 +275,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
         const finalTechnologyLevel = formData.technologyLevel === 'Custom' ? formData.customTechnologyLevel.trim() : formData.technologyLevel;
         const finalAudienceRating = formData.audienceRating === 'Custom' ? formData.customAudienceRating.trim() : formData.audienceRating;
 
-        await createWorld.mutateAsync({
+        const worldData = {
           name: formData.name,
           description: formData.summary || undefined,
           // Map new fields to existing database schema
@@ -239,14 +289,22 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
           // Store travel difficulty and cosmology model in existing fields or settings
           climateBiomes: combinedTravelDifficulty.length > 0 ? combinedTravelDifficulty : undefined, // Temp mapping
           cosmologyModel: combinedCosmologyModel.length > 0 ? combinedCosmologyModel.join(', ') : undefined,
-        });
+        };
 
-        // Reset form and close modal
-        setFormData(initialFormData);
+        if (isEditMode) {
+          await updateWorld.mutateAsync(worldData);
+        } else {
+          await createWorld.mutateAsync(worldData);
+        }
+
+        // Reset form and close modal (only reset to initial in create mode)
+        if (!isEditMode) {
+          setFormData(initialFormData);
+        }
         setErrors({});
         onClose();
       } catch (e) {
-        setErrors(prev => ({ ...prev, name: 'Failed to create world' }));
+        setErrors(prev => ({ ...prev, name: `Failed to ${isEditMode ? 'update' : 'create'} world` }));
       }
     }
   };
@@ -344,7 +402,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
       <div
         role='dialog'
         aria-modal='true'
-        aria-label="Create New World"
+        aria-label={isEditMode ? "Edit World" : "Create New World"}
         className='relative w-full max-w-4xl max-h-[90vh] rounded-lg bg-white dark:bg-neutral-900 shadow-xl ring-1 ring-black/5 flex flex-col'
       >
         {/* Header */}
@@ -352,10 +410,10 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
           <div className="flex items-center justify-between w-full">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                Create New World
+                {isEditMode ? 'Edit World' : 'Create New World'}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Define the core parameters of your world
+                {isEditMode ? 'Update the parameters of your world' : 'Define the core parameters of your world'}
               </p>
             </div>
             <button
@@ -401,15 +459,17 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     World Summary
                   </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('summary')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
+                  <Suspense fallback={<AILoadingFallback />}>
+                    <LazyAIGenerateButton
+                      onClick={() => openAIModal('summary')}
+                      disabled={generateWorldFields.isPending}
+                      isGenerating={generateWorldFields.isPending}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Generate
+                    </LazyAIGenerateButton>
+                  </Suspense>
                 </div>
                 <Textarea
                   value={formData.summary}
@@ -459,25 +519,29 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
               </Button>
               <Button
                 type="submit"
-                disabled={createWorld.isPending}
-                loading={createWorld.isPending}
+                disabled={isEditMode ? updateWorld.isPending : createWorld.isPending}
+                loading={isEditMode ? updateWorld.isPending : createWorld.isPending}
               >
-                {createWorld.isPending ? 'Creating...' : 'Create World'}
+                {(isEditMode ? updateWorld.isPending : createWorld.isPending)
+                  ? (isEditMode ? 'Saving...' : 'Creating...')
+                  : (isEditMode ? 'Save Changes' : 'Create World')}
               </Button>
             </div>
           </form>
         </div>
 
         {/* AI Prompt Modal */}
-        <AIPromptModal
-          open={showAIModal}
-          onClose={() => setShowAIModal(false)}
-          onGenerate={handleAIGenerate}
-          isGenerating={generateWorldFields.isPending}
-          title="Generate World Field Values"
-          description="Generate content for the selected world fields. The AI will create values based on existing fields and your world context. You can leave the prompt empty to generate based on context alone."
-          placeholder="Optional: Describe the style, tone, or specific direction for generating these field values..."
-        />
+        <Suspense fallback={null}>
+          <LazyAIPromptModal
+            open={showAIModal}
+            onClose={() => setShowAIModal(false)}
+            onGenerate={handleAIGenerate}
+            isGenerating={generateWorldFields.isPending}
+            title="Generate World Field Values"
+            description="Generate content for the selected world fields. The AI will create values based on existing fields and your world context. You can leave the prompt empty to generate based on context alone."
+            placeholder="Optional: Describe the style, tone, or specific direction for generating these field values..."
+          />
+        </Suspense>
       </div>
     </div>
   );

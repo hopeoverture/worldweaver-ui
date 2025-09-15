@@ -4,8 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorlds } from '@/hooks/query/useWorlds';
 import { WorldGrid } from '@/components/worlds/WorldGrid';
-import { CreateWorldModal } from '@/components/worlds/CreateWorldModal';
-import { WorldEditModal } from '@/components/worlds/WorldEditModal';
+import { WorldModal } from '@/components/worlds/WorldModal';
 import { DeleteWorldModal } from '@/components/worlds/DeleteWorldModal';
 import { ArchiveWorldModal } from '@/components/worlds/ArchiveWorldModal';
 import { Button } from '@/components/ui/Button';
@@ -186,13 +185,13 @@ export default function HomePage() {
           />
 
           {/* Modals */}
-          <CreateWorldModal
+          <WorldModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
           />
-          
+
           {editWorldId && (
-            <WorldEditModal
+            <WorldModal
               isOpen={!!editWorldId}
               worldId={editWorldId}
               onClose={handleCloseEditModal}

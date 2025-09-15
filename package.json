@@ -8,6 +8,7 @@
     "dev:clean": "npm run predev && npm run dev",
     "dev:all": "concurrently -k -n \"WEB,SEED\" \"npm run dev\" \"wait-on http://localhost:3000 && npm run seed:core\"",
     "build": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next build",
+    "build:analyze": "ANALYZE=true npm run build",
     "start": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next start",
     "test": "vitest run",
     "lint": "eslint",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^15.5.3",
     "@next/eslint-plugin-next": "^15.5.2",
     "@tailwindcss/postcss": "^4",
     "@types/dompurify": "^3.0.5",
