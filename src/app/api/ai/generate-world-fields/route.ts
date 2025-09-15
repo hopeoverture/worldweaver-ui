@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { aiService } from '@/lib/services/aiService';
+import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
 
@@ -70,14 +71,68 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Check user's AI quota before generation
+    const hasQuota = await checkAIQuota(user.id);
+    if (!hasQuota) {
+      // Track the rate-limited attempt
+      await aiUsageService.trackUsage({
+        userId: user.id,
+        usage: {
+          operation: 'world_fields',
+          model: 'gpt-5-mini',
+          provider: 'openai',
+          promptTokens: 0,
+          completionTokens: 0,
+          costUsd: 0,
+          currency: 'USD',
+          success: false,
+          metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
+        },
+        error: 'AI quota exceeded'
+      });
+
+      return NextResponse.json(
+        { error: 'AI quota exceeded. Please wait for quota reset or upgrade your plan.' },
+        { status: 429 }
+      );
+    }
+
     // Generate world fields using AI service
-    const result = await aiService.generateWorldFields({
-      prompt: validatedData.prompt,
-      fieldsToGenerate: validatedData.fieldsToGenerate,
-      existingData: validatedData.existingData || {},
+    let generationResult;
+    try {
+      generationResult = await aiService.generateWorldFields({
+        prompt: validatedData.prompt,
+        fieldsToGenerate: validatedData.fieldsToGenerate,
+        existingData: validatedData.existingData || {},
+      });
+    } catch (error) {
+      // Track the failed attempt
+      await aiUsageService.trackUsage({
+        userId: user.id,
+        usage: {
+          operation: 'world_fields',
+          model: 'gpt-5-mini',
+          provider: 'openai',
+          promptTokens: 0,
+          completionTokens: 0,
+          costUsd: 0,
+          currency: 'USD',
+          success: false,
+          metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
+        },
+        error: (error as Error).message
+      });
+
+      throw error; // Re-throw to handle in outer catch block
+    }
+
+    // Track successful usage
+    await aiUsageService.trackUsage({
+      userId: user.id,
+      usage: generationResult.usage
     });
 
-    return NextResponse.json(result);
+    return NextResponse.json(generationResult.result);
 
   } catch (error) {
     if (error instanceof z.ZodError) {

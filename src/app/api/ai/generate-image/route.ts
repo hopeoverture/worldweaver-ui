@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { aiService } from '@/lib/services/aiService';
+import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
 
@@ -65,44 +66,107 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let result;
-
-    if (validatedData.type === 'entity') {
-      // Generate entity image
-      const worldContext = {
-        name: world.name,
-        description: world.description || undefined,
-        genreBlend: world.genre_blend || undefined,
-        overallTone: world.overall_tone || undefined,
-        keyThemes: world.key_themes || undefined,
-      };
-
-      result = await aiService.generateEntityImage({
-        entityName: validatedData.entityName || 'Entity',
-        templateName: validatedData.templateName,
-        entityFields: validatedData.entityFields,
-        worldContext,
-        customPrompt: validatedData.prompt,
+    // Check user's AI quota before generation
+    const hasQuota = await checkAIQuota(user.id);
+    if (!hasQuota) {
+      // Track the rate-limited attempt
+      await aiUsageService.trackUsage({
+        userId: user.id,
+        usage: {
+          operation: 'image',
+          model: 'gpt-image-1',
+          provider: 'openai',
+          promptTokens: 0,
+          completionTokens: 0,
+          costUsd: 0,
+          currency: 'USD',
+          success: false,
+          metadata: {
+            worldId: validatedData.worldId,
+            imageSize: validatedData.size,
+            imageQuality: validatedData.quality,
+            type: validatedData.type
+          }
+        },
+        error: 'AI quota exceeded'
       });
-    } else {
-      // Generate world cover image
-      const worldData = {
-        genreBlend: world.genre_blend || undefined,
-        overallTone: world.overall_tone || undefined,
-        keyThemes: world.key_themes || undefined,
-        scopeScale: world.scope_scale || undefined,
-        aestheticDirection: world.aesthetic_direction || undefined,
-      };
 
-      result = await aiService.generateWorldCoverImage({
-        worldName: validatedData.worldName || world.name,
-        worldDescription: validatedData.worldDescription || world.description || undefined,
-        worldData,
-        customPrompt: validatedData.prompt,
-      });
+      return NextResponse.json(
+        { error: 'AI image quota exceeded. Please wait for quota reset or upgrade your plan.' },
+        { status: 429 }
+      );
     }
 
-    return NextResponse.json(result);
+    let generationResult;
+
+    try {
+      if (validatedData.type === 'entity') {
+        // Generate entity image
+        const worldContext = {
+          name: world.name,
+          description: world.description || undefined,
+          genreBlend: world.genre_blend || undefined,
+          overallTone: world.overall_tone || undefined,
+          keyThemes: world.key_themes || undefined,
+        };
+
+        generationResult = await aiService.generateEntityImage({
+          entityName: validatedData.entityName || 'Entity',
+          templateName: validatedData.templateName,
+          entityFields: validatedData.entityFields,
+          worldContext,
+          customPrompt: validatedData.prompt,
+        });
+      } else {
+        // Generate world cover image
+        const worldData = {
+          genreBlend: world.genre_blend || undefined,
+          overallTone: world.overall_tone || undefined,
+          keyThemes: world.key_themes || undefined,
+          scopeScale: world.scope_scale || undefined,
+          aestheticDirection: world.aesthetic_direction || undefined,
+        };
+
+        generationResult = await aiService.generateWorldCoverImage({
+          worldName: validatedData.worldName || world.name,
+          worldDescription: validatedData.worldDescription || world.description || undefined,
+          worldData,
+          customPrompt: validatedData.prompt,
+        });
+      }
+    } catch (error) {
+      // Track the failed attempt
+      await aiUsageService.trackUsage({
+        userId: user.id,
+        usage: {
+          operation: 'image',
+          model: 'gpt-image-1',
+          provider: 'openai',
+          promptTokens: 0,
+          completionTokens: 0,
+          costUsd: 0,
+          currency: 'USD',
+          success: false,
+          metadata: {
+            worldId: validatedData.worldId,
+            imageSize: validatedData.size,
+            imageQuality: validatedData.quality,
+            type: validatedData.type
+          }
+        },
+        error: (error as Error).message
+      });
+
+      throw error; // Re-throw to handle in outer catch block
+    }
+
+    // Track successful usage
+    await aiUsageService.trackUsage({
+      userId: user.id,
+      usage: generationResult.usage
+    });
+
+    return NextResponse.json(generationResult.result);
 
   } catch (error) {
     if (error instanceof z.ZodError) {

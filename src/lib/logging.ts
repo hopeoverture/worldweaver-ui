@@ -25,6 +25,7 @@ export interface LogContext {
   relationshipId?: string; // For relationship operations
   folderName?: string; // For folder operations
   role?: string; // For member role operations
+  operationType?: string; // For AI usage operations
 }
 
 export interface LogEntry {

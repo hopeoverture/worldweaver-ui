@@ -68,6 +68,105 @@ export type Database = {
           },
         ]
       }
+      ai_quotas: {
+        Row: {
+          created_at: string
+          id: number
+          metadata: Json
+          period_end: string
+          period_start: string
+          token_limit: number | null
+          usd_limit: number | null
+          used_tokens: number
+          used_usd: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          metadata?: Json
+          period_end: string
+          period_start: string
+          token_limit?: number | null
+          usd_limit?: number | null
+          used_tokens?: number
+          used_usd?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          metadata?: Json
+          period_end?: string
+          period_start?: string
+          token_limit?: number | null
+          usd_limit?: number | null
+          used_tokens?: number
+          used_usd?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_usage: {
+        Row: {
+          completion_tokens: number
+          cost_usd: number
+          created_at: string
+          currency: string
+          error_code: string | null
+          finished_at: string | null
+          id: number
+          metadata: Json
+          model: string | null
+          operation: string
+          prompt_tokens: number
+          provider: string | null
+          request_id: string | null
+          started_at: string | null
+          success: boolean | null
+          total_tokens: number | null
+          user_id: string
+        }
+        Insert: {
+          completion_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          currency?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: never
+          metadata?: Json
+          model?: string | null
+          operation: string
+          prompt_tokens?: number
+          provider?: string | null
+          request_id?: string | null
+          started_at?: string | null
+          success?: boolean | null
+          total_tokens?: number | null
+          user_id: string
+        }
+        Update: {
+          completion_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          currency?: string
+          error_code?: string | null
+          finished_at?: string | null
+          id?: never
+          metadata?: Json
+          model?: string | null
+          operation?: string
+          prompt_tokens?: number
+          provider?: string | null
+          request_id?: string | null
+          started_at?: string | null
+          success?: boolean | null
+          total_tokens?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       entities: {
         Row: {
           created_at: string

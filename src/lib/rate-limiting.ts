@@ -46,6 +46,10 @@ const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
   'templates.delete': { bucket: 'templates.delete', maxRequests: 10, windowSeconds: 60, strategy: 'user' },
   'folders.delete': { bucket: 'folders.delete', maxRequests: 15, windowSeconds: 60, strategy: 'user' },
   'relationships.delete': { bucket: 'relationships.delete', maxRequests: 20, windowSeconds: 60, strategy: 'user' },
+  // AI Generation rate limits (stricter than quota system for immediate protection)
+  'ai.generate.text': { bucket: 'ai.generate.text', maxRequests: 30, windowSeconds: 60, strategy: 'user', description: 'Text-based AI generation (templates, entities, world fields)' },
+  'ai.generate.image': { bucket: 'ai.generate.image', maxRequests: 10, windowSeconds: 300, strategy: 'user', description: 'Image generation with DALL-E' },
+  'ai.generate.burst': { bucket: 'ai.generate.burst', maxRequests: 100, windowSeconds: 3600, strategy: 'user', description: 'Hourly AI generation limit to prevent abuse' },
 }
 
 /**
@@ -295,6 +299,19 @@ export class RateLimitService {
    * Match request to rate limit bucket
    */
   private matchBucket(pathname: string, method: string): string | null {
+    // AI Generation endpoints (check these first due to strict limits)
+    if (method === 'POST' && pathname === '/api/ai/generate-image') {
+      return 'ai.generate.image'
+    }
+
+    if (method === 'POST' && (
+      pathname === '/api/ai/generate-template' ||
+      pathname === '/api/ai/generate-entity-fields' ||
+      pathname === '/api/ai/generate-world-fields'
+    )) {
+      return 'ai.generate.text'
+    }
+
     // Invite creation
     if (method === 'POST' && /^\/api\/worlds\/[\w-]+\/invites$/.test(pathname)) {
       return 'invites.create'
@@ -332,7 +349,7 @@ export class RateLimitService {
       return 'entities.delete'
     }
 
-    // Template operations  
+    // Template operations
     if (method === 'DELETE' && /^\/api\/templates\/[\w-]+$/.test(pathname)) {
       return 'templates.delete'
     }
@@ -363,56 +380,77 @@ export class RateLimitService {
   }
 
   /**
+   * Get all applicable rate limit buckets for a request
+   */
+  private getApplicableBuckets(pathname: string, method: string): string[] {
+    const primaryBucket = this.matchBucket(pathname, method)
+    if (!primaryBucket) {
+      return []
+    }
+
+    const buckets = [primaryBucket]
+
+    // Add AI burst limit for all AI generation endpoints
+    if (primaryBucket.startsWith('ai.generate.')) {
+      buckets.push('ai.generate.burst')
+    }
+
+    return buckets
+  }
+
+  /**
    * Check if request should be rate limited
    */
   async checkRateLimit(req: NextRequest): Promise<RateLimitResult | null> {
-    const bucket = this.matchBucket(req.nextUrl.pathname, req.method)
-    
-    if (!bucket) {
+    const buckets = this.getApplicableBuckets(req.nextUrl.pathname, req.method)
+
+    if (buckets.length === 0) {
       return null // No rate limiting for this endpoint
     }
 
-    const config = this.getConfig(bucket)
-    const keys = await this.generateKey(req, bucket, config.strategy)
-
     try {
-      // Check all keys and return the most restrictive result
+      // Check all applicable buckets and return the most restrictive result
       let mostRestrictiveResult: RateLimitResult | null = null;
 
-      for (const key of keys) {
-        let record: { count: number; resetTime: number }
-        
-        try {
-          record = await this.storage.increment(key, config.windowSeconds)
-        } catch (error) {
-          console.warn('Primary storage failed, using fallback:', error)
-          record = await this.fallbackStorage.increment(key, config.windowSeconds)
-        }
+      for (const bucket of buckets) {
+        const config = this.getConfig(bucket)
+        const keys = await this.generateKey(req, bucket, config.strategy)
 
-        const now = Date.now()
-        const remaining = Math.max(0, config.maxRequests - record.count)
-        const allowed = record.count <= config.maxRequests
-        const retryAfter = allowed ? 0 : Math.ceil((record.resetTime - now) / 1000)
+        for (const key of keys) {
+          let record: { count: number; resetTime: number }
 
-        const result: RateLimitResult = {
-          allowed,
-          count: record.count,
-          remaining,
-          resetTime: Math.floor(record.resetTime / 1000), // Convert to seconds
-          retryAfter
-        }
+          try {
+            record = await this.storage.increment(key, config.windowSeconds)
+          } catch (error) {
+            console.warn('Primary storage failed, using fallback:', error)
+            record = await this.fallbackStorage.increment(key, config.windowSeconds)
+          }
 
-        // If this key is rate limited, or it's more restrictive than previous results
-        if (!result.allowed || 
-            (mostRestrictiveResult && result.remaining < mostRestrictiveResult.remaining)) {
-          mostRestrictiveResult = result;
-        } else if (!mostRestrictiveResult) {
-          mostRestrictiveResult = result;
-        }
+          const now = Date.now()
+          const remaining = Math.max(0, config.maxRequests - record.count)
+          const allowed = record.count <= config.maxRequests
+          const retryAfter = allowed ? 0 : Math.ceil((record.resetTime - now) / 1000)
 
-        // Early exit if we hit a rate limit
-        if (!result.allowed) {
-          break;
+          const result: RateLimitResult = {
+            allowed,
+            count: record.count,
+            remaining,
+            resetTime: Math.floor(record.resetTime / 1000), // Convert to seconds
+            retryAfter
+          }
+
+          // If this key is rate limited, or it's more restrictive than previous results
+          if (!result.allowed ||
+              (mostRestrictiveResult && result.remaining < mostRestrictiveResult.remaining)) {
+            mostRestrictiveResult = result;
+          } else if (!mostRestrictiveResult) {
+            mostRestrictiveResult = result;
+          }
+
+          // Early exit if we hit a rate limit
+          if (!result.allowed) {
+            return mostRestrictiveResult;
+          }
         }
       }
 
