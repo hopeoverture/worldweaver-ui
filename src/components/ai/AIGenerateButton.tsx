@@ -11,6 +11,7 @@ interface AIGenerateButtonProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export function AIGenerateButton({
@@ -20,10 +21,12 @@ export function AIGenerateButton({
   variant = 'outline',
   size = 'sm',
   className = '',
-  disabled = false
+  disabled = false,
+  type = 'button'
 }: AIGenerateButtonProps) {
   return (
     <Button
+      type={type}
       onClick={onClick}
       variant={variant}
       size={size}

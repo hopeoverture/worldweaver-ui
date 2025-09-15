@@ -230,9 +230,19 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
       });
 
       // Update form data with generated fields
+      // Handle field mapping: API returns 'logline' but form expects 'summary'
+      const mappedFields: Record<string, unknown> = {};
+      Object.entries(result.fields).forEach(([key, value]) => {
+        if (key === 'logline') {
+          mappedFields.summary = value;
+        } else {
+          mappedFields[key] = value;
+        }
+      });
+
       setFormData(prev => ({
         ...prev,
-        ...result.fields
+        ...mappedFields
       }));
 
       setShowAIModal(false);
@@ -465,7 +475,8 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
                     </span>
                     <Suspense fallback={<AILoadingFallback />}>
                       <LazyAIGenerateButton
-                        onClick={() => openAIModal('summary')}
+                        type="button"
+                        onClick={() => openAIModal('logline')}
                         disabled={generateWorldFields.isPending}
                         isGenerating={generateWorldFields.isPending}
                         size="sm"
