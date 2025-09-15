@@ -2,13 +2,20 @@ import OpenAI from 'openai';
 import { TemplateField, FieldType, World, Entity, Template } from '@/lib/types';
 import { logError } from '@/lib/logging';
 
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('OPENAI_API_KEY environment variable is required');
-}
+// Initialize OpenAI client lazily to avoid build-time errors
+let openai: OpenAI | null = null;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is required');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
 
 export interface GenerateTemplateRequest {
   prompt: string;
@@ -84,7 +91,7 @@ Return a JSON object with this exact structure:
 
 Include 3-8 relevant fields. Use appropriate field types. Always include a Name field as the first field.`;
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -167,7 +174,7 @@ Example format:
         ? `Additional context: ${prompt}\n\nGenerate the field values.`
         : 'Generate appropriate field values based on the context.';
 
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
@@ -203,7 +210,7 @@ Example format:
     quality = 'standard'
   }: GenerateImageRequest): Promise<GenerateImageResponse> {
     try {
-      const response = await openai.images.generate({
+      const response = await getOpenAIClient().images.generate({
         model: 'dall-e-3',
         prompt,
         n: 1,

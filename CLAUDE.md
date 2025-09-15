@@ -35,6 +35,7 @@ Required environment variables:
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anonymous key
 - `SUPABASE_SERVICE_ROLE_KEY`: Service role key for admin operations
+- `OPENAI_API_KEY`: OpenAI API key for AI generation features
 
 Optional environment variables for development:
 - `SEED_ADMIN_TOKEN`: Random secret for seeding endpoints
@@ -54,6 +55,7 @@ Optional environment variables for development:
 - **Database**: Supabase with PostgreSQL and Row Level Security
 - **State Management**: Zustand for client state, TanStack Query for server state
 - **Authentication**: Supabase Auth with SSR support
+- **AI Integration**: OpenAI API with gpt-4o-mini for text and dall-e-3 for images
 - **Testing**: Vitest with API endpoint validation
 - **Type Safety**: TypeScript with strict mode, Zod for runtime validation
 - **Deployment**: Vercel with automatic builds
@@ -61,11 +63,13 @@ Optional environment variables for development:
 ### Project Structure
 - `src/app/`: Next.js App Router pages and API routes
 - `src/components/`: Reusable React components organized by domain
+  - `src/components/ai/`: AI generation UI components (AIGenerateButton, AIPromptModal)
 - `src/lib/`: Core utilities and services
   - `src/lib/supabase/`: Supabase client configurations (browser/server)
-  - `src/lib/services/`: Domain service layers (e.g., SupabaseWorldService)
-  - `src/lib/types.ts`: Core domain types
+  - `src/lib/services/`: Domain service layers (SupabaseWorldService, AIService)
+  - `src/lib/types.ts`: Core domain types including AI generation interfaces
 - `src/hooks/`: React hooks split by queries and mutations
+  - `src/hooks/mutations/`: Includes AI generation hooks (useGenerateTemplate, useGenerateEntityFields, useGenerateImage)
 - `src/providers/`: React context providers
 
 ### Core Domain Model
@@ -125,7 +129,19 @@ The application manages "worlds" containing entities, templates, folders, and re
   - Invites: `POST /api/worlds/[id]/invites`, `POST /api/invites/accept`
   - Files: `POST /api/worlds/[id]/files/upload`
   - Health: `GET /api/health/db`
+- **AI Generation endpoints**: `/api/ai/generate-template`, `/api/ai/generate-entity-fields`, `/api/ai/generate-image`
 - **Admin routes**: `/api/admin/seed-core-templates` with SEED_ADMIN_TOKEN validation
+
+### AI Generation Architecture
+- **AIService** (`src/lib/services/aiService.ts`): Centralized OpenAI integration with comprehensive world context building
+  - **Template Generation**: Creates templates from user prompts using world context
+  - **Entity Field Generation**: Generates field values for entities based on template structure and world context
+  - **Image Generation**: Creates entity images and world cover images using DALL-E 3
+  - **World Context Integration**: Uses ALL extended world fields (logline, genre, tone, themes, technology level, magic level, cosmology, climate, society, conflicts, rules, aesthetics)
+- **Permission System**: AI generation restricted to world owners and admins only
+- **Error Handling**: Comprehensive error handling with user-friendly messages and proper logging
+- **UI Components**: Reusable `AIGenerateButton` and `AIPromptModal` for consistent AI generation experience
+- **Mutation Hooks**: Type-safe React Query mutations with optimistic updates and error handling
 
 ## Key Development Notes
 
@@ -204,6 +220,24 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 
 ## Recent Updates & Fixes
 
+### September 2025 - AI Generation System Implementation
+- **Comprehensive AI Integration**: Full OpenAI integration with gpt-4o-mini for text and dall-e-3 for images
+  - **AIService Class**: Centralized service for all AI generation operations (`src/lib/services/aiService.ts`)
+  - **Template Generation**: AI-powered template creation from user prompts with world context
+  - **Entity Field Generation**: Generate field values for entities based on template structure and world information
+  - **Image Generation**: Entity images and world cover images using DALL-E 3 with contextual prompts
+  - **World Context Integration**: Uses ALL extended world fields for rich contextual generation
+- **API Endpoints**: Complete REST API for AI generation operations
+  - `/api/ai/generate-template`: Generate templates from prompts
+  - `/api/ai/generate-entity-fields`: Generate entity field values
+  - `/api/ai/generate-image`: Generate entity and world cover images
+  - **Permission System**: Restricted to world owners and admins with proper authentication
+- **UI Components**: Reusable AI generation components integrated into existing workflows
+  - **AIGenerateButton**: Consistent AI generation trigger with loading states
+  - **AIPromptModal**: Modal for entering generation prompts with validation
+  - **Template Generation UI**: Integrated into CreateTemplateModal with "Generate with AI" button
+- **Type Safety & Error Handling**: Comprehensive TypeScript types and error handling with user-friendly messages
+
 ### September 2025 - Drag-and-Drop & Unified Service Layer
 - **Comprehensive Drag-and-Drop Implementation**: Full drag-and-drop support for organizing content
   - **Entity Drag-and-Drop**: Drag entities from grids into entity folders or back to ungrouped state
@@ -263,6 +297,9 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
 - **Drag-and-drop issues**: Ensure components have proper drag handlers (onDragStart) and drop handlers (onDrop), verify folder kind matching (entities to entity folders, templates to template folders)
 - **Service layer errors**: Use unified service interfaces and proper error handling - check `src/lib/services/unified-service.ts` for standardized patterns
+- **AI generation failures**: Ensure `OPENAI_API_KEY` is set in environment variables, check user has proper permissions (world owner/admin), verify world context data is available
+- **AI generation timeout**: OpenAI API calls may take 10-30 seconds, ensure proper loading states and user feedback
+- **AI image generation costs**: DALL-E 3 charges per image generated, consider rate limiting for production use
 
 ### Performance Monitoring
 - Database optimization views available: `public.index_usage_stats`, `public.table_stats`
