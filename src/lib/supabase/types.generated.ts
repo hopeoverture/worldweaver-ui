@@ -584,10 +584,12 @@ export type Database = {
           climate_biomes: string[] | null
           conflict_drivers: string[] | null
           cosmology_model: string | null
+          cover_image: string | null
           created_at: string
           description: string | null
           genre_blend: string[] | null
           id: string
+          image_url: string | null
           invite_link_enabled: boolean | null
           invite_link_expires: string | null
           invite_link_max_uses: number | null
@@ -602,6 +604,7 @@ export type Database = {
           owner_id: string
           rules_constraints: string | null
           scope_scale: string | null
+          seat_limit: number | null
           settings: Json | null
           societal_overview: string | null
           technology_level: string[] | null
@@ -615,10 +618,12 @@ export type Database = {
           climate_biomes?: string[] | null
           conflict_drivers?: string[] | null
           cosmology_model?: string | null
+          cover_image?: string | null
           created_at?: string
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          image_url?: string | null
           invite_link_enabled?: boolean | null
           invite_link_expires?: string | null
           invite_link_max_uses?: number | null
@@ -633,6 +638,7 @@ export type Database = {
           owner_id?: string
           rules_constraints?: string | null
           scope_scale?: string | null
+          seat_limit?: number | null
           settings?: Json | null
           societal_overview?: string | null
           technology_level?: string[] | null
@@ -646,10 +652,12 @@ export type Database = {
           climate_biomes?: string[] | null
           conflict_drivers?: string[] | null
           cosmology_model?: string | null
+          cover_image?: string | null
           created_at?: string
           description?: string | null
           genre_blend?: string[] | null
           id?: string
+          image_url?: string | null
           invite_link_enabled?: boolean | null
           invite_link_expires?: string | null
           invite_link_max_uses?: number | null
@@ -664,6 +672,7 @@ export type Database = {
           owner_id?: string
           rules_constraints?: string | null
           scope_scale?: string | null
+          seat_limit?: number | null
           settings?: Json | null
           societal_overview?: string | null
           technology_level?: string[] | null

@@ -51,10 +51,10 @@ export function adaptWorldFromDatabase(
     conflictDrivers: dbWorld.conflict_drivers || undefined,
     rulesConstraints: dbWorld.rules_constraints || undefined,
     aestheticDirection: dbWorld.aesthetic_direction || undefined,
-    // Fields not in current schema but expected by domain
-    imageUrl: undefined,
-    coverImage: undefined,
-    seatLimit: undefined,
+    // World media and membership fields
+    imageUrl: (dbWorld as any).image_url || undefined,
+    coverImage: (dbWorld as any).cover_image || undefined,
+    seatLimit: (dbWorld as any).seat_limit || undefined,
     inviteLinkEnabled: dbWorld.invite_link_enabled ?? false,
     inviteLinkRole: dbWorld.invite_link_role as MemberRole | undefined,
     inviteLinkExpires: dbWorld.invite_link_expires || undefined,
@@ -95,7 +95,12 @@ export function adaptWorldToDatabase(
   if (domainWorld.conflictDrivers !== undefined) dbWorld.conflict_drivers = domainWorld.conflictDrivers;
   if (domainWorld.rulesConstraints !== undefined) dbWorld.rules_constraints = domainWorld.rulesConstraints;
   if (domainWorld.aestheticDirection !== undefined) dbWorld.aesthetic_direction = domainWorld.aestheticDirection;
-  
+
+  // World media and membership fields
+  if (domainWorld.imageUrl !== undefined) (dbWorld as any).image_url = domainWorld.imageUrl;
+  if (domainWorld.coverImage !== undefined) (dbWorld as any).cover_image = domainWorld.coverImage;
+  if (domainWorld.seatLimit !== undefined) (dbWorld as any).seat_limit = domainWorld.seatLimit;
+
   // Invite link settings
   if (domainWorld.inviteLinkEnabled !== undefined) dbWorld.invite_link_enabled = domainWorld.inviteLinkEnabled;
   if (domainWorld.inviteLinkRole !== undefined) dbWorld.invite_link_role = domainWorld.inviteLinkRole;
@@ -160,7 +165,7 @@ export function adaptTemplateFromDatabase(dbTemplate: DatabaseTemplate): Templat
   return {
     id: dbTemplate.id,
     worldId: dbTemplate.world_id || '',
-    folderId: undefined, // Not in current schema
+    folderId: dbTemplate.folder_id || undefined,
     name: dbTemplate.name,
     description: dbTemplate.description || '',
     icon: dbTemplate.icon || undefined,
@@ -208,7 +213,7 @@ export function adaptFolderFromDatabase(
     name: dbFolder.name,
     description: dbFolder.description || undefined,
     color: dbFolder.color || undefined,
-    kind: (dbFolder as any).kind as 'entities' | 'templates' || 'entities', // Should be set by database, default to entities as fallback
+    kind: (dbFolder.kind as 'entities' | 'templates') || 'entities', // Database has default 'entities'
     count: 0, // Entity count will be fetched separately if needed
     parentFolderId: dbFolder.parent_folder_id || undefined,
     createdAt: dbFolder.created_at,
@@ -224,15 +229,16 @@ export function adaptFolderToDatabase(
   domainFolder: Partial<Folder> & { [key: string]: unknown }
 ): Database['public']['Tables']['folders']['Insert'] | Database['public']['Tables']['folders']['Update'] {
   const { name, description, color, data, kind, count, ...customFields } = domainFolder;
-  
+
   const dbFolder: any = {};
   if (domainFolder.id !== undefined) dbFolder.id = domainFolder.id;
   if (domainFolder.worldId !== undefined) dbFolder.world_id = domainFolder.worldId;
   if (name !== undefined) dbFolder.name = name;
   if (description !== undefined) dbFolder.description = description;
   if (color !== undefined) dbFolder.color = color;
+  if (kind !== undefined) dbFolder.kind = kind;
   // Note: data field not in current schema, custom fields ignored for now
-  
+
   return dbFolder;
 }
 

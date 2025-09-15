@@ -29,7 +29,7 @@ export function AIPromptModal({
   const [prompt, setPrompt] = useState('');
 
   const handleSubmit = () => {
-    if (prompt.trim() && !isGenerating) {
+    if (!isGenerating) {
       onGenerate(prompt.trim());
     }
   };
@@ -52,7 +52,7 @@ export function AIPromptModal({
 
         <div>
           <label htmlFor="ai-prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Generation Prompt
+            Generation Prompt (optional)
           </label>
           <Textarea
             id="ai-prompt"
@@ -79,7 +79,7 @@ export function AIPromptModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!prompt.trim() || isGenerating}
+            disabled={isGenerating}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isGenerating ? (

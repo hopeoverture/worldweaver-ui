@@ -250,11 +250,7 @@ export class SupabaseWorldService {
   /**
    * Create a new world
    */
-  async createWorld(data: {
-    name: string;
-    description?: string;
-    isPublic?: boolean;
-  }, userId: string): Promise<World> {
+  async createWorld(data: Partial<World> & { name: string }, userId: string): Promise<World> {
     try {
       const supabase = await createServerSupabaseClient()
       // Ensure server client has an authenticated user context (RLS)
@@ -264,25 +260,27 @@ export class SupabaseWorldService {
         throw new Error('Not authenticated (server)');
       }
       const ownerId = authData.user.id;
+
+      // Use adaptWorldToDatabase to convert all fields properly
       const insertData = adaptWorldToDatabase({
-        name: data.name,
-        summary: data.description || '',
-        isPublic: data.isPublic || false,
+        ...data,
         isArchived: false,
         settings: {}
       });
-      
+
+      // Add required fields that come from server auth context
+      const finalInsertData = {
+        ...insertData,
+        owner_id: ownerId,
+        user_id: ownerId, // Required field - same as owner_id for new worlds
+        name: data.name, // Ensure required name field is set
+        is_archived: false,
+        settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
+      };
+
       const { data: world, error } = await supabase
         .from('worlds')
-        .insert({
-          name: data.name, // Required field
-          description: data.description || '',
-          owner_id: ownerId,
-          user_id: ownerId, // Required field - same as owner_id for new worlds
-          is_public: data.isPublic || false,
-          is_archived: false,
-          settings: {} as Database['public']['Tables']['worlds']['Row']['settings']
-        })
+        .insert(finalInsertData)
         .select()
         .single();
 

@@ -322,9 +322,9 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
         open={showAIPrompt}
         onClose={() => setShowAIPrompt(false)}
         onGenerate={handleAIGenerate}
-        title="Generate Template with AI"
-        description="Describe the type of template you want to create. The AI will generate appropriate fields based on your world context."
-        placeholder="e.g., A character template for fantasy heroes with combat abilities and backstory"
+        title="Generate Template Fields with AI"
+        description="Generate a complete template with field definitions. The AI will create appropriate field types and names based on your description and world context."
+        placeholder="Optional: Describe the type of template (e.g., A character template for fantasy heroes with combat abilities and backstory)"
         isGenerating={generateTemplate.isPending}
       />
     </Modal>

@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const schema = z.object({
       fromEntityId: z.string().uuid('From entity ID must be a valid UUID'),
       toEntityId: z.string().uuid('To entity ID must be a valid UUID'),
-      label: z.string().min(1, 'Relationship type is required').max(200, 'Relationship type too long'),
+      relationshipType: z.string().min(1, 'Relationship type is required').max(200, 'Relationship type too long'),
       description: z.string().max(1000, 'Description too long').nullable().optional(),
       metadata: z.record(z.unknown()).nullable().optional(),
     })
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         {
           fromEntityId: body.fromEntityId,
           toEntityId: body.toEntityId,
-          relationshipType: body.label,
+          relationshipType: body.relationshipType,
           description: body.description ?? null,
           metadata: (body.metadata ?? null) as any,
         },

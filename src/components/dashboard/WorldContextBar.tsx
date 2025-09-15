@@ -76,13 +76,15 @@ export function WorldContextBar({ world, onEditWorld }: WorldContextBarProps) {
           {world.overallTone ? (
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Tone</span>
-              <p className="text-sm text-gray-900 dark:text-gray-100">{world.overallTone}</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {Array.isArray(world.overallTone) ? world.overallTone.join(', ') : world.overallTone}
+              </p>
             </div>
           ) : null}
 
           {world.keyThemes?.length ? (
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Key Themes</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Theme</span>
               <p className="text-sm text-gray-900 dark:text-gray-100">{world.keyThemes.join(', ')}</p>
             </div>
           ) : null}
@@ -94,12 +96,6 @@ export function WorldContextBar({ world, onEditWorld }: WorldContextBarProps) {
             </div>
           ) : null}
 
-          {world.scopeScale ? (
-            <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Scope & Scale</span>
-              <p className="text-sm text-gray-900 dark:text-gray-100">{world.scopeScale}</p>
-            </div>
-          ) : null}
 
           {world.technologyLevel?.length ? (
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
@@ -124,7 +120,7 @@ export function WorldContextBar({ world, onEditWorld }: WorldContextBarProps) {
 
           {world.climateBiomes?.length ? (
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Climate & Biomes</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Travel Difficulty</span>
               <p className="text-sm text-gray-900 dark:text-gray-100">{world.climateBiomes.join(', ')}</p>
             </div>
           ) : null}
@@ -143,10 +139,12 @@ export function WorldContextBar({ world, onEditWorld }: WorldContextBarProps) {
             </div>
           ) : null}
 
-          {world.conflictDrivers ? (
+          {world.conflictDrivers?.length ? (
             <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-4">
               <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Conflict Drivers</span>
-              <p className="text-sm text-gray-900 dark:text-gray-100">{world.conflictDrivers}</p>
+              <p className="text-sm text-gray-900 dark:text-gray-100">
+                {Array.isArray(world.conflictDrivers) ? world.conflictDrivers.join(', ') : world.conflictDrivers}
+              </p>
             </div>
           ) : null}
 

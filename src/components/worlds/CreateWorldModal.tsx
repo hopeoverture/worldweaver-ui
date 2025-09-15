@@ -18,97 +18,117 @@ interface CreateWorldModalProps {
 
 interface WorldFormData {
   name: string;
-  logline: string;
-  genreBlend: string[];
-  overallTone: string;
-  keyThemes: string[];
+  summary: string;
+  genre: string;
+  customGenre: string;
+  tone: string[];
+  customTone: string[];
+  theme: string[];
+  customTheme: string[];
+  magicLevel: string;
+  customMagicLevel: string;
+  technologyLevel: string;
+  customTechnologyLevel: string;
   audienceRating: string;
-  scopeScale: string;
-  technologyLevel: string[];
-  magicLevel: string[];
-  cosmologyModel: string;
-  climateBiomes: string[];
-  calendarTimekeeping: string;
-  societalOverview: string;
+  customAudienceRating: string;
   conflictDrivers: string[];
-  rulesConstraints: string;
-  aestheticDirection: string;
+  customConflictDrivers: string[];
+  travelDifficulty: string[];
+  customTravelDifficulty: string[];
+  cosmologyModel: string[];
+  customCosmologyModel: string[];
 }
 
 const initialFormData: WorldFormData = {
   name: '',
-  logline: '',
-  genreBlend: [],
-  overallTone: '',
-  keyThemes: [],
+  summary: '',
+  genre: '',
+  customGenre: '',
+  tone: [],
+  customTone: [],
+  theme: [],
+  customTheme: [],
+  magicLevel: '',
+  customMagicLevel: '',
+  technologyLevel: '',
+  customTechnologyLevel: '',
   audienceRating: '',
-  scopeScale: '',
-  technologyLevel: [],
-  magicLevel: [],
-  cosmologyModel: '',
-  climateBiomes: [],
-  calendarTimekeeping: '',
-  societalOverview: '',
+  customAudienceRating: '',
   conflictDrivers: [],
-  rulesConstraints: '',
-  aestheticDirection: '',
+  customConflictDrivers: [],
+  travelDifficulty: [],
+  customTravelDifficulty: [],
+  cosmologyModel: [],
+  customCosmologyModel: [],
 };
 
 const genreOptions = [
-  'Fantasy', 'Science-Fiction', 'Post-Apocalyptic', 'Horror', 'Historical', 
-  'Mystery', 'Romance', 'Adventure', 'Cyberpunk', 'Steampunk', 'Urban Fantasy',
-  'Space Opera', 'Dystopian', 'Superhero', 'Western'
+  'High Fantasy', 'Low Fantasy', 'Sword & Sorcery', 'Weird West', 'Dark Fantasy',
+  'Science Fiction', 'Space Opera', 'Cyberpunk', 'Steampunk', 'Dieselpunk',
+  'Post-Apocalyptic', 'Gothic Horror', 'Historical', 'Custom'
 ];
 
 const toneOptions = [
-  'Bright', 'Hopeful', 'Neutral', 'Dark', 'Grim', 'Whimsical', 'Gritty', 
-  'Melancholic', 'Satirical', 'Epic', 'Intimate'
+  'Whimsical', 'Cozy', 'Hopeful', 'Heroic', 'Mysterious', 'Noir', 'Gritty',
+  'Grimdark', 'Bittersweet', 'Macabre', 'Custom'
 ];
 
 const themeOptions = [
-  'Survival', 'Found Family', 'Power Corrupts', 'Destiny vs. Choice', 
-  'Nature vs. Industry', 'Coming of Age', 'Redemption', 'Sacrifice', 
-  'Identity', 'Freedom', 'Justice', 'Love', 'Betrayal', 'Legacy'
-];
-
-const audienceOptions = [
-  'All Ages', 'Teen', 'Mature', 'Young Adult', 'Adult'
-];
-
-const scopeOptions = [
-  'Localized', 'Regional', 'Continental', 'Planetary', 'Multi-world/Planar', 
-  'Galactic', 'Universal', 'Interdimensional'
-];
-
-const technologyOptions = [
-  'Stone-Age', 'Bronze-Age', 'Iron-Age', 'Medieval', 'Renaissance', 
-  'Industrial', 'Modern', 'Near-Future', 'Futuristic', 'Post-Singularity'
+  'Discovery', 'Survival', 'Corruption', 'Redemption', 'Rebellion',
+  'Destiny vs Free Will', 'Power & Its Cost', 'Tradition vs Progress',
+  'Identity & Belonging', 'Environmental Balance', 'Custom'
 ];
 
 const magicOptions = [
-  'None', 'Low', 'Moderate', 'High', 'Soft Magic', 'Hard Magic', 
-  'Divine Magic', 'Elemental', 'Psychic', 'Ritualistic'
+  'None', 'Latent', 'Cantrip', 'Hedge', 'Scholastic', 'Regulated',
+  'Pervasive', 'High', 'Mythic', 'Apocalyptic', 'Custom'
 ];
 
-const cosmologyOptions = [
-  'Naturalistic', 'Mythic', 'Planar/Multiverse', 'Spacefaring', 
-  'Dreamlike/Surreal', 'Cyclical', 'Linear', 'Fractal'
+const technologyOptions = [
+  'Stone Age', 'Bronze Age', 'Iron Age', 'Medieval', 'Early Gunpowder',
+  'Industrial', 'Electrical', 'Information', 'Near-Future', 'Interstellar', 'Custom'
 ];
 
-const climateOptions = [
-  'Temperate', 'Tropical', 'Arid', 'Polar', 'Oceanic', 'Alpine', 
-  'Desert', 'Swamp', 'Steppe', 'Tundra', 'Volcanic', 'Floating Islands'
+const audienceOptions = [
+  'All Ages', 'Teen', 'Young Adult', 'Mature', 'Adult', 'Custom'
 ];
 
 const conflictOptions = [
-  'Scarcity', 'Ideology', 'Territory', 'Revolution', 'Colonization', 
-  'Cosmic Threat', 'Plague', 'Ancient Secrets', 'Religious War', 
-  'Economic Collapse', 'Environmental Disaster', 'Technological Singularity'
+  'Resource Scarcity', 'Succession Crisis', 'Religious Schism', 'Colonial Expansion',
+  'Class Inequality', 'Forbidden Power Arms Race', 'Border Disputes',
+  'Plague or Ecocide', 'Ancient Foe Awakens', 'Prophecy Manipulation', 'Custom'
+];
+
+const travelDifficultyOptions = [
+  'Treacherous Terrain — mountains, swamps, ice, sinkholes',
+  'Extreme Weather — blizzards, sandstorms, monsoons, heatwaves',
+  'Poor Infrastructure — broken bridges, washed-out roads, no waystations',
+  'Banditry/Piracy — ambushes, toll gangs, raiders at chokepoints',
+  'Hostile Creatures — monsters, apex predators, swarms',
+  'Wars/Blockades — checkpoints, sieges, conscription, embargoes',
+  'Borders & Permits — visas, tariffs, tithe gates, bureaucratic delays',
+  'Disease/Quarantine — plague zones, inspections, vaccination proof',
+  'Arcane/Tech Anomalies — anti-magic fields, EMP zones, rifts, wild surges',
+  'Logistics & Navigation — fuel/water scarcity, map drift, dead zones for comms',
+  'Custom'
+];
+
+const cosmologyOptions = [
+  'Axis Mundi (World-Tree) — roots = underworld, trunk = mortal realm, branches = heavens',
+  'Layered Planes (Onion/Wheel) — concentric/adjacent planes aligned to concepts (order/chaos, elements)',
+  'Flat World on Turtle/Serpent — disc world with edge seas, waterfall rims, cosmic beast bearer',
+  'Hollow World (Inner Sun) — inhabited inner shell; polar entrances; sky is the core star',
+  'Crystal Spheres (Geocentric) — celestial bodies fixed in nested, transparent spheres; ritual astronomy',
+  'Astral Sea & Island Realms — starry ocean between planes; gods sail currents to domain-isles',
+  'Shattered Realms (Floating Shards) — world broken into sky-islands/planes linked by gates/leylines',
+  'Ringworld / Megastructure — artificial band/shell around a star; gravity by rotation; engineered biomes',
+  'Many-Worlds / Branching Timelines — every choice spawns parallels; crossings, echoes, paradox law',
+  'Cyclical Ages (Creation/Unmaking) — universe rebirths in eras; residue relics survive resets',
+  'Custom'
 ];
 
 export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const [formData, setFormData] = useState<WorldFormData>(initialFormData);
-  const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const createWorld = useCreateWorld();
   const generateWorldFields = useGenerateWorldFields();
@@ -117,9 +137,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiGenerationTarget, setAiGenerationTarget] = useState<string | string[]>('');
 
-  const totalSteps = 3;
-
-  const handleInputChange = (field: keyof WorldFormData, value: string) => {
+  const handleInputChange = (field: keyof WorldFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -135,11 +153,6 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     }));
   };
 
-  const handleTagInput = (field: keyof WorldFormData, value: string) => {
-    const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-    setFormData(prev => ({ ...prev, [field]: tags }));
-  };
-
   const handleAIGenerate = async (prompt: string) => {
     try {
       const fieldsToGenerate = Array.isArray(aiGenerationTarget)
@@ -149,7 +162,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
       const result = await generateWorldFields.mutateAsync({
         prompt,
         fieldsToGenerate,
-        existingData: formData
+        existingData: formData as any
       });
 
       // Update form data with generated fields
@@ -170,63 +183,52 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     setShowAIModal(true);
   };
 
-  const validateStep = (step: number): boolean => {
+  const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (step === 1) {
-      if (!formData.name.trim()) newErrors.name = 'World name is required';
-      if (!formData.logline.trim()) newErrors.logline = 'Logline is required';
-      if (formData.genreBlend.length === 0) newErrors.genreBlend = 'Select at least one genre';
-      if (!formData.overallTone) newErrors.overallTone = 'Overall tone is required';
-      if (formData.keyThemes.length === 0) newErrors.keyThemes = 'Add at least one theme';
-    }
-
-    if (step === 2) {
-      if (!formData.audienceRating) newErrors.audienceRating = 'Audience rating is required';
-      if (!formData.scopeScale) newErrors.scopeScale = 'Scope & scale is required';
-      if (!formData.cosmologyModel) newErrors.cosmologyModel = 'Cosmology model is required';
+    // Only require world name
+    if (!formData.name.trim()) {
+      newErrors.name = 'World name is required';
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps));
-    }
-  };
-
-  const handlePrevious = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
-
   const handleSubmit = async () => {
-    if (validateStep(currentStep)) {
+    if (validateForm()) {
       try {
+        // Combine regular and custom values for multi-select fields
+        const combinedTone = [...formData.tone.filter(t => t !== 'Custom'), ...formData.customTone.filter(t => t.trim())];
+        const combinedTheme = [...formData.theme.filter(t => t !== 'Custom'), ...formData.customTheme.filter(t => t.trim())];
+        const combinedConflictDrivers = [...formData.conflictDrivers.filter(c => c !== 'Custom'), ...formData.customConflictDrivers.filter(c => c.trim())];
+        const combinedTravelDifficulty = [...formData.travelDifficulty.filter(t => t !== 'Custom'), ...formData.customTravelDifficulty.filter(t => t.trim())];
+        const combinedCosmologyModel = [...formData.cosmologyModel.filter(c => c !== 'Custom'), ...formData.customCosmologyModel.filter(c => c.trim())];
+
+        // Handle single-select custom fields
+        const finalGenre = formData.genre === 'Custom' ? formData.customGenre.trim() : formData.genre;
+        const finalMagicLevel = formData.magicLevel === 'Custom' ? formData.customMagicLevel.trim() : formData.magicLevel;
+        const finalTechnologyLevel = formData.technologyLevel === 'Custom' ? formData.customTechnologyLevel.trim() : formData.technologyLevel;
+        const finalAudienceRating = formData.audienceRating === 'Custom' ? formData.customAudienceRating.trim() : formData.audienceRating;
+
         await createWorld.mutateAsync({
           name: formData.name,
-          // Keep description as a general summary; use logline for dedicated column too
-          description: formData.logline,
-          logline: formData.logline,
-          genreBlend: formData.genreBlend,
-          overallTone: formData.overallTone || undefined,
-          keyThemes: formData.keyThemes,
-          audienceRating: formData.audienceRating || undefined,
-          scopeScale: formData.scopeScale || undefined,
-          technologyLevel: formData.technologyLevel,
-          magicLevel: formData.magicLevel,
-          cosmologyModel: formData.cosmologyModel || undefined,
-          climateBiomes: formData.climateBiomes,
-          calendarTimekeeping: formData.calendarTimekeeping || undefined,
-          societalOverview: formData.societalOverview || undefined,
-          conflictDrivers: formData.conflictDrivers,
-          rulesConstraints: formData.rulesConstraints || undefined,
-          aestheticDirection: formData.aestheticDirection || undefined,
+          description: formData.summary || undefined,
+          // Map new fields to existing database schema
+          genreBlend: finalGenre ? [finalGenre] : undefined,
+          overallTone: combinedTone.length > 0 ? combinedTone.join(', ') : undefined,
+          keyThemes: combinedTheme.length > 0 ? combinedTheme : undefined,
+          magicLevel: finalMagicLevel ? [finalMagicLevel] : undefined,
+          technologyLevel: finalTechnologyLevel ? [finalTechnologyLevel] : undefined,
+          audienceRating: finalAudienceRating || undefined,
+          conflictDrivers: combinedConflictDrivers.length > 0 ? combinedConflictDrivers : undefined,
+          // Store travel difficulty and cosmology model in existing fields or settings
+          climateBiomes: combinedTravelDifficulty.length > 0 ? combinedTravelDifficulty : undefined, // Temp mapping
+          cosmologyModel: combinedCosmologyModel.length > 0 ? combinedCosmologyModel.join(', ') : undefined,
         });
+
         // Reset form and close modal
         setFormData(initialFormData);
-        setCurrentStep(1);
         setErrors({});
         onClose();
       } catch (e) {
@@ -235,29 +237,53 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     }
   };
 
-  const renderMultiSelect = (
+  const renderSingleSelect = (
     label: string,
     field: keyof WorldFormData,
+    customField: keyof WorldFormData,
     options: string[],
-    error?: string,
-    showAIButton?: boolean
+    error?: string
   ) => (
     <div>
       <div className="flex items-center justify-between mb-2">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           {label}
         </label>
-        {showAIButton && (
-          <AIGenerateButton
-            onClick={() => openAIModal(field)}
-            disabled={generateWorldFields.isPending}
-            isGenerating={generateWorldFields.isPending}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Generate
-          </AIGenerateButton>
-        )}
+      </div>
+      <Select
+        value={formData[field] as string}
+        onChange={(e) => handleInputChange(field, e.target.value)}
+        className={error ? 'border-red-500' : ''}
+      >
+        <option value="">Select {label.toLowerCase()}</option>
+        {options.map(option => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </Select>
+      {formData[field] === 'Custom' && (
+        <Input
+          value={formData[customField] as string}
+          onChange={(e) => handleInputChange(customField, e.target.value)}
+          placeholder={`Enter custom ${label.toLowerCase()}`}
+          className="mt-2"
+        />
+      )}
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+
+  const renderMultiSelect = (
+    label: string,
+    field: keyof WorldFormData,
+    customField: keyof WorldFormData,
+    options: string[],
+    error?: string
+  ) => (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
       </div>
       <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 min-h-[100px]">
         {options.map(option => (
@@ -275,52 +301,16 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
           </button>
         ))}
       </div>
-      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-    </div>
-  );
-
-  const renderTagInput = (
-    label: string,
-    field: keyof WorldFormData,
-    placeholder: string,
-    error?: string,
-    showAIButton?: boolean
-  ) => (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {label}
-        </label>
-        {showAIButton && (
-          <AIGenerateButton
-            onClick={() => openAIModal(field)}
-            disabled={generateWorldFields.isPending}
-            isGenerating={generateWorldFields.isPending}
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            Generate
-          </AIGenerateButton>
-        )}
-      </div>
-      <Input
-        placeholder={placeholder}
-        onChange={(e) => handleTagInput(field, e.target.value)}
-        className={error ? 'border-red-500' : ''}
-      />
-      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-        Separate multiple items with commas
-      </p>
-      {(formData[field] as string[]).length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {(formData[field] as string[]).map((tag, index) => (
-            <span
-              key={index}
-              className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
+      {(formData[field] as string[]).includes('Custom') && (
+        <div className="mt-3">
+          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+            Custom {label}
+          </label>
+          <Input
+            value={(formData[customField] as string[]).join(', ')}
+            onChange={(e) => handleInputChange(customField, e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+            placeholder={`Enter custom ${label.toLowerCase()}, separated by commas`}
+          />
         </div>
       )}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
@@ -330,9 +320,7 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div
-      className='fixed inset-0 z-50 flex items-center justify-center p-4'
-    >
+    <div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
       <button
         aria-hidden='true'
         tabIndex={-1}
@@ -353,65 +341,36 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 Create New World
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Step {currentStep} of {totalSteps}
+                Define the core parameters of your world
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex space-x-2">
-                {Array.from({ length: totalSteps }, (_, i) => (
-                  <div
-                    key={i}
-                    className={`w-3 h-3 rounded-full ${
-                      i + 1 <= currentStep
-                        ? 'bg-blue-600'
-                        : 'bg-gray-300 dark:bg-neutral-600'
-                    }`}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={onClose}
-                aria-label='Close'
-                className='h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600'
-              >
-                ✕
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              aria-label='Close'
+              className='h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-neutral-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600'
+            >
+              ✕
+            </button>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {currentStep === 1 && (
+          <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-8">
+            {/* Basic Information */}
             <div className="space-y-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  Core Information
+                  Basic Information
                 </h3>
-                <AIGenerateButton
-                  onClick={() => openAIModal(['name', 'logline', 'genreBlend', 'overallTone', 'keyThemes'])}
-                  disabled={generateWorldFields.isPending}
-                  isGenerating={generateWorldFields.isPending}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  Generate All Core Fields
-                </AIGenerateButton>
               </div>
 
+              {/* World Name */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     World Name *
                   </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('name')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
                 </div>
                 <Input
                   value={formData.name}
@@ -422,194 +381,14 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
               </div>
 
+              {/* World Summary */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    One-Sentence Logline *
+                    World Summary
                   </label>
                   <AIGenerateButton
-                    onClick={() => openAIModal('logline')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Input
-                  value={formData.logline}
-                  onChange={(e) => handleInputChange('logline', e.target.value)}
-                  placeholder="A tight hook for the world's premise"
-                  className={errors.logline ? 'border-red-500' : ''}
-                />
-                {errors.logline && <p className="mt-1 text-sm text-red-600">{errors.logline}</p>}
-              </div>
-
-              {renderMultiSelect('Genre Blend *', 'genreBlend', genreOptions, errors.genreBlend, true)}
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Overall Tone *
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('overallTone')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Select
-                  value={formData.overallTone}
-                  onChange={(e) => handleInputChange('overallTone', e.target.value)}
-                  className={errors.overallTone ? 'border-red-500' : ''}
-                >
-                  <option value="">Select overall tone</option>
-                  {toneOptions.map(tone => (
-                    <option key={tone} value={tone}>{tone}</option>
-                  ))}
-                </Select>
-                {errors.overallTone && <p className="mt-1 text-sm text-red-600">{errors.overallTone}</p>}
-              </div>
-
-              {renderTagInput('Key Themes *', 'keyThemes', 'e.g., Survival, Found Family, Power Corrupts', errors.keyThemes, true)}
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  World Parameters
-                </h3>
-                <AIGenerateButton
-                  onClick={() => openAIModal(['audienceRating', 'scopeScale', 'technologyLevel', 'magicLevel', 'cosmologyModel', 'climateBiomes'])}
-                  disabled={generateWorldFields.isPending}
-                  isGenerating={generateWorldFields.isPending}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  Generate All Parameters
-                </AIGenerateButton>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Intended Audience Rating *
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('audienceRating')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Select
-                  value={formData.audienceRating}
-                  onChange={(e) => handleInputChange('audienceRating', e.target.value)}
-                  className={errors.audienceRating ? 'border-red-500' : ''}
-                >
-                  <option value="">Select audience rating</option>
-                  {audienceOptions.map(rating => (
-                    <option key={rating} value={rating}>{rating}</option>
-                  ))}
-                </Select>
-                {errors.audienceRating && <p className="mt-1 text-sm text-red-600">{errors.audienceRating}</p>}
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Scope & Scale *
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('scopeScale')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Select
-                  value={formData.scopeScale}
-                  onChange={(e) => handleInputChange('scopeScale', e.target.value)}
-                  className={errors.scopeScale ? 'border-red-500' : ''}
-                >
-                  <option value="">Select scope and scale</option>
-                  {scopeOptions.map(scope => (
-                    <option key={scope} value={scope}>{scope}</option>
-                  ))}
-                </Select>
-                {errors.scopeScale && <p className="mt-1 text-sm text-red-600">{errors.scopeScale}</p>}
-              </div>
-
-              {renderMultiSelect('Technology Level', 'technologyLevel', technologyOptions, undefined, true)}
-              {renderMultiSelect('Magic Level', 'magicLevel', magicOptions, undefined, true)}
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Cosmology Model *
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('cosmologyModel')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Select
-                  value={formData.cosmologyModel}
-                  onChange={(e) => handleInputChange('cosmologyModel', e.target.value)}
-                  className={errors.cosmologyModel ? 'border-red-500' : ''}
-                >
-                  <option value="">Select cosmology model</option>
-                  {cosmologyOptions.map(model => (
-                    <option key={model} value={model}>{model}</option>
-                  ))}
-                </Select>
-                {errors.cosmologyModel && <p className="mt-1 text-sm text-red-600">{errors.cosmologyModel}</p>}
-              </div>
-
-              {renderMultiSelect('Climate & Biomes', 'climateBiomes', climateOptions, undefined, true)}
-            </div>
-          )}
-
-          {currentStep === 3 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                  World Details
-                </h3>
-                <AIGenerateButton
-                  onClick={() => openAIModal(['calendarTimekeeping', 'societalOverview', 'conflictDrivers', 'rulesConstraints', 'aestheticDirection'])}
-                  disabled={generateWorldFields.isPending}
-                  isGenerating={generateWorldFields.isPending}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  Generate All Details
-                </AIGenerateButton>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Calendar & Timekeeping
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('calendarTimekeeping')}
+                    onClick={() => openAIModal('summary')}
                     disabled={generateWorldFields.isPending}
                     isGenerating={generateWorldFields.isPending}
                     size="sm"
@@ -619,119 +398,73 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                   </AIGenerateButton>
                 </div>
                 <Textarea
-                  value={formData.calendarTimekeeping}
-                  onChange={(e) => handleInputChange('calendarTimekeeping', e.target.value)}
-                  placeholder="Day length, year length, seasons count, number of moons/suns, notable cycles..."
+                  value={formData.summary}
+                  onChange={(e) => handleInputChange('summary', e.target.value)}
+                  placeholder="A brief description of your world..."
                   rows={3}
                 />
               </div>
+            </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Societal Overview
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('societalOverview')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Textarea
-                  value={formData.societalOverview}
-                  onChange={(e) => handleInputChange('societalOverview', e.target.value)}
-                  placeholder="Social organization, common institutions, economic patterns, cultural mix..."
-                  rows={4}
-                />
-              </div>
+            {/* Core Settings */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                Core Settings
+              </h3>
 
-              {renderMultiSelect('Conflict Drivers', 'conflictDrivers', conflictOptions, undefined, true)}
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Rules & Constraints
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('rulesConstraints')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Textarea
-                  value={formData.rulesConstraints}
-                  onChange={(e) => handleInputChange('rulesConstraints', e.target.value)}
-                  placeholder="Physics dials, taboos, supernatural rules, what can/can't happen, costs/limits for power/tech..."
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Aesthetic Direction
-                  </label>
-                  <AIGenerateButton
-                    onClick={() => openAIModal('aestheticDirection')}
-                    disabled={generateWorldFields.isPending}
-                    isGenerating={generateWorldFields.isPending}
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Generate
-                  </AIGenerateButton>
-                </div>
-                <Textarea
-                  value={formData.aestheticDirection}
-                  onChange={(e) => handleInputChange('aestheticDirection', e.target.value)}
-                  placeholder="Visual motifs, textures, architecture vibes, soundscape, color palette keywords..."
-                  rows={4}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {renderSingleSelect('Genre', 'genre', 'customGenre', genreOptions, errors.genre)}
+                {renderSingleSelect('Magic Level', 'magicLevel', 'customMagicLevel', magicOptions)}
+                {renderSingleSelect('Technology Level', 'technologyLevel', 'customTechnologyLevel', technologyOptions)}
+                {renderSingleSelect('Audience Rating', 'audienceRating', 'customAudienceRating', audienceOptions)}
               </div>
             </div>
-          )}
+
+            {/* Multi-Select Fields */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                World Characteristics
+              </h3>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {renderMultiSelect('Tone', 'tone', 'customTone', toneOptions)}
+                {renderMultiSelect('Theme', 'theme', 'customTheme', themeOptions)}
+                {renderMultiSelect('Conflict Drivers', 'conflictDrivers', 'customConflictDrivers', conflictOptions)}
+                {renderMultiSelect('Travel Difficulty', 'travelDifficulty', 'customTravelDifficulty', travelDifficultyOptions)}
+              </div>
+
+              <div className="col-span-full">
+                {renderMultiSelect('Cosmology Model', 'cosmologyModel', 'customCosmologyModel', cosmologyOptions)}
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-neutral-700">
+              <Button variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createWorld.isPending}
+                loading={createWorld.isPending}
+              >
+                {createWorld.isPending ? 'Creating...' : 'Create World'}
+              </Button>
+            </div>
+          </form>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 dark:border-neutral-700">
-          <Button
-            variant="outline"
-            onClick={currentStep === 1 ? onClose : handlePrevious}
-          >
-            {currentStep === 1 ? 'Cancel' : 'Previous'}
-          </Button>
-
-          <div className="flex gap-3">
-            {currentStep < totalSteps ? (
-              <Button onClick={handleNext}>
-                Next
-              </Button>
-            ) : (
-              <Button onClick={handleSubmit}>
-                Create World
-              </Button>
-            )}
-          </div>
-        </div>
+        {/* AI Prompt Modal */}
+        <AIPromptModal
+          open={showAIModal}
+          onClose={() => setShowAIModal(false)}
+          onGenerate={handleAIGenerate}
+          isGenerating={generateWorldFields.isPending}
+          title="Generate World Field Values"
+          description="Generate content for the selected world fields. The AI will create values based on existing fields and your world context. You can leave the prompt empty to generate based on context alone."
+          placeholder="Optional: Describe the style, tone, or specific direction for generating these field values..."
+        />
       </div>
-
-      {/* AI Prompt Modal */}
-      <AIPromptModal
-        open={showAIModal}
-        onClose={() => setShowAIModal(false)}
-        onGenerate={handleAIGenerate}
-        isGenerating={generateWorldFields.isPending}
-        title="Generate World Fields"
-        placeholder="Describe what kind of world fields you'd like to generate..."
-      />
     </div>
   );
 }

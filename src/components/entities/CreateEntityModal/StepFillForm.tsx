@@ -504,13 +504,13 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
         }
         description={
           aiGenerationTarget === 'all'
-            ? `Generate values for all ${template.fields.length} fields in this ${template.name}. The AI will use your world context and any existing field values.`
-            : `Generate a value for the "${template.fields.find(f => f.id === aiGenerationTarget)?.name}" field. The AI will consider your world context and other field values.`
+            ? `Generate values for all ${template.fields.length} fields in this ${template.name}. The AI will use your world context and any existing field values. You can leave the prompt empty to generate based on context alone.`
+            : `Generate a value for the "${template.fields.find(f => f.id === aiGenerationTarget)?.name}" field. The AI will consider your world context and other field values. You can leave the prompt empty to generate based on context alone.`
         }
         placeholder={
           aiGenerationTarget === 'all'
-            ? `Describe what kind of ${template.name.toLowerCase()} you want to create...`
-            : `Describe what you want for the ${template.fields.find(f => f.id === aiGenerationTarget)?.name} field...`
+            ? `Optional: Describe what kind of ${template.name.toLowerCase()} you want to create...`
+            : `Optional: Describe what you want for the ${template.fields.find(f => f.id === aiGenerationTarget)?.name} field...`
         }
         isGenerating={generateEntityFields.isPending}
       />

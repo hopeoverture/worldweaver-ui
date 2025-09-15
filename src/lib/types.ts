@@ -65,6 +65,45 @@ export type WorldSettings = Record<string, Json>
 export type RelationshipMetadata = Record<string, Json>
 
 // ==============================================
+// AI Usage Tracking Types
+// ==============================================
+
+// AI Usage Record - maps to ai_usage table
+export interface AIUsageRecord {
+  id: number;
+  userId: string;
+  operation: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number | null;
+  costUsd: number;
+  currency: string;
+  model: string | null;
+  provider: string | null;
+  requestId: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  success: boolean | null;
+  errorCode: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+// AI Quota Record - maps to ai_quotas table
+export interface AIQuotaRecord {
+  id: number;
+  userId: string;
+  periodStart: string;
+  periodEnd: string;
+  tokenLimit: number | null;
+  usdLimit: number | null;
+  usedTokens: number;
+  usedUsd: number;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+// ==============================================
 // AI Generation Types
 // ==============================================
 
@@ -264,7 +303,7 @@ export type Folder = {
   worldId: ID;
   name: string;
   description?: string;
-  kind?: FolderKind; // Optional since not in database schema yet
+  kind: FolderKind; // Required - exists in database schema with default 'entities'
   color?: string;
   count: number;
   parentFolderId?: string; // From database schema

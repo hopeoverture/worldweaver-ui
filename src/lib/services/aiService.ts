@@ -676,17 +676,27 @@ Example format:
     if (worldContext.description) context += `Description: ${worldContext.description}\n`;
     if (worldContext.logline) context += `Logline: ${worldContext.logline}\n`;
     if (worldContext.genreBlend?.length) context += `Genre: ${worldContext.genreBlend.join(', ')}\n`;
-    if (worldContext.overallTone) context += `Tone: ${worldContext.overallTone}\n`;
-    if (worldContext.keyThemes?.length) context += `Key Themes: ${worldContext.keyThemes.join(', ')}\n`;
+    if (worldContext.overallTone) {
+      const tone = Array.isArray(worldContext.overallTone)
+        ? worldContext.overallTone.join(', ')
+        : worldContext.overallTone;
+      context += `Tone: ${tone}\n`;
+    }
+    if (worldContext.keyThemes?.length) context += `Theme: ${worldContext.keyThemes.join(', ')}\n`;
     if (worldContext.audienceRating) context += `Audience Rating: ${worldContext.audienceRating}\n`;
     if (worldContext.scopeScale) context += `Scope & Scale: ${worldContext.scopeScale}\n`;
     if (worldContext.technologyLevel?.length) context += `Technology Level: ${worldContext.technologyLevel.join(', ')}\n`;
     if (worldContext.magicLevel?.length) context += `Magic Level: ${worldContext.magicLevel.join(', ')}\n`;
     if (worldContext.cosmologyModel) context += `Cosmology: ${worldContext.cosmologyModel}\n`;
-    if (worldContext.climateBiomes?.length) context += `Climate & Biomes: ${worldContext.climateBiomes.join(', ')}\n`;
+    if (worldContext.climateBiomes?.length) context += `Travel Difficulty: ${worldContext.climateBiomes.join(', ')}\n`;
     if (worldContext.calendarTimekeeping) context += `Calendar & Timekeeping: ${worldContext.calendarTimekeeping}\n`;
     if (worldContext.societalOverview) context += `Societal Overview: ${worldContext.societalOverview}\n`;
-    if (worldContext.conflictDrivers) context += `Conflict Drivers: ${worldContext.conflictDrivers}\n`;
+    if (worldContext.conflictDrivers) {
+      const drivers = Array.isArray(worldContext.conflictDrivers)
+        ? worldContext.conflictDrivers.join(', ')
+        : worldContext.conflictDrivers;
+      context += `Conflict Drivers: ${drivers}\n`;
+    }
     if (worldContext.rulesConstraints) context += `Rules & Constraints: ${worldContext.rulesConstraints}\n`;
     if (worldContext.aestheticDirection) context += `Aesthetic Direction: ${worldContext.aestheticDirection}\n`;
 
