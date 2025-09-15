@@ -607,6 +607,7 @@ export type Database = {
           seat_limit: number | null
           settings: Json | null
           societal_overview: string | null
+          summary: string | null
           technology_level: string[] | null
           updated_at: string
           user_id: string
@@ -641,6 +642,7 @@ export type Database = {
           seat_limit?: number | null
           settings?: Json | null
           societal_overview?: string | null
+          summary?: string | null
           technology_level?: string[] | null
           updated_at?: string
           user_id: string
@@ -675,6 +677,7 @@ export type Database = {
           seat_limit?: number | null
           settings?: Json | null
           societal_overview?: string | null
+          summary?: string | null
           technology_level?: string[] | null
           updated_at?: string
           user_id?: string
