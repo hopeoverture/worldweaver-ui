@@ -125,6 +125,34 @@ export interface AIImageGenerationResponse {
   revisedPrompt?: string;
 }
 
+export interface AIWorldFieldsGenerationRequest {
+  worldId?: string;
+  prompt?: string;
+  fieldsToGenerate: string[]; // Array of field names to generate
+  existingData?: Partial<{
+    name: string;
+    logline: string;
+    genreBlend: string[];
+    overallTone: string;
+    keyThemes: string[];
+    audienceRating: string;
+    scopeScale: string;
+    technologyLevel: string[];
+    magicLevel: string[];
+    cosmologyModel: string;
+    climateBiomes: string[];
+    calendarTimekeeping: string;
+    societalOverview: string;
+    conflictDrivers: string[];
+    rulesConstraints: string;
+    aestheticDirection: string;
+  }>;
+}
+
+export interface AIWorldFieldsGenerationResponse {
+  fields: Record<string, unknown>;
+}
+
 // Folder Data Structure - stored in folders.data JSONB column
 // Note: For type safety, cast values appropriately when reading from database
 export type FolderData = Record<string, Json>

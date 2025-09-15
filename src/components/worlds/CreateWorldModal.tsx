@@ -7,6 +7,9 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { useCreateWorld } from '@/hooks/mutations/useCreateWorld';
+import { useGenerateWorldFields } from '@/hooks/mutations/useGenerateWorldFields';
+import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
+import { AIPromptModal } from '@/components/ai/AIPromptModal';
 
 interface CreateWorldModalProps {
   isOpen: boolean;
@@ -108,6 +111,11 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const createWorld = useCreateWorld();
+  const generateWorldFields = useGenerateWorldFields();
+
+  // AI generation state
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiGenerationTarget, setAiGenerationTarget] = useState<string | string[]>('');
 
   const totalSteps = 3;
 
@@ -130,6 +138,36 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
   const handleTagInput = (field: keyof WorldFormData, value: string) => {
     const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
     setFormData(prev => ({ ...prev, [field]: tags }));
+  };
+
+  const handleAIGenerate = async (prompt: string) => {
+    try {
+      const fieldsToGenerate = Array.isArray(aiGenerationTarget)
+        ? aiGenerationTarget
+        : [aiGenerationTarget];
+
+      const result = await generateWorldFields.mutateAsync({
+        prompt,
+        fieldsToGenerate,
+        existingData: formData
+      });
+
+      // Update form data with generated fields
+      setFormData(prev => ({
+        ...prev,
+        ...result.fields
+      }));
+
+      setShowAIModal(false);
+    } catch (error) {
+      // Error handling is done by the mutation hook
+      console.error('AI generation failed:', error);
+    }
+  };
+
+  const openAIModal = (target: string | string[]) => {
+    setAiGenerationTarget(target);
+    setShowAIModal(true);
   };
 
   const validateStep = (step: number): boolean => {
@@ -201,12 +239,26 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     label: string,
     field: keyof WorldFormData,
     options: string[],
-    error?: string
+    error?: string,
+    showAIButton?: boolean
   ) => (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        {label}
-      </label>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
+        {showAIButton && (
+          <AIGenerateButton
+            onClick={() => openAIModal(field)}
+            disabled={generateWorldFields.isPending}
+            isGenerating={generateWorldFields.isPending}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Generate
+          </AIGenerateButton>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-800 min-h-[100px]">
         {options.map(option => (
           <button
@@ -231,12 +283,26 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
     label: string,
     field: keyof WorldFormData,
     placeholder: string,
-    error?: string
+    error?: string,
+    showAIButton?: boolean
   ) => (
     <div>
-      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-        {label}
-      </label>
+      <div className="flex items-center justify-between mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {label}
+        </label>
+        {showAIButton && (
+          <AIGenerateButton
+            onClick={() => openAIModal(field)}
+            disabled={generateWorldFields.isPending}
+            isGenerating={generateWorldFields.isPending}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Generate
+          </AIGenerateButton>
+        )}
+      </div>
       <Input
         placeholder={placeholder}
         onChange={(e) => handleTagInput(field, e.target.value)}
@@ -318,14 +384,35 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
         <div className="flex-1 overflow-y-auto p-6">
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                Core Information
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Core Information
+                </h3>
+                <AIGenerateButton
+                  onClick={() => openAIModal(['name', 'logline', 'genreBlend', 'overallTone', 'keyThemes'])}
+                  disabled={generateWorldFields.isPending}
+                  isGenerating={generateWorldFields.isPending}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Generate All Core Fields
+                </AIGenerateButton>
+              </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  World Name *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    World Name *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('name')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Input
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
@@ -336,9 +423,20 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  One-Sentence Logline *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    One-Sentence Logline *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('logline')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Input
                   value={formData.logline}
                   onChange={(e) => handleInputChange('logline', e.target.value)}
@@ -348,12 +446,23 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 {errors.logline && <p className="mt-1 text-sm text-red-600">{errors.logline}</p>}
               </div>
 
-              {renderMultiSelect('Genre Blend *', 'genreBlend', genreOptions, errors.genreBlend)}
+              {renderMultiSelect('Genre Blend *', 'genreBlend', genreOptions, errors.genreBlend, true)}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Overall Tone *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Overall Tone *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('overallTone')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Select
                   value={formData.overallTone}
                   onChange={(e) => handleInputChange('overallTone', e.target.value)}
@@ -367,20 +476,41 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 {errors.overallTone && <p className="mt-1 text-sm text-red-600">{errors.overallTone}</p>}
               </div>
 
-              {renderTagInput('Key Themes *', 'keyThemes', 'e.g., Survival, Found Family, Power Corrupts', errors.keyThemes)}
+              {renderTagInput('Key Themes *', 'keyThemes', 'e.g., Survival, Found Family, Power Corrupts', errors.keyThemes, true)}
             </div>
           )}
 
           {currentStep === 2 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                World Parameters
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  World Parameters
+                </h3>
+                <AIGenerateButton
+                  onClick={() => openAIModal(['audienceRating', 'scopeScale', 'technologyLevel', 'magicLevel', 'cosmologyModel', 'climateBiomes'])}
+                  disabled={generateWorldFields.isPending}
+                  isGenerating={generateWorldFields.isPending}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Generate All Parameters
+                </AIGenerateButton>
+              </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Intended Audience Rating *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Intended Audience Rating *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('audienceRating')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Select
                   value={formData.audienceRating}
                   onChange={(e) => handleInputChange('audienceRating', e.target.value)}
@@ -395,9 +525,20 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Scope & Scale *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Scope & Scale *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('scopeScale')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Select
                   value={formData.scopeScale}
                   onChange={(e) => handleInputChange('scopeScale', e.target.value)}
@@ -411,13 +552,24 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 {errors.scopeScale && <p className="mt-1 text-sm text-red-600">{errors.scopeScale}</p>}
               </div>
 
-              {renderMultiSelect('Technology Level', 'technologyLevel', technologyOptions)}
-              {renderMultiSelect('Magic Level', 'magicLevel', magicOptions)}
+              {renderMultiSelect('Technology Level', 'technologyLevel', technologyOptions, undefined, true)}
+              {renderMultiSelect('Magic Level', 'magicLevel', magicOptions, undefined, true)}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cosmology Model *
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Cosmology Model *
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('cosmologyModel')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Select
                   value={formData.cosmologyModel}
                   onChange={(e) => handleInputChange('cosmologyModel', e.target.value)}
@@ -431,20 +583,41 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 {errors.cosmologyModel && <p className="mt-1 text-sm text-red-600">{errors.cosmologyModel}</p>}
               </div>
 
-              {renderMultiSelect('Climate & Biomes', 'climateBiomes', climateOptions)}
+              {renderMultiSelect('Climate & Biomes', 'climateBiomes', climateOptions, undefined, true)}
             </div>
           )}
 
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-                World Details
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  World Details
+                </h3>
+                <AIGenerateButton
+                  onClick={() => openAIModal(['calendarTimekeeping', 'societalOverview', 'conflictDrivers', 'rulesConstraints', 'aestheticDirection'])}
+                  disabled={generateWorldFields.isPending}
+                  isGenerating={generateWorldFields.isPending}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Generate All Details
+                </AIGenerateButton>
+              </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Calendar & Timekeeping
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Calendar & Timekeeping
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('calendarTimekeeping')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Textarea
                   value={formData.calendarTimekeeping}
                   onChange={(e) => handleInputChange('calendarTimekeeping', e.target.value)}
@@ -454,9 +627,20 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Societal Overview
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Societal Overview
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('societalOverview')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Textarea
                   value={formData.societalOverview}
                   onChange={(e) => handleInputChange('societalOverview', e.target.value)}
@@ -465,12 +649,23 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
                 />
               </div>
 
-              {renderMultiSelect('Conflict Drivers', 'conflictDrivers', conflictOptions)}
+              {renderMultiSelect('Conflict Drivers', 'conflictDrivers', conflictOptions, undefined, true)}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Rules & Constraints
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Rules & Constraints
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('rulesConstraints')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Textarea
                   value={formData.rulesConstraints}
                   onChange={(e) => handleInputChange('rulesConstraints', e.target.value)}
@@ -480,9 +675,20 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Aesthetic Direction
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Aesthetic Direction
+                  </label>
+                  <AIGenerateButton
+                    onClick={() => openAIModal('aestheticDirection')}
+                    disabled={generateWorldFields.isPending}
+                    isGenerating={generateWorldFields.isPending}
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Generate
+                  </AIGenerateButton>
+                </div>
                 <Textarea
                   value={formData.aestheticDirection}
                   onChange={(e) => handleInputChange('aestheticDirection', e.target.value)}
@@ -516,6 +722,16 @@ export function CreateWorldModal({ isOpen, onClose }: CreateWorldModalProps) {
           </div>
         </div>
       </div>
+
+      {/* AI Prompt Modal */}
+      <AIPromptModal
+        open={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onGenerate={handleAIGenerate}
+        isGenerating={generateWorldFields.isPending}
+        title="Generate World Fields"
+        placeholder="Describe what kind of world fields you'd like to generate..."
+      />
     </div>
   );
 }

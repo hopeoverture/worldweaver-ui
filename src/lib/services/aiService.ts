@@ -49,6 +49,33 @@ export interface GenerateEntityFieldsResponse {
   fields: Record<string, unknown>;
 }
 
+export interface GenerateWorldFieldsRequest {
+  prompt?: string;
+  fieldsToGenerate: string[];
+  existingData?: Partial<{
+    name: string;
+    logline: string;
+    genreBlend: string[];
+    overallTone: string;
+    keyThemes: string[];
+    audienceRating: string;
+    scopeScale: string;
+    technologyLevel: string[];
+    magicLevel: string[];
+    cosmologyModel: string;
+    climateBiomes: string[];
+    calendarTimekeeping: string;
+    societalOverview: string;
+    conflictDrivers: string[];
+    rulesConstraints: string;
+    aestheticDirection: string;
+  }>;
+}
+
+export interface GenerateWorldFieldsResponse {
+  fields: Record<string, unknown>;
+}
+
 export interface GenerateImageRequest {
   prompt: string;
   style?: 'natural' | 'vivid';
@@ -332,6 +359,107 @@ Example format:
     } catch (error) {
       logError('Error generating world cover image', error as Error, { action: 'generate_world_cover_image' });
       throw new Error(`Failed to generate world cover image: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Generate world field values based on existing data and context
+   */
+  async generateWorldFields({
+    prompt,
+    fieldsToGenerate,
+    existingData = {}
+  }: GenerateWorldFieldsRequest): Promise<GenerateWorldFieldsResponse> {
+    try {
+      const contextPrompt = this.buildWorldContext(existingData as any);
+
+      // Build field descriptions for the AI
+      const fieldDescriptions: Record<string, string> = {
+        name: 'A creative and memorable name for the world',
+        logline: 'A compelling one-sentence description that captures the essence of the world',
+        genreBlend: 'Array of relevant genre tags that define this world\'s style',
+        overallTone: 'The emotional atmosphere and mood of the world',
+        keyThemes: 'Array of central thematic elements that drive stories in this world',
+        audienceRating: 'Appropriate audience rating based on content and themes',
+        scopeScale: 'The geographic or dimensional scope of the world',
+        technologyLevel: 'Array of technology levels present in the world',
+        magicLevel: 'Array of magic system types and prevalence levels',
+        cosmologyModel: 'The structure and nature of reality in this world',
+        climateBiomes: 'Array of climate types and biomes present',
+        calendarTimekeeping: 'Detailed description of how time is measured, including day/year length, seasons, celestial bodies, and significant cycles',
+        societalOverview: 'Overview of civilizations, cultures, social structures, institutions, and economic patterns',
+        conflictDrivers: 'Array of forces and factors that create tension and drive stories',
+        rulesConstraints: 'Physical laws, magical rules, technological limitations, taboos, and other constraints that define what can and cannot happen',
+        aestheticDirection: 'Visual style, architecture, fashion, art direction, textures, soundscape, and color palette'
+      };
+
+      const fieldsToGenerateDesc = fieldsToGenerate.map(field =>
+        `- ${field}: ${fieldDescriptions[field] || 'Generate appropriate content for this field'}`
+      ).join('\n');
+
+      // Build existing data context
+      const existingDataDesc = Object.entries(existingData)
+        .filter(([_, value]) => value && (Array.isArray(value) ? value.length > 0 : true))
+        .map(([key, value]) => {
+          if (Array.isArray(value)) {
+            return `${key}: ${value.join(', ')}`;
+          }
+          return `${key}: ${value}`;
+        }).join('\n');
+
+      const systemPrompt = `You are a worldbuilding assistant for tabletop RPGs and creative writing. Generate world field values that are creative, consistent, and thematically coherent.
+
+${contextPrompt}
+
+${existingDataDesc ? `Existing World Data:\n${existingDataDesc}\n` : ''}
+
+Generate values for these fields:
+${fieldsToGenerateDesc}
+
+Return a JSON object with field names as keys and generated values as values.
+
+For array fields (genreBlend, keyThemes, technologyLevel, magicLevel, climateBiomes, conflictDrivers), provide arrays of strings.
+For string fields, provide descriptive text appropriate to the field type.
+For calendarTimekeeping, societalOverview, rulesConstraints, and aestheticDirection, provide rich, detailed descriptions.
+
+Ensure all generated content is consistent with existing data and maintains thematic coherence.
+
+Example format:
+{
+  "name": "Generated World Name",
+  "logline": "A compelling description...",
+  "genreBlend": ["Fantasy", "Mystery"],
+  "calendarTimekeeping": "Detailed time system description...",
+  "societalOverview": "Rich societal description..."
+}`;
+
+      const userPrompt = prompt
+        ? `Additional guidance: ${prompt}\n\nGenerate the requested world fields.`
+        : 'Generate creative and consistent values for the requested world fields.';
+
+      const completion = await getOpenAIClient().chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.8,
+        response_format: { type: 'json_object' }
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from OpenAI');
+      }
+
+      const parsed = JSON.parse(response);
+
+      return { fields: parsed };
+    } catch (error) {
+      logError('Error generating world fields', error as Error, {
+        action: 'generate_world_fields'
+      });
+      throw new Error(`Failed to generate world fields: ${(error as Error).message}`);
     }
   }
 
