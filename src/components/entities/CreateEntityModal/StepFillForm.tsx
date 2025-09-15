@@ -2,12 +2,16 @@
 import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
+import { useWorld } from '@/hooks/query/useWorld';
+import { useGenerateEntityFields } from '@/hooks/mutations/useGenerateEntityFields';
 import { sanitizeTemplateField, validateJsonField } from '@/lib/security';
 import { logError } from '@/lib/logging';
 import { LinkEditor } from './LinkEditor';
 import { FieldControls } from './FieldControls';
 import { Button } from '../../ui/Button';
-import { ImageUpload } from '../../ui/ImageUpload';
+import { AIImageUpload } from '@/components/ai/AIImageUpload';
+import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
+import { AIPromptModal } from '@/components/ai/AIPromptModal';
 
 interface StepFillFormProps {
   template: Template;
@@ -19,16 +23,21 @@ interface StepFillFormProps {
 
 export function StepFillForm({ template, worldId, initialFolderId, onSave, onBack }: StepFillFormProps) {
   const { data: folders = [] } = useWorldFolders(worldId);
+  const { data: world } = useWorld(worldId);
+  const generateEntityFields = useGenerateEntityFields();
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
     folderId: initialFolderId || '', // Use initialFolderId if provided, otherwise default to no folder
     fields: {} as Record<string, any>,
     links: [] as Link[],
-    imageFile: null as File | null
+    imageFile: null as File | null,
+    aiImageUrl: null as string | null
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiGenerationTarget, setAiGenerationTarget] = useState<'all' | string>('all');
 
   // Get entity folders for this world
   const entityFolders = folders.filter(f => f.kind === 'entities');
@@ -74,8 +83,52 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
   const handleImageChange = (file: File | null) => {
     setFormData(prev => ({
       ...prev,
-      imageFile: file
+      imageFile: file,
+      aiImageUrl: null // Clear AI image when user uploads a file
     }));
+  };
+
+  const handleAIImageGenerate = (imageUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      aiImageUrl: imageUrl,
+      imageFile: null // Clear file when AI generates an image
+    }));
+  };
+
+  const handleAIGenerate = async (prompt: string) => {
+    if (!world) return;
+
+    try {
+      const result = await generateEntityFields.mutateAsync({
+        prompt,
+        entityName: formData.name || undefined,
+        templateId: template.id,
+        existingFields: formData.fields,
+        worldId,
+        generateAllFields: aiGenerationTarget === 'all',
+        specificField: aiGenerationTarget !== 'all' ? aiGenerationTarget : undefined
+      });
+
+      // Update form data with generated fields
+      setFormData(prev => ({
+        ...prev,
+        fields: {
+          ...prev.fields,
+          ...result.fields
+        }
+      }));
+
+      setShowAIModal(false);
+    } catch (error) {
+      // Error handling is done by the mutation hook
+      console.error('AI generation failed:', error);
+    }
+  };
+
+  const openAIModal = (target: 'all' | string) => {
+    setAiGenerationTarget(target);
+    setShowAIModal(true);
   };
 
 
@@ -108,9 +161,11 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
     setIsSubmitting(true);
     
     try {
-      // Upload image first if provided
+      // Handle image - either uploaded file or AI-generated URL
       let imageUrl: string | undefined = undefined;
+
       if (formData.imageFile) {
+        // Upload user-provided image
         const formDataForUpload = new FormData();
         formDataForUpload.append('file', formData.imageFile);
 
@@ -133,6 +188,9 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
           .getPublicUrl(result.file.path);
 
         imageUrl = urlData.publicUrl;
+      } else if (formData.aiImageUrl) {
+        // Use AI-generated image URL directly
+        imageUrl = formData.aiImageUrl;
       }
 
       await onSave({
@@ -319,13 +377,26 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
         </div>
 
         {/* Image Upload */}
-        <ImageUpload
-          value={undefined}
+        <AIImageUpload
+          value={formData.aiImageUrl || undefined}
           onChange={handleImageChange}
+          onAIGenerate={handleAIImageGenerate}
+          worldId={worldId}
           label="Entity Image"
-          description="Upload an image to represent this entity. Drag and drop or click to select."
+          description="Upload an image or generate one with AI. Drag and drop or click to select."
           error={errors.image}
           disabled={isSubmitting}
+          aiType="entity"
+          entityName={formData.name}
+          templateName={template.name}
+          entityFields={formData.fields}
+          worldContext={world ? {
+            name: world.name,
+            description: world.description,
+            genreBlend: world.genreBlend,
+            overallTone: world.overallTone,
+            keyThemes: world.keyThemes
+          } : undefined}
         />
 
         {/* Folder Selection - Make it more prominent */}
@@ -365,15 +436,36 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
       {/* Template fields */}
       {template.fields.length > 0 && (
         <div className="space-y-4">
-          <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
+            <AIGenerateButton
+              onClick={() => openAIModal('all')}
+              disabled={generateEntityFields.isPending}
+              isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              Generate All Fields
+            </AIGenerateButton>
+          </div>
           {template.fields.map(field => (
             <div key={field.id}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                {field.name}
-                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                  ({field.type})
-                </span>
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {field.name}
+                  <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                    ({field.type})
+                  </span>
+                </label>
+                <AIGenerateButton
+                  onClick={() => openAIModal(field.id)}
+                  disabled={generateEntityFields.isPending}
+                  isGenerating={generateEntityFields.isPending && aiGenerationTarget === field.id}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Generate
+                </AIGenerateButton>
+              </div>
               {renderField(field)}
               {errors[field.id] && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors[field.id]}</p>
@@ -399,6 +491,29 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
           {isSubmitting ? 'Creating...' : 'Create Entity'}
         </Button>
       </div>
+
+      {/* AI Generation Modal */}
+      <AIPromptModal
+        open={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onGenerate={handleAIGenerate}
+        title={
+          aiGenerationTarget === 'all'
+            ? 'Generate All Entity Fields'
+            : `Generate ${template.fields.find(f => f.id === aiGenerationTarget)?.name || 'Field'}`
+        }
+        description={
+          aiGenerationTarget === 'all'
+            ? `Generate values for all ${template.fields.length} fields in this ${template.name}. The AI will use your world context and any existing field values.`
+            : `Generate a value for the "${template.fields.find(f => f.id === aiGenerationTarget)?.name}" field. The AI will consider your world context and other field values.`
+        }
+        placeholder={
+          aiGenerationTarget === 'all'
+            ? `Describe what kind of ${template.name.toLowerCase()} you want to create...`
+            : `Describe what you want for the ${template.fields.find(f => f.id === aiGenerationTarget)?.name} field...`
+        }
+        isGenerating={generateEntityFields.isPending}
+      />
     </form>
   );
 }

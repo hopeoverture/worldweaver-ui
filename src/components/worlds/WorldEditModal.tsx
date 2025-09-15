@@ -4,6 +4,7 @@ import { useWorld } from '@/hooks/query/useWorld';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
+import { AIImageUpload } from '@/components/ai/AIImageUpload';
 import { useUpdateWorld } from '@/hooks/mutations/useUpdateWorld';
 import { logError } from '@/lib/logging';
 
@@ -88,33 +89,55 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
     aestheticDirection: ''
   });
 
+  // Image-related state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
+
   // Load world data when modal opens
   useEffect(() => {
     if (isOpen && world) {
       setFormData({
         name: world.name || '',
-        logline: world.summary || '',
-        genreBlend: [], // TODO: Load from stored world data when available
+        logline: world.description || world.summary || '',
+        genreBlend: world.genreBlend || [],
         tone: [],
-        themes: [],
-        audienceRating: '',
-        scope: '',
+        themes: world.keyThemes || [],
+        audienceRating: world.audienceRating || '',
+        scope: world.scopeScale || '',
         techLevel: '',
         magicLevel: '',
-        cosmology: '',
-        climateBiomes: [],
-        calendar: '',
-        society: '',
+        cosmology: world.cosmologyModel || '',
+        climateBiomes: world.climateBiomes || [],
+        calendar: world.calendarTimekeeping || '',
+        society: world.societalOverview || '',
         conflictDrivers: '',
-        rulesConstraints: '',
-        aestheticDirection: ''
+        rulesConstraints: world.rulesConstraints || '',
+        aestheticDirection: world.aestheticDirection || ''
       });
+      setCurrentImageUrl(world.imageUrl || null);
+      setImageFile(null);
+      setAiImageUrl(null);
       setCurrentStep(1);
     }
   }, [isOpen, world]);
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageChange = (file: File | null) => {
+    setImageFile(file);
+    setAiImageUrl(null); // Clear AI image when user uploads a file
+    if (!file) {
+      setCurrentImageUrl(null);
+    }
+  };
+
+  const handleAIImageGenerate = (imageUrl: string) => {
+    setAiImageUrl(imageUrl);
+    setCurrentImageUrl(imageUrl);
+    setImageFile(null); // Clear file when AI generates an image
   };
 
   const handleNext = () => {
@@ -131,12 +154,60 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
 
   const handleSubmit = async () => {
     if (!world) return;
-    
+
     setIsSubmitting(true);
     try {
+      // Handle image - upload, AI-generated, or removal
+      let finalImageUrl = currentImageUrl;
+
+      if (imageFile) {
+        // Upload new image
+        const formDataForUpload = new FormData();
+        formDataForUpload.append('file', imageFile);
+
+        const response = await fetch(`/api/worlds/${worldId}/files/upload?kind=world-covers`, {
+          method: 'POST',
+          body: formDataForUpload,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const result = await response.json();
+
+        // Get public URL for the uploaded image
+        const { createClient } = await import('@/lib/supabase/browser');
+        const supabase = createClient();
+        const { data: urlData } = supabase.storage
+          .from('world-assets')
+          .getPublicUrl(result.file.path);
+
+        finalImageUrl = urlData.publicUrl;
+      } else if (aiImageUrl) {
+        // Use AI-generated image URL directly
+        finalImageUrl = aiImageUrl;
+      } else if (currentImageUrl === null && world.imageUrl) {
+        // User explicitly removed the image
+        finalImageUrl = null;
+      }
+
       await updateWorldMut.mutateAsync({
         name: formData.name,
         description: formData.logline,
+        logline: formData.logline,
+        genreBlend: formData.genreBlend,
+        overallTone: formData.tone.join(', ') || undefined,
+        keyThemes: formData.themes,
+        audienceRating: formData.audienceRating || undefined,
+        scopeScale: formData.scope || undefined,
+        cosmologyModel: formData.cosmology || undefined,
+        climateBiomes: formData.climateBiomes,
+        calendarTimekeeping: formData.calendar || undefined,
+        societalOverview: formData.society || undefined,
+        rulesConstraints: formData.rulesConstraints || undefined,
+        aestheticDirection: formData.aestheticDirection || undefined,
+        imageUrl: finalImageUrl || undefined
       });
       onClose();
     } catch (error) {
@@ -280,7 +351,7 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
                 Core Information
               </h3>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   World Name *
@@ -303,6 +374,25 @@ export function WorldEditModal({ isOpen, worldId, onClose }: WorldEditModalProps
                   rows={2}
                 />
               </div>
+
+              {/* World Cover Image */}
+              <AIImageUpload
+                value={currentImageUrl || undefined}
+                onChange={handleImageChange}
+                onAIGenerate={handleAIImageGenerate}
+                worldId={worldId}
+                label="World Cover Image"
+                description="Upload a cover image or generate one with AI to represent your world."
+                disabled={isSubmitting}
+                aiType="world-cover"
+                worldContext={{
+                  name: formData.name,
+                  description: formData.logline,
+                  genreBlend: formData.genreBlend,
+                  overallTone: formData.tone.join(', ') || undefined,
+                  keyThemes: formData.themes
+                }}
+              />
 
               {renderMultiSelectField('Genre Blend', 'genreBlend', genreOptions, 'Select primary genres')}
               {renderMultiSelectField('Tone & Mood', 'tone', toneOptions, 'Select the world\'s emotional tone')}

@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
-import { ImageUpload } from '@/components/ui/ImageUpload';
+import { AIImageUpload } from '@/components/ai/AIImageUpload';
 import { Entity, Template, Folder, TemplateField, Link } from '@/lib/types';
 import { useWorldTemplates } from '@/hooks/query/useWorldTemplates';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
+import { useWorld } from '@/hooks/query/useWorld';
 import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
+import { useGenerateEntityFields } from '@/hooks/mutations/useGenerateEntityFields';
 import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate } from '@/lib/utils';
+import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
+import { AIPromptModal } from '@/components/ai/AIPromptModal';
 
 interface EntityDetailModalProps {
   entity: Entity | null;
@@ -27,12 +31,17 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   const { data: folders = [] } = useWorldFolders(worldId);
   const { data: entities = [] } = useWorldEntities(worldId);
   const { data: relationships = [] } = useWorldRelationships(worldId);
+  const { data: world } = useWorld(worldId);
+  const generateEntityFields = useGenerateEntityFields();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null | undefined>(undefined);
+  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiGenerationTarget, setAiGenerationTarget] = useState<'all' | string>('all');
   const updateEntityMut = useUpdateEntity(worldId);
   const { toast } = useToast();
 
@@ -63,6 +72,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
       });
       setCurrentImageUrl(entity.imageUrl);
       setImageFile(null);
+      setAiImageUrl(null);
       setErrors({});
     }
   }, [entity]);
@@ -90,8 +100,9 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     }
 
     try {
-      // Handle image upload or removal
+      // Handle image - upload, AI-generated, or removal
       let finalImageUrl = currentImageUrl;
+
       if (imageFile) {
         // Upload new image
         const formDataForUpload = new FormData();
@@ -116,6 +127,9 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
           .getPublicUrl(result.file.path);
 
         finalImageUrl = urlData.publicUrl;
+      } else if (aiImageUrl) {
+        // Use AI-generated image URL directly
+        finalImageUrl = aiImageUrl;
       } else if (currentImageUrl === null && entity.imageUrl) {
         // User explicitly removed the image
         finalImageUrl = null;
@@ -149,6 +163,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     });
     setCurrentImageUrl(entity.imageUrl);
     setImageFile(null);
+    setAiImageUrl(null);
     setIsEditing(false);
     setErrors({});
   };
@@ -165,15 +180,57 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
 
   const handleImageChange = (file: File | null) => {
     setImageFile(file);
+    setAiImageUrl(null); // Clear AI image when user uploads a file
     if (!file) {
       // If removing image, set current URL to null to indicate removal
       setCurrentImageUrl(null);
     }
   };
 
+  const handleAIImageGenerate = (imageUrl: string) => {
+    setAiImageUrl(imageUrl);
+    setCurrentImageUrl(imageUrl);
+    setImageFile(null); // Clear file when AI generates an image
+  };
+
   const handleRemoveLink = (linkId: string) => {
     // TODO: Replace with useDeleteRelationship mutation
     console.log('Remove link:', linkId);
+  };
+
+  const handleAIGenerate = async (prompt: string) => {
+    if (!world || !entity || !template) return;
+
+    try {
+      const result = await generateEntityFields.mutateAsync({
+        prompt,
+        entityName: formData.name || entity.name,
+        templateId: template.id,
+        existingFields: formData.fields || entity.fields,
+        worldId,
+        generateAllFields: aiGenerationTarget === 'all',
+        specificField: aiGenerationTarget !== 'all' ? aiGenerationTarget : undefined
+      });
+
+      // Update form data with generated fields
+      setFormData(prev => ({
+        ...prev,
+        fields: {
+          ...prev.fields,
+          ...result.fields
+        }
+      }));
+
+      setShowAIModal(false);
+    } catch (error) {
+      // Error handling is done by the mutation hook
+      console.error('AI generation failed:', error);
+    }
+  };
+
+  const openAIModal = (target: 'all' | string) => {
+    setAiGenerationTarget(target);
+    setShowAIModal(true);
   };
 
   const renderFieldInput = (field: TemplateField) => {
@@ -332,13 +389,26 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Image</h3>
           {isEditing ? (
-            <ImageUpload
+            <AIImageUpload
               value={currentImageUrl || undefined}
               onChange={handleImageChange}
+              onAIGenerate={handleAIImageGenerate}
+              worldId={worldId}
               label=""
-              description="Upload an image to represent this entity. Drag and drop or click to select."
+              description="Upload an image or generate one with AI. Drag and drop or click to select."
               error={errors.image}
               disabled={updateEntityMut.isPending}
+              aiType="entity"
+              entityName={formData.name || entity.name}
+              templateName={template.name}
+              entityFields={formData.fields || entity.fields}
+              worldContext={world ? {
+                name: world.name,
+                description: world.description,
+                genreBlend: world.genreBlend,
+                overallTone: world.overallTone,
+                keyThemes: world.keyThemes
+              } : undefined}
             />
           ) : (
             <div className="text-gray-700 dark:text-gray-300">
@@ -378,15 +448,40 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
         {/* Template Fields */}
         {template.fields.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Details</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Details</h3>
+              {isEditing && (
+                <AIGenerateButton
+                  onClick={() => openAIModal('all')}
+                  disabled={generateEntityFields.isPending}
+                  isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Generate All Fields
+                </AIGenerateButton>
+              )}
+            </div>
             <div className="space-y-4">
               {template.fields.map(field => (
                 <div key={field.id}>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {field.name}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {field.name}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    {isEditing && (
+                      <AIGenerateButton
+                        onClick={() => openAIModal(field.id)}
+                        disabled={generateEntityFields.isPending}
+                        isGenerating={generateEntityFields.isPending && aiGenerationTarget === field.id}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Generate
+                      </AIGenerateButton>
+                    )}
+                  </div>
+
                   {isEditing ? (
                     <div>
                       {renderFieldInput(field)}
@@ -455,6 +550,29 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
           </Button>
         </div>
       </div>
+
+      {/* AI Generation Modal */}
+      <AIPromptModal
+        open={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onGenerate={handleAIGenerate}
+        title={
+          aiGenerationTarget === 'all'
+            ? 'Generate All Entity Fields'
+            : `Generate ${template?.fields.find(f => f.id === aiGenerationTarget)?.name || 'Field'}`
+        }
+        description={
+          aiGenerationTarget === 'all'
+            ? `Generate values for all ${template?.fields.length || 0} fields in this ${template?.name}. The AI will use your world context and any existing field values.`
+            : `Generate a value for the "${template?.fields.find(f => f.id === aiGenerationTarget)?.name}" field. The AI will consider your world context and other field values.`
+        }
+        placeholder={
+          aiGenerationTarget === 'all'
+            ? `Describe what kind of ${template?.name.toLowerCase()} you want to update...`
+            : `Describe what you want for the ${template?.fields.find(f => f.id === aiGenerationTarget)?.name} field...`
+        }
+        isGenerating={generateEntityFields.isPending}
+      />
     </Modal>
   );
 }
