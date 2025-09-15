@@ -17,8 +17,8 @@
  * All prices are per unit (token or image)
  */
 export const AI_PRICING = {
-  // GPT-5 mini pricing (per token)
-  'gpt-5-mini': {
+  // GPT-5 pricing (per token)
+  'gpt-5-2025-08-07': {
     input: 0.25 / 1_000_000,     // $0.25 per 1M input tokens
     cached_input: 0.025 / 1_000_000,  // $0.025 per 1M cached input tokens
     output: 2.00 / 1_000_000,    // $2.00 per 1M output tokens
@@ -189,13 +189,13 @@ export function estimateTextCost(
 export function getPricingInfo() {
   return {
     textGeneration: {
-      model: 'gpt-5-mini',
-      inputPricePerToken: AI_PRICING['gpt-5-mini'].input,
-      cachedInputPricePerToken: AI_PRICING['gpt-5-mini'].cached_input,
-      outputPricePerToken: AI_PRICING['gpt-5-mini'].output,
-      inputPricePer1M: AI_PRICING['gpt-5-mini'].input * 1_000_000,
-      cachedInputPricePer1M: AI_PRICING['gpt-5-mini'].cached_input * 1_000_000,
-      outputPricePer1M: AI_PRICING['gpt-5-mini'].output * 1_000_000,
+      model: 'gpt-5-2025-08-07',
+      inputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].input,
+      cachedInputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].cached_input,
+      outputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].output,
+      inputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].input * 1_000_000,
+      cachedInputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].cached_input * 1_000_000,
+      outputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].output * 1_000_000,
     },
     imageGeneration: {
       model: 'gpt-image-1',

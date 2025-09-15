@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         usage: {
           operation: 'template',
-          model: 'gpt-5-mini',
+          model: 'gpt-5-2025-08-07',
           provider: 'openai',
           promptTokens: 0,
           completionTokens: 0,
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         usage: {
           operation: 'template',
-          model: 'gpt-5-mini',
+          model: 'gpt-5-2025-08-07',
           provider: 'openai',
           promptTokens: 0,
           completionTokens: 0,
