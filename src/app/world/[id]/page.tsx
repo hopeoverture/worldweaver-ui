@@ -1049,8 +1049,6 @@ export default function WorldDashboard() {
       <WorldContextBar
         world={world}
         onEditWorld={() => setEditWorldModalOpen(true)}
-        memberCount={members.length}
-        templateCount={remoteTemplates.length}
       />
 
       {/* Search Bar */}
