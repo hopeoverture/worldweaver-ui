@@ -26,8 +26,7 @@ const nextConfig: NextConfig = {
     // Optimize package imports to reduce bundle size
     optimizePackageImports: ['@supabase/supabase-js', '@tanstack/react-query'],
   },
-  // Improve build performance
-  swcMinify: true,
+  // SWC is now the default in Next.js 15+
 }
 
 export default withBundleAnalyzer(nextConfig)

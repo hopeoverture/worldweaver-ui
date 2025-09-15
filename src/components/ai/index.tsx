@@ -18,9 +18,8 @@ export const LazyAIImageUpload = lazy(() =>
   import('./AIImageUpload').then(module => ({ default: module.AIImageUpload }))
 );
 
-export const LazyAIUsageDashboard = lazy(() =>
-  import('./AIUsageDashboard').then(module => ({ default: module.AIUsageDashboard }))
-);
+// Note: AIUsageDashboard not included due to server-only dependencies
+// Load directly when needed with proper server-side data fetching
 
 // Loading fallback component
 export const AILoadingFallback = () => {
