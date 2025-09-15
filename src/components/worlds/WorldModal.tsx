@@ -209,10 +209,10 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
         ? aiGenerationTarget
         : [aiGenerationTarget];
 
-      // Transform form data to match API expectations
+      // Transform form data to include ALL fields for comprehensive AI context
       const existingData = {
         name: formData.name,
-        logline: formData.summary,
+        summary: formData.summary,
         genreBlend: formData.genre === 'Custom' ? [formData.customGenre.trim()] : formData.genre ? [formData.genre] : undefined,
         overallTone: [...formData.tone.filter(t => t !== 'Custom'), ...formData.customTone.filter(t => t.trim())].join(', ') || undefined,
         keyThemes: [...formData.theme.filter(t => t !== 'Custom'), ...formData.customTheme.filter(t => t.trim())],
@@ -221,6 +221,7 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
         magicLevel: formData.magicLevel === 'Custom' ? [formData.customMagicLevel.trim()] : formData.magicLevel ? [formData.magicLevel] : undefined,
         cosmologyModel: [...formData.cosmologyModel.filter(c => c !== 'Custom'), ...formData.customCosmologyModel.filter(c => c.trim())].join(', ') || undefined,
         conflictDrivers: [...formData.conflictDrivers.filter(c => c !== 'Custom'), ...formData.customConflictDrivers.filter(c => c.trim())],
+        climateBiomes: [...formData.travelDifficulty.filter(t => t !== 'Custom'), ...formData.customTravelDifficulty.filter(t => t.trim())],
       };
 
       const result = await generateWorldFields.mutateAsync({
@@ -229,20 +230,10 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
         existingData
       });
 
-      // Update form data with generated fields
-      // Handle field mapping: API returns 'logline' but form expects 'summary'
-      const mappedFields: Record<string, unknown> = {};
-      Object.entries(result.fields).forEach(([key, value]) => {
-        if (key === 'logline') {
-          mappedFields.summary = value;
-        } else {
-          mappedFields[key] = value;
-        }
-      });
-
+      // Update form data with generated fields directly
       setFormData(prev => ({
         ...prev,
-        ...mappedFields
+        ...result.fields
       }));
 
       setShowAIModal(false);
@@ -476,7 +467,7 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
                     <Suspense fallback={<AILoadingFallback />}>
                       <LazyAIGenerateButton
                         type="button"
-                        onClick={() => openAIModal('logline')}
+                        onClick={() => openAIModal('summary')}
                         disabled={generateWorldFields.isPending}
                         isGenerating={generateWorldFields.isPending}
                         size="sm"
