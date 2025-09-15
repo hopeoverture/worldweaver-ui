@@ -459,17 +459,22 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     World Summary
                   </label>
-                  <Suspense fallback={<AILoadingFallback />}>
-                    <LazyAIGenerateButton
-                      onClick={() => openAIModal('summary')}
-                      disabled={generateWorldFields.isPending}
-                      isGenerating={generateWorldFields.isPending}
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      Generate
-                    </LazyAIGenerateButton>
-                  </Suspense>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Uses form context
+                    </span>
+                    <Suspense fallback={<AILoadingFallback />}>
+                      <LazyAIGenerateButton
+                        onClick={() => openAIModal('summary')}
+                        disabled={generateWorldFields.isPending}
+                        isGenerating={generateWorldFields.isPending}
+                        size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Generate
+                      </LazyAIGenerateButton>
+                    </Suspense>
+                  </div>
                 </div>
                 <Textarea
                   value={formData.summary}
@@ -537,9 +542,9 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
             onClose={() => setShowAIModal(false)}
             onGenerate={handleAIGenerate}
             isGenerating={generateWorldFields.isPending}
-            title="Generate World Field Values"
-            description="Generate content for the selected world fields. The AI will create values based on existing fields and your world context. You can leave the prompt empty to generate based on context alone."
-            placeholder="Optional: Describe the style, tone, or specific direction for generating these field values..."
+            title="Generate World Summary"
+            description="Generate a compelling summary for your world based on all the details you've filled in above. The AI will use your world's genre, themes, tone, and other parameters as context."
+            placeholder="Optional: Describe the writing style, focus, or specific elements to emphasize in the summary..."
           />
         </Suspense>
       </div>
