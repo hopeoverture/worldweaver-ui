@@ -6,10 +6,13 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useCreateTemplate } from '@/hooks/mutations/useCreateTemplate';
+import { useGenerateTemplate } from '@/hooks/mutations/useGenerateTemplate';
 import { TemplateField, FieldType } from '@/lib/types';
 import { useToast } from '@/components/ui/ToastProvider';
 import { logError } from '@/lib/logging';
 import { v4 as uuidv4 } from 'uuid';
+import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
+import { AIPromptModal } from '@/components/ai/AIPromptModal';
 
 interface CreateTemplateModalProps {
   open: boolean;
@@ -47,7 +50,9 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
     { name: 'Name', type: 'shortText' as FieldType, required: true }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
   const { toast } = useToast();
+  const generateTemplate = useGenerateTemplate();
 
   const fieldTypeOptions = [
     { value: 'shortText', label: 'Short Text' },
@@ -94,6 +99,36 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
       toast({ title: 'Failed to create template', description: String((error as Error)?.message || error), variant: 'error' });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleAIGenerate = async (prompt: string) => {
+    try {
+      const result = await generateTemplate.mutateAsync({
+        prompt,
+        worldId,
+      });
+
+      // Update form with generated data
+      setFormData(prev => ({
+        ...prev,
+        name: result.name || prev.name
+      }));
+
+      // Convert generated fields to template fields
+      const generatedFields: Omit<TemplateField, 'id'>[] = result.fields.map(field => ({
+        name: field.name,
+        type: field.type,
+        prompt: field.prompt,
+        required: field.required || false,
+        options: field.options,
+      }));
+
+      setFields(generatedFields);
+      setShowAIPrompt(false);
+    } catch (error) {
+      // Error is already handled by the mutation hook
+      console.error('AI generation failed:', error);
     }
   };
 
@@ -173,14 +208,23 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
               Template Fields
             </h3>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              onClick={addField}
-            >
-              Add Field
-            </Button>
+            <div className="flex gap-2">
+              <AIGenerateButton
+                onClick={() => setShowAIPrompt(true)}
+                isGenerating={generateTemplate.isPending}
+                size="sm"
+              >
+                Generate with AI
+              </AIGenerateButton>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addField}
+              >
+                Add Field
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-4 max-h-64 overflow-y-auto">
@@ -273,6 +317,16 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
           </div>
         </div>
       </form>
+
+      <AIPromptModal
+        open={showAIPrompt}
+        onClose={() => setShowAIPrompt(false)}
+        onGenerate={handleAIGenerate}
+        title="Generate Template with AI"
+        description="Describe the type of template you want to create. The AI will generate appropriate fields based on your world context."
+        placeholder="e.g., A character template for fantasy heroes with combat abilities and backstory"
+        isGenerating={generateTemplate.isPending}
+      />
     </Modal>
   );
 }

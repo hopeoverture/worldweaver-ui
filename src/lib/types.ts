@@ -64,6 +64,67 @@ export type WorldSettings = Record<string, Json>
 // Note: For type safety, cast values appropriately when reading from database
 export type RelationshipMetadata = Record<string, Json>
 
+// ==============================================
+// AI Generation Types
+// ==============================================
+
+export interface AIGenerationStatus {
+  isGenerating: boolean;
+  progress?: number;
+  stage?: string;
+  error?: string;
+}
+
+export interface AITemplateGenerationRequest {
+  prompt: string;
+  worldId: string;
+}
+
+export interface AITemplateGenerationResponse {
+  name: string;
+  description: string;
+  fields: Array<{
+    name: string;
+    type: FieldType;
+    prompt?: string;
+    required?: boolean;
+    options?: string[];
+  }>;
+}
+
+export interface AIEntityFieldsGenerationRequest {
+  worldId: string;
+  templateId?: string;
+  entityName?: string;
+  prompt?: string;
+  existingFields?: Record<string, unknown>;
+  generateAllFields?: boolean;
+  specificField?: string;
+}
+
+export interface AIEntityFieldsGenerationResponse {
+  fields: Record<string, unknown>;
+}
+
+export interface AIImageGenerationRequest {
+  worldId: string;
+  type: 'entity' | 'world-cover';
+  prompt: string;
+  entityName?: string;
+  templateName?: string;
+  entityFields?: Record<string, unknown>;
+  worldName?: string;
+  worldDescription?: string;
+  style?: 'natural' | 'vivid';
+  size?: '1024x1024' | '1024x1792' | '1792x1024';
+  quality?: 'standard' | 'hd';
+}
+
+export interface AIImageGenerationResponse {
+  imageUrl: string;
+  revisedPrompt?: string;
+}
+
 // Folder Data Structure - stored in folders.data JSONB column
 // Note: For type safety, cast values appropriately when reading from database
 export type FolderData = Record<string, Json>
