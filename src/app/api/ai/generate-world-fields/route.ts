@@ -100,38 +100,63 @@ export async function POST(req: NextRequest) {
     // Generate world fields using AI service
     let generationResult;
     try {
+      console.log('🔍 Starting AI generation with data:', {
+        prompt: validatedData.prompt,
+        fieldsToGenerate: validatedData.fieldsToGenerate,
+        hasExistingData: !!validatedData.existingData
+      });
+
       generationResult = await aiService.generateWorldFields({
         prompt: validatedData.prompt,
         fieldsToGenerate: validatedData.fieldsToGenerate,
         existingData: validatedData.existingData || {},
       });
-    } catch (error) {
-      // Track the failed attempt
-      await aiUsageService.trackUsage({
-        userId: user.id,
-        usage: {
-          operation: 'world_fields',
-          model: 'gpt-5-2025-08-07',
-          provider: 'openai',
-          promptTokens: 0,
-          completionTokens: 0,
-          costUsd: 0,
-          currency: 'USD',
-          success: false,
-          metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
-        },
-        error: (error as Error).message
+
+      console.log('✅ AI generation successful:', {
+        hasResult: !!generationResult.result,
+        hasUsage: !!generationResult.usage
       });
+    } catch (error) {
+      console.error('❌ AI generation failed:', error);
+
+      // Track the failed attempt
+      try {
+        await aiUsageService.trackUsage({
+          userId: user.id,
+          usage: {
+            operation: 'world_fields',
+            model: 'gpt-5-2025-08-07',
+            provider: 'openai',
+            promptTokens: 0,
+            completionTokens: 0,
+            costUsd: 0,
+            currency: 'USD',
+            success: false,
+            metadata: { worldId: validatedData.worldId, fieldsToGenerate: validatedData.fieldsToGenerate }
+          },
+          error: (error as Error).message
+        });
+      } catch (trackingError) {
+        console.error('❌ Failed to track usage:', trackingError);
+      }
 
       throw error; // Re-throw to handle in outer catch block
     }
 
     // Track successful usage
-    await aiUsageService.trackUsage({
-      userId: user.id,
-      usage: generationResult.usage
-    });
+    try {
+      console.log('📊 Tracking successful usage...');
+      await aiUsageService.trackUsage({
+        userId: user.id,
+        usage: generationResult.usage
+      });
+      console.log('✅ Usage tracking successful');
+    } catch (trackingError) {
+      console.error('❌ Failed to track successful usage:', trackingError);
+      // Don't throw here - we still want to return the result
+    }
 
+    console.log('🎉 Returning result to client');
     return NextResponse.json(generationResult.result);
 
   } catch (error) {

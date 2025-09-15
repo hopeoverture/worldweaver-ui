@@ -369,28 +369,33 @@ Example format:
     const startTime = Date.now();
 
     try {
-      // GPT-image-1 uses chat completions for image generation
-      const response = await getOpenAIClient().chat.completions.create({
+      // Map quality to size for the API
+      const sizeMap = {
+        low: '1024x1024',
+        medium: '1024x1024',
+        high: '1024x1024'
+      } as const;
+
+      // Use proper OpenAI Images API
+      const response = await getOpenAIClient().images.generate({
         model: 'gpt-image-1',
-        messages: [
-          {
-            role: 'user',
-            content: `Generate an image: ${prompt}`
-          }
-        ],
-        max_tokens: 1000
+        prompt: prompt,
+        n: 1,
+        size: sizeMap[quality],
+        quality: quality === 'high' ? 'hd' : 'standard',
+        response_format: 'url'
       });
 
-      const imageResponse = response.choices[0]?.message?.content;
-      if (!imageResponse) {
-        throw new Error('No image response from GPT-image-1');
+      if (!response.data || response.data.length === 0) {
+        throw new Error('No image data returned from GPT-image-1');
       }
 
-      // For now, we'll simulate an image URL - in practice, GPT-image-1 would return actual image data
-      const simulatedImageUrl = `data:image/png;base64,simulated_${Date.now()}`;
+      const imageData = response.data[0];
+      if (!imageData?.url) {
+        throw new Error('No image URL returned from GPT-image-1');
+      }
 
       // Calculate usage metrics for image generation
-      const usage = response.usage;
       const responseTimeMs = Date.now() - startTime;
       const costBreakdown = calculateImageGenerationCost({ quality });
 
@@ -398,23 +403,24 @@ Example format:
 
       return {
         result: {
-          imageUrl: simulatedImageUrl,
-          revisedPrompt: imageResponse
+          imageUrl: imageData.url,
+          revisedPrompt: imageData.revised_prompt || prompt
         },
         usage: {
           operation: 'image',
           model: 'gpt-image-1',
           provider: 'openai',
-          requestId: response.id,
-          promptTokens: usage?.prompt_tokens || 0,
-          completionTokens: usage?.completion_tokens || 0,
-          totalTokens: usage?.total_tokens || 0,
+          requestId: response.created?.toString(),
+          promptTokens: 0, // Image generation doesn't use tokens in the same way
+          completionTokens: 0,
+          totalTokens: 0,
           costUsd: costBreakdown.imageCost,
           currency: 'USD',
           success: true,
           metadata: {
             imageQuality: quality,
-            revisedPrompt: imageResponse
+            size: sizeMap[quality],
+            revisedPrompt: imageData.revised_prompt || prompt
           },
           startedAt: new Date(startTime),
           finishedAt: endTime,
@@ -422,7 +428,9 @@ Example format:
         }
       };
     } catch (error) {
-      logError('Error generating image', error as Error, { action: 'generate_image' });
+      logError('Error generating image', error as Error, {
+        action: 'generate_image'
+      });
       throw new Error(`Failed to generate image: ${(error as Error).message}`);
     }
   }
@@ -542,6 +550,7 @@ Example format:
       // Build field descriptions for the AI
       const fieldDescriptions: Record<string, string> = {
         name: 'A creative and memorable name for the world',
+        summary: 'A brief overview of the world, its key characteristics, and what makes it unique',
         logline: 'A compelling one-sentence description that captures the essence of the world',
         genreBlend: 'Array of relevant genre tags that define this world\'s style',
         overallTone: 'The emotional atmosphere and mood of the world',
@@ -668,11 +677,12 @@ Example format:
   /**
    * Build world context string for prompts using all available world information
    */
-  private buildWorldContext(worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>): string {
+  private buildWorldContext(worldContext?: Pick<World, 'name' | 'description' | 'summary' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>): string {
     if (!worldContext) return '';
 
     let context = '';
     if (worldContext.name) context += `World: ${worldContext.name}\n`;
+    if (worldContext.summary) context += `Summary: ${worldContext.summary}\n`;
     if (worldContext.description) context += `Description: ${worldContext.description}\n`;
     if (worldContext.logline) context += `Logline: ${worldContext.logline}\n`;
     if (worldContext.genreBlend?.length) context += `Genre: ${worldContext.genreBlend.join(', ')}\n`;
