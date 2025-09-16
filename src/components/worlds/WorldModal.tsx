@@ -264,15 +264,84 @@ export function WorldModal({ isOpen, worldId, onClose }: WorldModalProps) {
         console.log('📝 Generated Field Values:', result.fields);
       }
 
-      // Update form data with generated fields directly
+      // Update form data with generated fields, handling field mapping correctly
       setFormData(prev => {
+        // Process AI-generated fields to match WorldModal form structure
+        const processedFields: Partial<WorldFormData> = {};
+
+        // Handle each AI-generated field with proper mapping
+        Object.entries(result.fields).forEach(([key, value]) => {
+          switch (key) {
+            case 'summary':
+              processedFields.summary = value as string;
+              break;
+            case 'name':
+              processedFields.name = value as string;
+              break;
+            case 'genreBlend':
+              if (Array.isArray(value) && value.length > 0) {
+                processedFields.genre = value[0];
+              }
+              break;
+            case 'overallTone':
+              if (typeof value === 'string') {
+                processedFields.tone = value.split(', ').filter(t => t.trim());
+              } else if (Array.isArray(value)) {
+                processedFields.tone = value;
+              }
+              break;
+            case 'keyThemes':
+              if (Array.isArray(value)) {
+                processedFields.theme = value;
+              }
+              break;
+            case 'magicLevel':
+              if (Array.isArray(value) && value.length > 0) {
+                processedFields.magicLevel = value[0];
+              }
+              break;
+            case 'technologyLevel':
+              if (Array.isArray(value) && value.length > 0) {
+                processedFields.technologyLevel = value[0];
+              }
+              break;
+            case 'audienceRating':
+              processedFields.audienceRating = value as string;
+              break;
+            case 'conflictDrivers':
+              if (Array.isArray(value)) {
+                processedFields.conflictDrivers = value;
+              }
+              break;
+            case 'climateBiomes':
+              if (Array.isArray(value)) {
+                processedFields.travelDifficulty = value;
+              }
+              break;
+            case 'cosmologyModel':
+              if (typeof value === 'string') {
+                processedFields.cosmologyModel = value.split(', ').filter(c => c.trim());
+              } else if (Array.isArray(value)) {
+                processedFields.cosmologyModel = value;
+              }
+              break;
+            default:
+              // For any unmapped fields, log them for debugging
+              console.log(`🔍 Unmapped AI field: ${key} = ${value}`);
+              break;
+          }
+        });
+
         const newFormData = {
           ...prev,
-          ...result.fields
+          ...processedFields
         };
+
         console.log('🔄 Updating form data with generated fields');
         console.log('📋 Form data before update:', { summary: prev.summary });
         console.log('📋 Form data after update:', { summary: newFormData.summary });
+        console.log('📊 Processed AI fields:', processedFields);
+
         return newFormData;
       });
 
