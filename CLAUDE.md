@@ -1,312 +1,352 @@
-# CLAUDE.md
+# Claude Code Configuration - SPARC Development Environment
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## 🚨 CRITICAL: CONCURRENT EXECUTION & FILE MANAGEMENT
 
-## Common Development Commands
+**ABSOLUTE RULES**:
+1. ALL operations MUST be concurrent/parallel in a single message
+2. **NEVER save working files, text/mds and tests to the root folder**
+3. ALWAYS organize files in appropriate subdirectories
+4. **USE CLAUDE CODE'S TASK TOOL** for spawning agents concurrently, not just MCP
 
-### Development & Port Management
-- `npm run dev`: Start development server with auto port cleanup (includes Windows Node 20 readlink patch)
-- `npm run dev:clean`: Development with explicit port cleanup (same as predev + dev)
-- `npm run dev:all`: Full development stack (server + auto-seed templates when ready)
-- `npm run predev`: Auto port cleanup - runs before dev automatically (ports: 3000, 3001, 54321, 5432, 8000)
-- `npm run kill-ports`: Manual port cleanup when needed
+### ⚡ GOLDEN RULE: "1 MESSAGE = ALL RELATED OPERATIONS"
 
-### Build & Production
-- `npm run build`: Build production version (includes readlink patch)
-- `npm run start`: Start production server
+**MANDATORY PATTERNS:**
+- **TodoWrite**: ALWAYS batch ALL todos in ONE call (5-10+ todos minimum)
+- **Task tool (Claude Code)**: ALWAYS spawn ALL agents in ONE message with full instructions
+- **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
+- **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
+- **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
 
-### Testing & Quality
-- `npm run test`: Run tests with Vitest (minimal test suite currently)
-- `npm run lint`: Run ESLint with flat config
-- `npm run typecheck`: Run TypeScript type checking (use this command frequently, after every change)
-- `npm run test:api`: Run API endpoint tests
-- `npm run test:mcp`: Test MCP server configuration and connectivity
+### 🎯 CRITICAL: Claude Code Task Tool for Agent Execution
 
-### Utilities
-- `npm run seed:core`: Seed core system templates (requires dev server running)
+**Claude Code's Task tool is the PRIMARY way to spawn agents:**
+```javascript
+// ✅ CORRECT: Use Claude Code's Task tool for parallel agent execution
+[Single Message]:
+  Task("Research agent", "Analyze requirements and patterns...", "researcher")
+  Task("Coder agent", "Implement core features...", "coder")
+  Task("Tester agent", "Create comprehensive tests...", "tester")
+  Task("Reviewer agent", "Review code quality...", "reviewer")
+  Task("Architect agent", "Design system architecture...", "system-architect")
+```
 
-### Database Operations
-- Apply migrations: Use Supabase SQL editor, Supabase CLI (`npx supabase db push`), or direct psql
-- Regenerate types: `npx supabase gen types typescript --project-id rkjtxcavocbhhwuywduj --schema public > src/lib/supabase/types.generated.ts`
+**MCP tools are ONLY for coordination setup:**
+- `mcp__claude-flow__swarm_init` - Initialize coordination topology
+- `mcp__claude-flow__agent_spawn` - Define agent types for coordination
+- `mcp__claude-flow__task_orchestrate` - Orchestrate high-level workflows
 
-## Environment Setup
+### 📁 File Organization Rules
 
-Required environment variables:
-- `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anonymous key
-- `SUPABASE_SERVICE_ROLE_KEY`: Service role key for admin operations
-- `OPENAI_API_KEY`: OpenAI API key for AI generation features
+**NEVER save to root folder. Use these directories:**
+- `/src` - Source code files
+- `/tests` - Test files
+- `/docs` - Documentation and markdown files
+- `/config` - Configuration files
+- `/scripts` - Utility scripts
+- `/examples` - Example code
 
-Optional environment variables for development:
-- `SEED_ADMIN_TOKEN`: Random secret for seeding endpoints
-- `SEED_BASE_URL`: Base URL for seeding (default: http://localhost:3000)
-- `ADMIN_SEED_ENABLED`: Enable seeding in production (default: false)
+## Project Overview
 
-### Node Version Management
-- Use Node 20 LTS as specified in `.nvmrc`
-- Run `nvm use` to ensure version consistency across development environments
-- Port management automatically handles common development ports to prevent EADDRINUSE errors
+This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Completion) methodology with Claude-Flow orchestration for systematic Test-Driven Development.
 
-## Architecture Overview
+## SPARC Commands
 
-### Tech Stack
-- **Framework**: Next.js 15.5.2 with App Router
-- **UI**: React 19.1.0 with Tailwind CSS 4.1.13 (CSS variables, no config file needed)
-- **Database**: Supabase with PostgreSQL and Row Level Security
-- **State Management**: Zustand for client state, TanStack Query for server state
-- **Authentication**: Supabase Auth with SSR support
-- **AI Integration**: OpenAI API with gpt-4o-mini for text and dall-e-3 for images
-- **Testing**: Vitest with API endpoint validation
-- **Type Safety**: TypeScript with strict mode, Zod for runtime validation
-- **Deployment**: Vercel with automatic builds
+### Core Commands
+- `npx claude-flow sparc modes` - List available modes
+- `npx claude-flow sparc run <mode> "<task>"` - Execute specific mode
+- `npx claude-flow sparc tdd "<feature>"` - Run complete TDD workflow
+- `npx claude-flow sparc info <mode>` - Get mode details
 
-### Project Structure
-- `src/app/`: Next.js App Router pages and API routes
-- `src/components/`: Reusable React components organized by domain
-  - `src/components/ai/`: AI generation UI components (AIGenerateButton, AIPromptModal)
-- `src/lib/`: Core utilities and services
-  - `src/lib/supabase/`: Supabase client configurations (browser/server)
-  - `src/lib/services/`: Domain service layers (SupabaseWorldService, AIService)
-  - `src/lib/types.ts`: Core domain types including AI generation interfaces
-- `src/hooks/`: React hooks split by queries and mutations
-  - `src/hooks/mutations/`: Includes AI generation hooks (useGenerateTemplate, useGenerateEntityFields, useGenerateImage)
-- `src/providers/`: React context providers
+### Batchtools Commands
+- `npx claude-flow sparc batch <modes> "<task>"` - Parallel execution
+- `npx claude-flow sparc pipeline "<task>"` - Full pipeline processing
+- `npx claude-flow sparc concurrent <mode> "<tasks-file>"` - Multi-task processing
 
-### Core Domain Model
-The application manages "worlds" containing entities, templates, folders, and relationships:
-- **World**: Top-level container with members, settings, and content
-- **Entity**: Individual items in a world with custom fields based on templates
-- **Template**: Defines field schemas for entities (supports system-wide and world-specific)
-- **Folder**: Organizes entities within a world
-- **Relationship**: Links between entities with typed connections
+### Build Commands
+- `npm run build` - Build project
+- `npm run test` - Run tests
+- `npm run lint` - Linting
+- `npm run typecheck` - Type checking
 
-### Data Layer Architecture
-- **Unified Service Layer**: Modern service abstraction with interface-based architecture (`src/lib/services/unified-service.ts`)
-  - **IWorldService, IEntityService, ITemplateService, IFolderService, IRelationshipService**: Clean service interfaces
-  - **UnifiedServiceLayer**: Orchestrates all service interactions with centralized error handling
-  - **ServiceError hierarchy**: NotFoundError, AccessDeniedError, DatabaseError, ValidationError for proper error handling
-- **SupabaseWorldService**: Legacy service class still used for complex operations (`src/lib/services/worldService.ts`)
-- **Type-safe database operations**: Uses generated types from Supabase schema
-- **Row Level Security (RLS)**: Enforced at database level for all tables with helper functions:
-  - `user_has_world_access(world_id, user_id)`: Checks ownership, membership, or public access
-  - `user_can_edit_world(world_id)`: Checks if user can edit (owner or editor/admin member)
-  - `user_is_world_admin(world_id)`: Checks if user is admin (owner or admin member)
-  - `user_email_matches_invite(email)`: Checks if current user email matches invite
-- **JSONB fields**: Flexible custom data storage (entities.data, folders.data, profiles.data, etc.)
-- **Adapter Pattern**: `src/lib/adapters/index.ts` converts between database snake_case and domain camelCase
+## SPARC Workflow Phases
 
-### Authentication & Security
-- **Three-tier Supabase client setup**:
-  - `src/lib/supabase/browser.ts`: Client-side operations
-  - `src/lib/supabase/server.ts`: SSR and API routes  
-  - `src/lib/supabase/admin.ts`: Admin operations with service role key
-- **Middleware security** (`middleware.ts`): CSP with per-request nonces, security headers, rate limiting
-- **Input sanitization**: `src/lib/security.ts` with DOMPurify (client) and safe fallbacks (server)
-- **Rate limiting**: `src/lib/rate-limiting.ts` with KV/memory fallback
-- **Route protection**: Server-side auth checks in API routes and pages
+1. **Specification** - Requirements analysis (`sparc run spec-pseudocode`)
+2. **Pseudocode** - Algorithm design (`sparc run spec-pseudocode`)
+3. **Architecture** - System design (`sparc run architect`)
+4. **Refinement** - TDD implementation (`sparc tdd`)
+5. **Completion** - Integration (`sparc run integration`)
 
-### Component Patterns
-- **Domain-organized components**: `src/components/worlds/`, `entities/`, `templates/`, `folders/`
-- **Virtualized grids**: `VirtualWorldGrid.tsx`, `VirtualEntityGrid.tsx` with skeleton loaders for performance
-- **Drag-and-Drop Integration**: Comprehensive drag-and-drop across all content components
-  - **Draggable Components**: EntityCard, TemplateCard with `onDragStart` prop support
-  - **Drop Zones**: FolderCard accepts appropriate content types, UngroupedEntitiesDropZone, UngroupedTemplatesDropZone
-  - **Visual Feedback**: Hover states, drop indicators, smooth animations during drag operations
-  - **Type Safety**: Validates drop compatibility (entities → entity folders, templates → template folders)
-- **UI primitives**: `src/components/ui/` (Button, Card, FormField, Input, SmartGrid, VirtualGrid, etc.)
-- **Modal patterns**: Create/edit operations with consistent validation and error handling
-- **Error boundaries**: React Error Boundary integration with proper fallbacks
+## Code Style & Best Practices
 
-### API Design
-- **RESTful API routes** under `src/app/api/` with authentication middleware
-- **Nested resource routing**: `/api/worlds/[id]/entities`, `/api/worlds/[id]/folders`, etc.
-- **Core endpoints**:
-  - Worlds: `GET/POST /api/worlds`, `GET/PUT/DELETE /api/worlds/[id]`
-  - Entities: `GET/PUT/DELETE /api/entities/[id]`, `POST /api/worlds/[id]/entities`
-  - Templates: `GET/PUT/DELETE /api/templates/[id]`, `POST /api/worlds/[id]/templates`
-  - Folders: `GET/PUT/DELETE /api/folders/[id]`, `POST /api/worlds/[id]/folders`
-  - Relationships: `GET/POST /api/worlds/[id]/relationships`, `PUT/DELETE /api/relationships/[id]`
-  - Invites: `POST /api/worlds/[id]/invites`, `POST /api/invites/accept`
-  - Files: `POST /api/worlds/[id]/files/upload`
-  - Health: `GET /api/health/db`
-- **AI Generation endpoints**: `/api/ai/generate-template`, `/api/ai/generate-entity-fields`, `/api/ai/generate-image`
-- **Admin routes**: `/api/admin/seed-core-templates` with SEED_ADMIN_TOKEN validation
+- **Modular Design**: Files under 500 lines
+- **Environment Safety**: Never hardcode secrets
+- **Test-First**: Write tests before implementation
+- **Clean Architecture**: Separate concerns
+- **Documentation**: Keep updated
 
-### AI Generation Architecture
-- **AIService** (`src/lib/services/aiService.ts`): Centralized OpenAI integration with comprehensive world context building
-  - **Template Generation**: Creates templates from user prompts using world context
-  - **Entity Field Generation**: Generates field values for entities based on template structure and world context
-  - **Image Generation**: Creates entity images and world cover images using DALL-E 3
-  - **World Context Integration**: Uses ALL extended world fields (logline, genre, tone, themes, technology level, magic level, cosmology, climate, society, conflicts, rules, aesthetics)
-- **Permission System**: AI generation restricted to world owners and admins only
-- **Error Handling**: Comprehensive error handling with user-friendly messages and proper logging
-- **UI Components**: Reusable `AIGenerateButton` and `AIPromptModal` for consistent AI generation experience
-- **Mutation Hooks**: Type-safe React Query mutations with optimistic updates and error handling
+## 🚀 Available Agents (54 Total)
 
-## Key Development Notes
+### Core Development
+`coder`, `reviewer`, `tester`, `planner`, `researcher`
 
-### Windows Compatibility & Port Management
-- Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
-- Patch is automatically included in dev/build commands
-- **Port cleanup**: `predev` script automatically kills processes on ports 3000, 3001, 54321, 5432, 8000
-- **Process management**: Uses `concurrently -k` for graceful shutdown preventing zombie processes
-- **Manual cleanup**: Use `npm run kill-ports` if ports remain busy
+### Swarm Coordination
+`hierarchical-coordinator`, `mesh-coordinator`, `adaptive-coordinator`, `collective-intelligence-coordinator`, `swarm-memory-manager`
 
-### Database Operations
-- **Always use SupabaseWorldService** class for database operations (`src/lib/services/worldService.ts`)
-- **Access control**: World ownership uses `owner_id` field (not `user_id` which was removed)
-- **Custom fields**: Stored in JSONB columns (entities.data, folders.data, profiles.data)
-- **Field naming**: Database uses snake_case, domain uses camelCase (handled by adapters)
-- **Generated types**: `src/lib/supabase/types.generated.ts` must be kept in sync with schema changes
+### Consensus & Distributed
+`byzantine-coordinator`, `raft-manager`, `gossip-coordinator`, `consensus-builder`, `crdt-synchronizer`, `quorum-manager`, `security-manager`
 
-### Drag-and-Drop System
-- **Native HTML5 API**: Uses native drag-and-drop with proper dataTransfer handling
-- **Component Integration**: All grid components support drag handlers via `onDragStart` props
-- **Folder Organization**: Entities and templates can be moved into appropriate folder types
-- **Mutation Hooks**: Uses `useUpdateEntity` and `useUpdateTemplate` for database updates with folderId changes
-- **Visual Feedback**: Consistent drag states, drop zones, and success notifications across all components
+### Performance & Optimization
+`perf-analyzer`, `performance-benchmarker`, `task-orchestrator`, `memory-coordinator`, `smart-agent`
 
-### Template System
-- System templates available globally, world-specific templates override them
-- Template editing creates world-specific overrides instead of modifying system templates
-- Template fields define entity structure and validation
+### GitHub & Repository
+`github-modes`, `pr-manager`, `code-review-swarm`, `issue-tracker`, `release-manager`, `workflow-automation`, `project-board-sync`, `repo-architect`, `multi-repo-swarm`
 
-### Testing
-- API endpoint testing via `npm run test:api`
-- Vitest for unit/integration tests
-- Test configuration excludes scripts directory from linting
+### SPARC Methodology
+`sparc-coord`, `sparc-coder`, `specification`, `pseudocode`, `architecture`, `refinement`
 
-### Seeding
-- Core templates seeded via admin endpoint
-- Requires SEED_ADMIN_TOKEN for authentication
-- Only enabled in development unless ADMIN_SEED_ENABLED=true
+### Specialized Development
+`backend-dev`, `mobile-dev`, `ml-developer`, `cicd-engineer`, `api-docs`, `system-architect`, `code-analyzer`, `base-template-generator`
 
-## Important Conventions
+### Testing & Validation
+`tdd-london-swarm`, `production-validator`
 
-- **Imports**: Use absolute imports with `@/*` path mapping
-- **TypeScript**: Strict mode enabled, Zod for runtime validation
-- **Error handling**: Proper error boundaries for major component trees, consistent API error responses
-- **State management**: TanStack Query for server state, Zustand for client state
-- **Naming**: camelCase for JS/TS variables, kebab-case for files, snake_case in database
-- **Database design**: Store custom/dynamic fields in JSONB columns rather than adding schema columns
-- **Testing**: Minimal test suite currently, use `npm run test:api` for API endpoint validation
+### Migration & Planning
+`migration-planner`, `swarm-init`
 
-## MCP (Model Context Protocol) Integration
+## 🎯 Claude Code vs MCP Tools
 
-This project includes comprehensive MCP server configuration for enhanced development workflow. All MCP servers are configured in `.mcp.json` which Claude Code automatically loads.
+### Claude Code Handles ALL EXECUTION:
+- **Task tool**: Spawn and run agents concurrently for actual work
+- File operations (Read, Write, Edit, MultiEdit, Glob, Grep)
+- Code generation and programming
+- Bash commands and system operations
+- Implementation work
+- Project navigation and analysis
+- TodoWrite and task management
+- Git operations
+- Package management
+- Testing and debugging
 
-### Available MCP Servers
-- **Memory**: Persistent context and note-taking (`@modelcontextprotocol/server-memory`)
-- **Filesystem**: File operations and code analysis (`@modelcontextprotocol/server-filesystem`)
-- **Shell**: Command execution with PowerShell support (`@modelcontextprotocol/server-shell`)
-- **Sequential Thinking**: Complex problem solving (`@modelcontextprotocol/server-sequential-thinking`)
-- **Supabase Official**: Standard database operations (`@supabase/mcp-server-supabase`)
-- **Supabase Advanced**: Advanced database tools (`mcp-supabase`)
-- **PostgreSQL**: Raw SQL access (`enhanced-postgres-mcp-server`)
-- **Puppeteer**: Browser automation (`puppeteer-mcp-server`)
+### MCP Tools ONLY COORDINATE:
+- Swarm initialization (topology setup)
+- Agent type definitions (coordination patterns)
+- Task orchestration (high-level planning)
+- Memory management
+- Neural features
+- Performance tracking
+- GitHub integration
 
-### Setup Instructions
-1. Run `npm run test:mcp` to check configuration status
-2. Configure environment variables in `.env.local` (see MCP_SETUP.md)
-3. MCP servers are automatically loaded from `.mcp.json` configuration
-4. Restart Claude Code to reload MCP servers after configuration changes
+**KEY**: MCP coordinates the strategy, Claude Code's Task tool executes with real agents.
 
-### Usage Examples
-- "Use Supabase MCP to show all tables in the database"
-- "Use Memory MCP to remember this architecture decision"
-- "Use Filesystem MCP to analyze the component structure"
-- "Use Sequential Thinking MCP to debug this authentication issue"
+## 🚀 Quick Setup
 
-See `MCP_SETUP.md` for detailed configuration and usage guide.
+```bash
+# Add MCP servers (Claude Flow required, others optional)
+claude mcp add claude-flow npx claude-flow@alpha mcp start
+claude mcp add ruv-swarm npx ruv-swarm mcp start  # Optional: Enhanced coordination
+claude mcp add flow-nexus npx flow-nexus@latest mcp start  # Optional: Cloud features
+```
 
-## Recent Updates & Fixes
+## MCP Tool Categories
 
-### September 2025 - AI Generation System Implementation
-- **Comprehensive AI Integration**: Full OpenAI integration with gpt-4o-mini for text and dall-e-3 for images
-  - **AIService Class**: Centralized service for all AI generation operations (`src/lib/services/aiService.ts`)
-  - **Template Generation**: AI-powered template creation from user prompts with world context
-  - **Entity Field Generation**: Generate field values for entities based on template structure and world information
-  - **Image Generation**: Entity images and world cover images using DALL-E 3 with contextual prompts
-  - **World Context Integration**: Uses ALL extended world fields for rich contextual generation
-- **API Endpoints**: Complete REST API for AI generation operations
-  - `/api/ai/generate-template`: Generate templates from prompts
-  - `/api/ai/generate-entity-fields`: Generate entity field values
-  - `/api/ai/generate-image`: Generate entity and world cover images
-  - **Permission System**: Restricted to world owners and admins with proper authentication
-- **UI Components**: Reusable AI generation components integrated into existing workflows
-  - **AIGenerateButton**: Consistent AI generation trigger with loading states
-  - **AIPromptModal**: Modal for entering generation prompts with validation
-  - **Template Generation UI**: Integrated into CreateTemplateModal with "Generate with AI" button
-- **Type Safety & Error Handling**: Comprehensive TypeScript types and error handling with user-friendly messages
+### Coordination
+`swarm_init`, `agent_spawn`, `task_orchestrate`
 
-### September 2025 - Drag-and-Drop & Unified Service Layer
-- **Comprehensive Drag-and-Drop Implementation**: Full drag-and-drop support for organizing content
-  - **Entity Drag-and-Drop**: Drag entities from grids into entity folders or back to ungrouped state
-  - **Template Drag-and-Drop**: Drag templates from grids into template folders or back to ungrouped state
-  - **Visual Feedback**: Smooth animations, hover states, and drop zone indicators
-  - **Type Safety**: Validates drop targets (entities only to entity folders, templates only to template folders)
-  - **Real-time Updates**: Uses TanStack Query mutations with optimistic updates and error handling
-  - **Cross-component Integration**: Consistent drag-and-drop across EntityCard, TemplateCard, FolderCard, EntityGrid, TemplateGrid, VirtualEntityGrid, VirtualTemplateGrid
-- **Unified Service Layer Implementation**: Comprehensive service abstraction layer (`src/lib/services/unified-service.ts`)
-  - **Interface-based Architecture**: Clear separation of concerns with IWorldService, IEntityService, ITemplateService, IFolderService, IRelationshipService
-  - **Error Handling**: Centralized error handling with ServiceError, NotFoundError, AccessDeniedError, DatabaseError, ValidationError
-  - **Database Adapter Pattern**: Consistent snake_case ↔ camelCase conversion across all data operations
-  - **Service Composition**: UnifiedServiceLayer class that orchestrates all service interactions
+### Monitoring
+`swarm_status`, `agent_list`, `agent_metrics`, `task_status`, `task_results`
 
-### September 2025 - Template Folders & Relationship System Fixes
-- **Template Folder System**: Added support for template folders with proper differentiation
-  - Added `kind` column to folders table to differentiate between 'entities' and 'templates' folders
-  - Applied migration `20250912185500_add_kind_to_folders.sql` with performance indexing
-  - Fixed template folder display issues and removed hardcoded empty arrays
-  - Updated folder creation workflow to properly handle template vs entity folder types
-- **Relationship Creation Fixed**: Resolved 500 errors when creating relationships between entities
-  - Fixed RLS (Row Level Security) policy violations on relationships table with `service_role` checks
-  - Applied migration `20250912150110_fix_relationships_rls_policy.sql` with comprehensive policies
-  - Updated all API endpoints to use `supabaseWorldService` with admin client fallback support
-- **UI/UX Improvements**: Complete relationship creation workflow with proper feedback
-  - Added `useCreateRelationship` mutation hook with TanStack Query integration
-  - Success toast notifications showing relationship details: "Entity A relationship Entity B"
-  - Auto-refresh relationships table after creation via query invalidation
-  - Fixed RelationshipTable component to use TanStack Query instead of deprecated Zustand store
-- **TypeScript & Error Handling**: Comprehensive error handling with specific user-friendly messages
-  - Proper validation with Zod schemas for relationship data
-  - Fixed all TypeScript compilation errors and type safety issues
+### Memory & Neural
+`memory_usage`, `neural_status`, `neural_train`, `neural_patterns`
 
-### September 2025 - Build & Configuration Fixes  
-- **Port Management**: Added automatic port cleanup with `kill-port`, `concurrently` for graceful process management, preventing zombie Node processes and EADDRINUSE errors
-- **Node Version Standardization**: Added `.nvmrc` for Node 20 LTS consistency across development environments
-- **PostCSS Configuration**: Fixed PostCSS config for Tailwind CSS v4. Requires `@tailwindcss/postcss` plugin with correct syntax to resolve Vercel build failures.
-- **Tailwind CSS v4.1.13**: Updated to latest version with CSS variables for theming. No `tailwind.config.ts` needed for v4.
-- **Field Consistency**: Completed comprehensive database field naming audit ensuring snake_case in database, camelCase in domain.
-- **Authentication Issues**: Fixed SSR initialization and AuthContext problems affecting world loading.
-- **Database Optimizations**: Added performance monitoring views and optimized indexes for common query patterns.
+### GitHub Integration
+`github_swarm`, `repo_analyze`, `pr_enhance`, `issue_triage`, `code_review`
 
-## Troubleshooting
+### System
+`benchmark_run`, `features_detect`, `swarm_monitor`
 
-### Common Issues
-- **Port conflicts (EADDRINUSE)**: Run `npm run kill-ports` or use `npm run dev:clean` - automatic `predev` cleanup prevents zombie Node processes
-- **Auth failures**: Ensure `NEXT_PUBLIC_SUPABASE_*` environment variables are set and valid
-- **Build failures**: Tailwind v4 requires proper PostCSS config with `@tailwindcss/postcss` plugin
-- **Admin/seed operations**: Require `SUPABASE_SERVICE_ROLE_KEY` environment variable  
-- **Node version inconsistency**: Use `nvm use` to match `.nvmrc` (Node 20 LTS)
-- **CSP issues**: Development allows unsafe-inline for HMR, production uses strict nonces
-- **Database sync**: Run migrations with `npx supabase db push`, regenerate types after schema changes
-- **Field consistency**: Database uses snake_case, domain uses camelCase - adapters handle conversion
-- **Windows compatibility**: Automatic fs.readlink patch applied via `scripts/patch-fs-readlink.cjs`
-- **Relationship creation failures**: Check RLS policies have `service_role` exceptions, ensure `supabaseWorldService` is used for admin operations
-- **Template folder issues**: Ensure folders have correct `kind` field ('entities' or 'templates') for proper display
-- **UI not refreshing**: Components should use TanStack Query hooks, not deprecated Zustand store (`useStore`)
-- **Drag-and-drop issues**: Ensure components have proper drag handlers (onDragStart) and drop handlers (onDrop), verify folder kind matching (entities to entity folders, templates to template folders)
-- **Service layer errors**: Use unified service interfaces and proper error handling - check `src/lib/services/unified-service.ts` for standardized patterns
-- **AI generation failures**: Ensure `OPENAI_API_KEY` is set in environment variables, check user has proper permissions (world owner/admin), verify world context data is available
-- **AI generation timeout**: OpenAI API calls may take 10-30 seconds, ensure proper loading states and user feedback
-- **AI image generation costs**: DALL-E 3 charges per image generated, consider rate limiting for production use
+### Flow-Nexus MCP Tools (Optional Advanced Features)
+Flow-Nexus extends MCP capabilities with 70+ cloud-based orchestration tools:
 
-### Performance Monitoring
-- Database optimization views available: `public.index_usage_stats`, `public.table_stats`
-- Helper functions for RLS policies: `user_has_world_access`, `user_can_edit_world`, `user_is_world_admin`
-- Composite indexes for common query patterns (world access, membership, entity searches)
-- GIN indexes for JSONB field searches (entities.data, templates.fields, etc.)
+**Key MCP Tool Categories:**
+- **Swarm & Agents**: `swarm_init`, `swarm_scale`, `agent_spawn`, `task_orchestrate`
+- **Sandboxes**: `sandbox_create`, `sandbox_execute`, `sandbox_upload` (cloud execution)
+- **Templates**: `template_list`, `template_deploy` (pre-built project templates)
+- **Neural AI**: `neural_train`, `neural_patterns`, `seraphina_chat` (AI assistant)
+- **GitHub**: `github_repo_analyze`, `github_pr_manage` (repository management)
+- **Real-time**: `execution_stream_subscribe`, `realtime_subscribe` (live monitoring)
+- **Storage**: `storage_upload`, `storage_list` (cloud file management)
 
-Always make sure all tests pass (especially typescript) before committing changes to git
-- image model for ai generation is gpt-image-1 and the text model is gpt-5-mini. do not ever change them unless the user asks.
+**Authentication Required:**
+- Register: `mcp__flow-nexus__user_register` or `npx flow-nexus@latest register`
+- Login: `mcp__flow-nexus__user_login` or `npx flow-nexus@latest login`
+- Access 70+ specialized MCP tools for advanced orchestration
+
+## 🚀 Agent Execution Flow with Claude Code
+
+### The Correct Pattern:
+
+1. **Optional**: Use MCP tools to set up coordination topology
+2. **REQUIRED**: Use Claude Code's Task tool to spawn agents that do actual work
+3. **REQUIRED**: Each agent runs hooks for coordination
+4. **REQUIRED**: Batch all operations in single messages
+
+### Example Full-Stack Development:
+
+```javascript
+// Single message with all agent spawning via Claude Code's Task tool
+[Parallel Agent Execution]:
+  Task("Backend Developer", "Build REST API with Express. Use hooks for coordination.", "backend-dev")
+  Task("Frontend Developer", "Create React UI. Coordinate with backend via memory.", "coder")
+  Task("Database Architect", "Design PostgreSQL schema. Store schema in memory.", "code-analyzer")
+  Task("Test Engineer", "Write Jest tests. Check memory for API contracts.", "tester")
+  Task("DevOps Engineer", "Setup Docker and CI/CD. Document in memory.", "cicd-engineer")
+  Task("Security Auditor", "Review authentication. Report findings via hooks.", "reviewer")
+  
+  // All todos batched together
+  TodoWrite { todos: [...8-10 todos...] }
+  
+  // All file operations together
+  Write "backend/server.js"
+  Write "frontend/App.jsx"
+  Write "database/schema.sql"
+```
+
+## 📋 Agent Coordination Protocol
+
+### Every Agent Spawned via Task Tool MUST:
+
+**1️⃣ BEFORE Work:**
+```bash
+npx claude-flow@alpha hooks pre-task --description "[task]"
+npx claude-flow@alpha hooks session-restore --session-id "swarm-[id]"
+```
+
+**2️⃣ DURING Work:**
+```bash
+npx claude-flow@alpha hooks post-edit --file "[file]" --memory-key "swarm/[agent]/[step]"
+npx claude-flow@alpha hooks notify --message "[what was done]"
+```
+
+**3️⃣ AFTER Work:**
+```bash
+npx claude-flow@alpha hooks post-task --task-id "[task]"
+npx claude-flow@alpha hooks session-end --export-metrics true
+```
+
+## 🎯 Concurrent Execution Examples
+
+### ✅ CORRECT WORKFLOW: MCP Coordinates, Claude Code Executes
+
+```javascript
+// Step 1: MCP tools set up coordination (optional, for complex tasks)
+[Single Message - Coordination Setup]:
+  mcp__claude-flow__swarm_init { topology: "mesh", maxAgents: 6 }
+  mcp__claude-flow__agent_spawn { type: "researcher" }
+  mcp__claude-flow__agent_spawn { type: "coder" }
+  mcp__claude-flow__agent_spawn { type: "tester" }
+
+// Step 2: Claude Code Task tool spawns ACTUAL agents that do the work
+[Single Message - Parallel Agent Execution]:
+  // Claude Code's Task tool spawns real agents concurrently
+  Task("Research agent", "Analyze API requirements and best practices. Check memory for prior decisions.", "researcher")
+  Task("Coder agent", "Implement REST endpoints with authentication. Coordinate via hooks.", "coder")
+  Task("Database agent", "Design and implement database schema. Store decisions in memory.", "code-analyzer")
+  Task("Tester agent", "Create comprehensive test suite with 90% coverage.", "tester")
+  Task("Reviewer agent", "Review code quality and security. Document findings.", "reviewer")
+  
+  // Batch ALL todos in ONE call
+  TodoWrite { todos: [
+    {id: "1", content: "Research API patterns", status: "in_progress", priority: "high"},
+    {id: "2", content: "Design database schema", status: "in_progress", priority: "high"},
+    {id: "3", content: "Implement authentication", status: "pending", priority: "high"},
+    {id: "4", content: "Build REST endpoints", status: "pending", priority: "high"},
+    {id: "5", content: "Write unit tests", status: "pending", priority: "medium"},
+    {id: "6", content: "Integration tests", status: "pending", priority: "medium"},
+    {id: "7", content: "API documentation", status: "pending", priority: "low"},
+    {id: "8", content: "Performance optimization", status: "pending", priority: "low"}
+  ]}
+  
+  // Parallel file operations
+  Bash "mkdir -p app/{src,tests,docs,config}"
+  Write "app/package.json"
+  Write "app/src/server.js"
+  Write "app/tests/server.test.js"
+  Write "app/docs/API.md"
+```
+
+### ❌ WRONG (Multiple Messages):
+```javascript
+Message 1: mcp__claude-flow__swarm_init
+Message 2: Task("agent 1")
+Message 3: TodoWrite { todos: [single todo] }
+Message 4: Write "file.js"
+// This breaks parallel coordination!
+```
+
+## Performance Benefits
+
+- **84.8% SWE-Bench solve rate**
+- **32.3% token reduction**
+- **2.8-4.4x speed improvement**
+- **27+ neural models**
+
+## Hooks Integration
+
+### Pre-Operation
+- Auto-assign agents by file type
+- Validate commands for safety
+- Prepare resources automatically
+- Optimize topology by complexity
+- Cache searches
+
+### Post-Operation
+- Auto-format code
+- Train neural patterns
+- Update memory
+- Analyze performance
+- Track token usage
+
+### Session Management
+- Generate summaries
+- Persist state
+- Track metrics
+- Restore context
+- Export workflows
+
+## Advanced Features (v2.0.0)
+
+- 🚀 Automatic Topology Selection
+- ⚡ Parallel Execution (2.8-4.4x speed)
+- 🧠 Neural Training
+- 📊 Bottleneck Analysis
+- 🤖 Smart Auto-Spawning
+- 🛡️ Self-Healing Workflows
+- 💾 Cross-Session Memory
+- 🔗 GitHub Integration
+
+## Integration Tips
+
+1. Start with basic swarm init
+2. Scale agents gradually
+3. Use memory for context
+4. Monitor progress regularly
+5. Train patterns from success
+6. Enable hooks automation
+7. Use GitHub tools first
+
+## Support
+
+- Documentation: https://github.com/ruvnet/claude-flow
+- Issues: https://github.com/ruvnet/claude-flow/issues
+- Flow-Nexus Platform: https://flow-nexus.ruv.io (registration required for cloud features)
+
+---
+
+Remember: **Claude Flow coordinates, Claude Code creates!**
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+Never save working files, text/mds and tests to the root folder.
