@@ -7,6 +7,8 @@ import { World } from '../types';
 import { createClient as createServerSupabaseClient } from '../supabase/server';
 import { adaptWorldFromDatabase, adaptWorldToDatabase, isValidWorld } from '../adapters';
 import { logError } from '../logging';
+import { worldAccessCache } from '../cache/worldAccessCache';
+import { aiContextCache } from '../cache/aiContextCache';
 
 export class WorldService {
   /**
@@ -155,7 +157,11 @@ export class WorldService {
         logError('Invalid world data after update', new Error('World validation failed'), { worldId, userId });
         throw new Error('Invalid world data after update');
       }
-      
+
+      // Invalidate caches for this world since data might have changed
+      worldAccessCache.invalidateWorld(worldId);
+      aiContextCache.invalidateContext(adaptedWorld);
+
       return adaptedWorld;
     } catch (error) {
       logError('Error updating world', error as Error, { action: 'updateWorld', worldId, userId });
@@ -179,6 +185,9 @@ export class WorldService {
         logError('Supabase error deleting world', error, { action: 'deleteWorld', worldId, userId });
         throw new Error(`Database error: ${error.message}`);
       }
+
+      // Invalidate cache for this world since it no longer exists
+      worldAccessCache.invalidateWorld(worldId);
     } catch (error) {
       logError('Error deleting world', error as Error, { action: 'deleteWorld', worldId, userId });
       throw new Error('Failed to delete world');
@@ -209,9 +218,15 @@ export class WorldService {
 
   /**
    * Check if user has access to a world without fetching full world data
-   * Optimized for N+1 query prevention
+   * Optimized for N+1 query prevention with caching
    */
   async hasWorldAccess(worldId: string, userId: string): Promise<boolean> {
+    // Check cache first
+    const cached = worldAccessCache.getWithStats(worldId, userId);
+    if (cached !== null) {
+      return cached;
+    }
+
     try {
       const supabase = await createServerSupabaseClient();
       const { data: world, error } = await supabase
@@ -221,13 +236,21 @@ export class WorldService {
         .eq('id', worldId)
         .single();
 
+      let hasAccess = false;
       if (error) {
-        if ((error as any).code === 'PGRST116') return false; // Not found
-        logError('Supabase error checking world access', error, { action: 'hasWorldAccess', worldId, userId });
-        return false;
+        if ((error as any).code === 'PGRST116') {
+          hasAccess = false; // Not found
+        } else {
+          logError('Supabase error checking world access', error, { action: 'hasWorldAccess', worldId, userId });
+          hasAccess = false;
+        }
+      } else {
+        hasAccess = !!world;
       }
 
-      return !!world;
+      // Cache the result with 5 minute TTL
+      worldAccessCache.set(worldId, userId, hasAccess);
+      return hasAccess;
     } catch (error) {
       logError('Error checking world access', error as Error, { action: 'hasWorldAccess', worldId, userId });
       return false;
@@ -236,10 +259,29 @@ export class WorldService {
 
   /**
    * Get world access info for multiple worlds efficiently
-   * Returns a Map of worldId -> hasAccess for bulk operations
+   * Returns a Map of worldId -> hasAccess for bulk operations with caching
    */
   async getWorldAccessBulk(worldIds: string[], userId: string): Promise<Map<string, boolean>> {
     if (worldIds.length === 0) return new Map();
+
+    // Check cache for all requested worlds
+    const cachedResults = worldAccessCache.getBulk(worldIds, userId);
+    const uncachedWorldIds: string[] = [];
+    const finalResults = new Map<string, boolean>();
+
+    // Separate cached and uncached results
+    for (const [worldId, cached] of cachedResults) {
+      if (cached !== null) {
+        finalResults.set(worldId, cached);
+      } else {
+        uncachedWorldIds.push(worldId);
+      }
+    }
+
+    // If all results were cached, return immediately
+    if (uncachedWorldIds.length === 0) {
+      return finalResults;
+    }
 
     try {
       const supabase = await createServerSupabaseClient();
@@ -247,23 +289,41 @@ export class WorldService {
         .from('worlds')
         .select('id')
         .or(`owner_id.eq.${userId},and(is_public.eq.true,is_archived.eq.false)`)
-        .in('id', worldIds);
+        .in('id', uncachedWorldIds);
 
       if (error) {
-        logError('Supabase error in bulk world access check', error, { action: 'getWorldAccessBulk', worldIds, userId });
-        return new Map();
+        logError('Supabase error in bulk world access check', error, { action: 'getWorldAccessBulk', worldIds: uncachedWorldIds, userId });
+        // For failed requests, set uncached worlds to false
+        uncachedWorldIds.forEach(id => finalResults.set(id, false));
+        return finalResults;
       }
 
-      const accessMap = new Map<string, boolean>();
-      // Initialize all as false
-      worldIds.forEach(id => accessMap.set(id, false));
+      // Initialize uncached worlds as false
+      const uncachedResults: Array<{ worldId: string; userId: string; hasAccess: boolean }> = [];
+      uncachedWorldIds.forEach(id => {
+        finalResults.set(id, false);
+        uncachedResults.push({ worldId: id, userId, hasAccess: false });
+      });
+
       // Set accessible worlds to true
-      worlds?.forEach(world => accessMap.set(world.id, true));
-      
-      return accessMap;
+      worlds?.forEach(world => {
+        finalResults.set(world.id, true);
+        // Update the cache entry for this world
+        const cacheEntry = uncachedResults.find(entry => entry.worldId === world.id);
+        if (cacheEntry) {
+          cacheEntry.hasAccess = true;
+        }
+      });
+
+      // Cache all the new results
+      worldAccessCache.setBulk(uncachedResults);
+
+      return finalResults;
     } catch (error) {
-      logError('Error in bulk world access check', error as Error, { action: 'getWorldAccessBulk', worldIds, userId });
-      return new Map();
+      logError('Error in bulk world access check', error as Error, { action: 'getWorldAccessBulk', worldIds: uncachedWorldIds, userId });
+      // For failed requests, set uncached worlds to false
+      uncachedWorldIds.forEach(id => finalResults.set(id, false));
+      return finalResults;
     }
   }
 

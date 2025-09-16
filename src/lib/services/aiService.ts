@@ -8,6 +8,7 @@ import {
   type TokenUsage,
   type ImageGenerationParams
 } from '@/lib/ai-pricing';
+import { aiContextCache } from '@/lib/cache/aiContextCache';
 
 // Initialize OpenAI client lazily to avoid build-time errors
 let openai: OpenAI | null = null;
@@ -842,39 +843,8 @@ Example format:
    * Build world context string for prompts using all available world information
    */
   private buildWorldContext(worldContext?: Pick<World, 'name' | 'description' | 'summary' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>): string {
-    if (!worldContext) return '';
-
-    let context = '';
-    if (worldContext.name) context += `World: ${worldContext.name}\n`;
-    if (worldContext.summary) context += `Summary: ${worldContext.summary}\n`;
-    if (worldContext.description) context += `Description: ${worldContext.description}\n`;
-    if (worldContext.logline) context += `Logline: ${worldContext.logline}\n`;
-    if (worldContext.genreBlend?.length) context += `Genre: ${worldContext.genreBlend.join(', ')}\n`;
-    if (worldContext.overallTone) {
-      const tone = Array.isArray(worldContext.overallTone)
-        ? worldContext.overallTone.join(', ')
-        : worldContext.overallTone;
-      context += `Tone: ${tone}\n`;
-    }
-    if (worldContext.keyThemes?.length) context += `Theme: ${worldContext.keyThemes.join(', ')}\n`;
-    if (worldContext.audienceRating) context += `Audience Rating: ${worldContext.audienceRating}\n`;
-    if (worldContext.scopeScale) context += `Scope & Scale: ${worldContext.scopeScale}\n`;
-    if (worldContext.technologyLevel?.length) context += `Technology Level: ${worldContext.technologyLevel.join(', ')}\n`;
-    if (worldContext.magicLevel?.length) context += `Magic Level: ${worldContext.magicLevel.join(', ')}\n`;
-    if (worldContext.cosmologyModel) context += `Cosmology: ${worldContext.cosmologyModel}\n`;
-    if (worldContext.climateBiomes?.length) context += `Travel Difficulty: ${worldContext.climateBiomes.join(', ')}\n`;
-    if (worldContext.calendarTimekeeping) context += `Calendar & Timekeeping: ${worldContext.calendarTimekeeping}\n`;
-    if (worldContext.societalOverview) context += `Societal Overview: ${worldContext.societalOverview}\n`;
-    if (worldContext.conflictDrivers) {
-      const drivers = Array.isArray(worldContext.conflictDrivers)
-        ? worldContext.conflictDrivers.join(', ')
-        : worldContext.conflictDrivers;
-      context += `Conflict Drivers: ${drivers}\n`;
-    }
-    if (worldContext.rulesConstraints) context += `Rules & Constraints: ${worldContext.rulesConstraints}\n`;
-    if (worldContext.aestheticDirection) context += `Aesthetic Direction: ${worldContext.aestheticDirection}\n`;
-
-    return context ? `World Context:\n${context}\n` : '';
+    // Use cached context building to reduce repeated processing
+    return aiContextCache.getWorldContext(worldContext);
   }
 }
 
