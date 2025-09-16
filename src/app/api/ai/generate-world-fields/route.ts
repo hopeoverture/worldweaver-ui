@@ -236,9 +236,19 @@ export async function POST(req: NextRequest) {
       action: 'generate_world_fields'
     });
 
-    return NextResponse.json(
-      { error: 'Failed to generate world fields', requestId },
-      { status: 500 }
-    );
+    // Return more detailed error information for debugging
+    const errorResponse = {
+      error: 'Failed to generate world fields',
+      requestId,
+      details: {
+        message: (error as Error).message,
+        name: (error as Error).name,
+        timestamp: new Date().toISOString(),
+        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        nodeEnv: process.env.NODE_ENV
+      }
+    };
+
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
