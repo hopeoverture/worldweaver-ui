@@ -252,7 +252,26 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
         prompt,
         entityName: formData.name || entity.name,
         templateId: template.id,
-        existingFields: formData.fields || entity.fields,
+        existingFields: {
+          // Include name and summary from form
+          ...(formData.name ? { name: formData.name } : {}),
+          ...(formData.summary ? { summary: formData.summary } : {}),
+
+          // Include folder context with actual name
+          ...(formData.folderId && folders.length > 0 ? {
+            folder: folders.filter(f => f.kind === 'entities').find(f => f.id === formData.folderId)?.name || 'Unknown Folder'
+          } : {}),
+
+          // Include template fields with human-readable names (not IDs) - ALWAYS from form
+          ...Object.fromEntries(
+            Object.entries(formData.fields || {})
+              .map(([fieldId, value]) => {
+                const field = template?.fields.find(f => f.id === fieldId);
+                return field ? [field.name, value] : null;
+              })
+              .filter(Boolean) as [string, any][]
+          )
+        },
         worldId,
         generateAllFields: aiGenerationTarget === 'all',
         specificField: aiGenerationTarget !== 'all' ? aiGenerationTarget : undefined

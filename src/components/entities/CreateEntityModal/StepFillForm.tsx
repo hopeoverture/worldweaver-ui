@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Template, Entity, Link, TemplateField } from '@/lib/types';
 import { useWorldFolders } from '@/hooks/query/useWorldFolders';
 import { useWorld } from '@/hooks/query/useWorld';
+import { useWorldEntities } from '@/hooks/query/useWorldEntities';
 import { useGenerateEntityFields } from '@/hooks/mutations/useGenerateEntityFields';
 import { sanitizeTemplateField, validateJsonField } from '@/lib/security';
 import { logError } from '@/lib/logging';
@@ -24,6 +25,7 @@ interface StepFillFormProps {
 export function StepFillForm({ template, worldId, initialFolderId, onSave, onBack }: StepFillFormProps) {
   const { data: folders = [] } = useWorldFolders(worldId);
   const { data: world } = useWorld(worldId);
+  const { data: entities = [] } = useWorldEntities(worldId);
   const generateEntityFields = useGenerateEntityFields();
   const [formData, setFormData] = useState({
     name: '',
@@ -104,7 +106,34 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
         prompt,
         entityName: formData.name || undefined,
         templateId: template.id,
-        existingFields: formData.fields,
+        existingFields: {
+          // Include name and summary
+          ...(formData.name ? { name: formData.name } : {}),
+          ...(formData.summary ? { summary: formData.summary } : {}),
+
+          // Include folder context with actual name
+          ...(formData.folderId && entityFolders.length > 0 ? {
+            folder: entityFolders.find(f => f.id === formData.folderId)?.name || 'Unknown Folder'
+          } : {}),
+
+          // Include template fields with human-readable names (not IDs)
+          ...Object.fromEntries(
+            Object.entries(formData.fields)
+              .map(([fieldId, value]) => {
+                const field = template.fields.find(f => f.id === fieldId);
+                return field ? [field.name, value] : null;
+              })
+              .filter(Boolean) as [string, any][]
+          ),
+
+          // Include relationships/links with entity names
+          ...(formData.links && formData.links.length > 0 ? {
+            relationships: formData.links.map(link => {
+              const targetEntity = entities.find((e: any) => e.id === link.toEntityId);
+              return `${link.relationshipType} ${targetEntity?.name || 'unknown entity'}`;
+            }).join(', ')
+          } : {})
+        },
         worldId,
         generateAllFields: aiGenerationTarget === 'all',
         specificField: aiGenerationTarget !== 'all' ? aiGenerationTarget : undefined
