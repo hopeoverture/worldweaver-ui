@@ -176,6 +176,7 @@ export async function POST(req: NextRequest) {
         specificField: validatedData.specificField,
       });
     } catch (error) {
+      console.error('Detailed error from aiService (entity fields):', error);
       // Track the failed attempt
       await aiUsageService.trackUsage({
         userId: user.id,
