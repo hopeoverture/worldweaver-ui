@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject, experimental_generateImage as generateImage } from 'ai';
 import { z } from 'zod';
 import { TemplateField, FieldType, World } from '@/lib/types';
@@ -9,6 +9,19 @@ import {
   type TokenUsage,
   type ImageGenerationParams
 } from '@/lib/ai-pricing';
+
+// Create configured OpenAI provider instance
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: 'https://api.openai.com/v1', // Ensure we're using the standard OpenAI endpoint
+});
+
+// Verify OpenAI configuration
+function ensureOpenAIConfigured() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+}
 
 // Re-use existing interfaces from the original AI service
 export type {
@@ -80,6 +93,8 @@ export class AIServiceVercel {
     const startTime = Date.now();
 
     try {
+      // Ensure OpenAI is properly configured
+      ensureOpenAIConfigured();
       const contextPrompt = this.buildWorldContext(worldContext);
 
       const systemPrompt = `You are a worldbuilding assistant. Generate a template for a tabletop RPG or creative writing project.
@@ -98,12 +113,24 @@ Generate a JSON object with this exact structure:
 
 Include 3-8 relevant fields. Use appropriate field types. Always include a Name field as the first field.`;
 
-      const result = await generateObject({
-        model: openai('gpt-5-mini'), // Use the custom model specified by user
-        schema: TemplateSchema,
-        system: systemPrompt,
-        prompt: `Generate a template for: ${prompt}`
-      });
+      let result;
+      try {
+        result = await generateObject({
+          model: openai('gpt-5-mini'), // Use the custom model specified by user
+          schema: TemplateSchema,
+          system: systemPrompt,
+          prompt: `Generate a template for: ${prompt}`
+        });
+      } catch (modelError) {
+        logError('Error calling Vercel AI generateObject', modelError as Error, {
+          action: 'generate_template_vercel_model_call',
+          metadata: {
+            model: 'gpt-5-mini',
+            hasApiKey: !!process.env.OPENAI_API_KEY
+          }
+        });
+        throw new Error(`AI model call failed: ${(modelError as Error).message}`);
+      }
 
       // Calculate usage metrics from Vercel AI response
       const responseTimeMs = Date.now() - startTime;
@@ -163,6 +190,8 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
     const startTime = Date.now();
 
     try {
+      // Ensure OpenAI is properly configured
+      ensureOpenAIConfigured();
       const contextPrompt = this.buildWorldContext(worldContext);
 
       const fieldsToGenerate = generateAllFields
@@ -221,12 +250,24 @@ Example format:
         ? `Additional context: ${prompt}\n\nGenerate the field values.`
         : 'Generate appropriate field values based on the context.';
 
-      const result = await generateObject({
-        model: openai('gpt-5-mini'),
-        schema: EntityFieldsSchema,
-        system: systemPrompt,
-        prompt: userPrompt
-      });
+      let result;
+      try {
+        result = await generateObject({
+          model: openai('gpt-5-mini'),
+          schema: EntityFieldsSchema,
+          system: systemPrompt,
+          prompt: userPrompt
+        });
+      } catch (modelError) {
+        logError('Error calling Vercel AI generateObject for entity fields', modelError as Error, {
+          action: 'generate_entity_fields_vercel_model_call',
+          metadata: {
+            model: 'gpt-5-mini',
+            hasApiKey: !!process.env.OPENAI_API_KEY
+          }
+        });
+        throw new Error(`AI model call failed: ${(modelError as Error).message}`);
+      }
 
       // Calculate usage metrics
       const responseTimeMs = Date.now() - startTime;
@@ -285,6 +326,8 @@ Example format:
     const startTime = Date.now();
 
     try {
+      // Ensure OpenAI is properly configured
+      ensureOpenAIConfigured();
       const contextPrompt = this.buildWorldContext(existingData as any);
 
       // Build field descriptions for the AI
@@ -352,12 +395,24 @@ Example format:
         ? `Additional guidance: ${prompt}\n\nGenerate the requested world fields.`
         : 'Generate creative and consistent values for the requested world fields.';
 
-      const result = await generateObject({
-        model: openai('gpt-5-mini'),
-        schema: WorldFieldsSchema,
-        system: systemPrompt,
-        prompt: userPrompt
-      });
+      let result;
+      try {
+        result = await generateObject({
+          model: openai('gpt-5-mini'),
+          schema: WorldFieldsSchema,
+          system: systemPrompt,
+          prompt: userPrompt
+        });
+      } catch (modelError) {
+        logError('Error calling Vercel AI generateObject for world fields', modelError as Error, {
+          action: 'generate_world_fields_vercel_model_call',
+          metadata: {
+            model: 'gpt-5-mini',
+            hasApiKey: !!process.env.OPENAI_API_KEY
+          }
+        });
+        throw new Error(`AI model call failed: ${(modelError as Error).message}`);
+      }
 
       // Calculate usage metrics
       const responseTimeMs = Date.now() - startTime;
@@ -414,6 +469,8 @@ Example format:
     const startTime = Date.now();
 
     try {
+      // Ensure OpenAI is properly configured
+      ensureOpenAIConfigured();
       // Map quality to size for the API
       const sizeMap = {
         low: '1024x1024',
