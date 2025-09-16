@@ -27,7 +27,8 @@
       "Bash(powershell:*)",
       "WebFetch(domain:ai-sdk.dev)",
       "WebSearch",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
