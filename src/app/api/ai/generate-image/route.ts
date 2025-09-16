@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (error) {
+      console.error('Detailed error from aiService:', error);
       // Track the failed attempt
       await aiUsageService.trackUsage({
         userId: user.id,

@@ -483,6 +483,14 @@ export function EntityDetailModal({
       // Build a contextual prompt from the entity data
       const contextualPrompt = buildImagePromptFromContext(entityName, template, entityFields || {}, '');
 
+      console.log('Context-based image generation:', {
+        entityName,
+        templateName: template.name,
+        entityFields: entityFields || {},
+        contextualPrompt,
+        promptLength: contextualPrompt.length
+      });
+
       const result = await generateImage.mutateAsync({
         worldId: worldId,
         type: 'entity' as const,
