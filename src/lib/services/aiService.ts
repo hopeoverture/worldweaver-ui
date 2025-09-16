@@ -239,6 +239,11 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
     try {
       const contextPrompt = this.buildWorldContext(worldContext);
 
+      // Check if required fields are filled to provide better context
+      const requiredFields = templateFields.filter(f => f.required);
+      const filledRequiredFields = requiredFields.filter(f => existingFields[f.id] || existingFields[f.name]);
+      const hasRequiredFieldContext = filledRequiredFields.length === requiredFields.length;
+
       const fieldsToGenerate = generateAllFields
         ? templateFields
         : templateFields.filter(f => specificField ? f.name === specificField : !existingFields[f.name]);
@@ -271,6 +276,11 @@ ${contextPrompt}
 
 Entity: ${entityName || 'Unnamed'}
 Template: ${templateName || 'Unknown'}
+
+${hasRequiredFieldContext
+  ? 'ℹ️ All required template fields are filled, providing good context for generation.'
+  : '⚠️ Some required template fields are missing. Generate content that works generally but may lack specific context.'
+}
 
 Existing fields:
 ${Object.entries(existingFields).map(([key, value]) => `${key}: ${value}`).join('\n')}

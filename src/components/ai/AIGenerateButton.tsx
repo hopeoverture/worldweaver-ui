@@ -12,6 +12,7 @@ interface AIGenerateButtonProps {
   className?: string;
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
+  title?: string;
 }
 
 export function AIGenerateButton({
@@ -22,7 +23,8 @@ export function AIGenerateButton({
   size = 'sm',
   className = '',
   disabled = false,
-  type = 'button'
+  type = 'button',
+  title
 }: AIGenerateButtonProps) {
   return (
     <Button
@@ -32,6 +34,7 @@ export function AIGenerateButton({
       size={size}
       disabled={disabled || isGenerating}
       className={`inline-flex items-center gap-2 ${className}`}
+      title={title}
     >
       {isGenerating ? (
         <>

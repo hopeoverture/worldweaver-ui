@@ -269,7 +269,39 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     }
   };
 
+  // Check if required fields are filled for AI generation
+  const getRequiredFieldsStatus = () => {
+    if (!template) return { hasRequiredFields: false, missingFields: [] };
+
+    const requiredFields = template.fields.filter(f => f.required);
+    const missingFields: string[] = [];
+
+    requiredFields.forEach(field => {
+      const value = formData.fields?.[field.id] || entity.fields?.[field.id];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        missingFields.push(field.name);
+      }
+    });
+
+    return {
+      hasRequiredFields: missingFields.length === 0,
+      missingFields,
+      requiredFields: requiredFields.map(f => f.name)
+    };
+  };
+
   const openAIModal = (target: 'all' | string) => {
+    const { hasRequiredFields, missingFields } = getRequiredFieldsStatus();
+
+    if (target === 'all' && !hasRequiredFields) {
+      toast({
+        title: 'Required fields missing',
+        description: `Please fill in these required fields first: ${missingFields.join(', ')}. AI needs this basic information to generate contextually appropriate content.`,
+        variant: 'error'
+      });
+      return;
+    }
+
     setAiGenerationTarget(target);
     setShowAIModal(true);
   };
@@ -492,23 +524,62 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Details</h3>
               {isEditing && (
-                <AIGenerateButton
-                  onClick={() => openAIModal('all')}
-                  disabled={generateEntityFields.isPending}
-                  isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  Generate All Fields
-                </AIGenerateButton>
+                <div className="relative">
+                  <AIGenerateButton
+                    onClick={() => openAIModal('all')}
+                    disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
+                    isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
+                    className={`text-white ${
+                      getRequiredFieldsStatus().hasRequiredFields
+                        ? 'bg-purple-600 hover:bg-purple-700'
+                        : 'bg-gray-400 cursor-not-allowed'
+                    }`}
+                    title={
+                      getRequiredFieldsStatus().hasRequiredFields
+                        ? 'Generate all empty fields using AI'
+                        : `Please fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
+                    }
+                  >
+                    Generate All Fields
+                  </AIGenerateButton>
+                  {!getRequiredFieldsStatus().hasRequiredFields && (
+                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
+            {/* Warning banner for missing required fields */}
+            {isEditing && !getRequiredFieldsStatus().hasRequiredFields && (
+              <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <span className="text-yellow-600 dark:text-yellow-400">⚠️</span>
+                  </div>
+                  <div className="ml-2">
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      Required fields needed for AI generation
+                    </h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      Please fill in: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
+                      <br />
+                      <span className="text-xs">AI needs these core details to generate contextually appropriate content.</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               {template.fields.map(field => (
                 <div key={field.id}>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       {field.name}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                      {field.required && (
+                        <span className="text-red-500 ml-1 font-bold" title="Required field">*</span>
+                      )}
                     </label>
                     {isEditing && (
                       <AIGenerateButton
@@ -517,8 +588,16 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
                         isGenerating={generateEntityFields.isPending && aiGenerationTarget === field.id}
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white"
+                        title={
+                          !getRequiredFieldsStatus().hasRequiredFields
+                            ? 'Note: Fill required fields for better AI generation quality'
+                            : 'Generate this field using AI'
+                        }
                       >
                         Generate
+                        {!getRequiredFieldsStatus().hasRequiredFields && (
+                          <span className="ml-1 text-xs">⚠️</span>
+                        )}
                       </AIGenerateButton>
                     )}
                   </div>
