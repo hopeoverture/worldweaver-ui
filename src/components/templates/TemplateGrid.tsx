@@ -13,9 +13,10 @@ interface TemplateGridProps {
   onDragStart?: (template: Template) => void;
   /** List of template IDs that are customized versions of system templates */
   customizedTemplateIds?: string[];
+  worldId?: string;
 }
 
-export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate, onDragStart, customizedTemplateIds = [] }: TemplateGridProps) {
+export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate, onDragStart, customizedTemplateIds = [], worldId }: TemplateGridProps) {
   
   // Empty state component
   const emptyState = (
@@ -41,6 +42,7 @@ export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate, on
           onDelete={onDelete}
           onDragStart={onDragStart}
           isCustomized={customizedTemplateIds.includes(template.id)}
+          worldId={worldId}
         />
       ))}
     </div>
@@ -55,6 +57,7 @@ export function TemplateGrid({ templates, onEdit, onDelete, onCreateTemplate, on
       onCreateTemplate={onCreateTemplate}
       onDragStart={onDragStart}
       customizedTemplateIds={customizedTemplateIds}
+      worldId={worldId}
     />
   );
 

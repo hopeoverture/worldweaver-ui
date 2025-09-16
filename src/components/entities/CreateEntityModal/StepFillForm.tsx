@@ -132,21 +132,40 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
   };
 
 
+  // Get status of required fields for AI generation and validation
+  const getRequiredFieldsStatus = () => {
+    const requiredFields = template.fields.filter(f => f.required);
+    const missingFields: string[] = [];
+
+    requiredFields.forEach(field => {
+      const value = formData.fields[field.id];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        missingFields.push(field.name);
+      }
+    });
+
+    return {
+      hasRequiredFields: missingFields.length === 0,
+      missingFields,
+      requiredFields
+    };
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
     }
-    
-    // Validate required template fields (if any have validation rules)
+
+    // Validate required template fields
     template.fields.forEach(field => {
       const value = formData.fields[field.id];
-      if (field.name.toLowerCase().includes('required') && (!value || value.toString().trim() === '')) {
+      if (field.required && (!value || value.toString().trim() === '')) {
         newErrors[field.id] = `${field.name} is required`;
       }
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -440,28 +459,64 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
             <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
             <AIGenerateButton
               onClick={() => openAIModal('all')}
-              disabled={generateEntityFields.isPending}
+              disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
               isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
+              title={
+                !getRequiredFieldsStatus().hasRequiredFields
+                  ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
+                  : 'Generate values for all fields using AI'
+              }
             >
               Generate All Fields
             </AIGenerateButton>
           </div>
+
+          {/* Warning banner for missing required fields */}
+          {!getRequiredFieldsStatus().hasRequiredFields && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Required fields needed for AI generation
+                  </h3>
+                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                    Fill these required fields first to enable AI generation: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
+                  </p>
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    Required fields provide essential context that helps the AI generate better, more relevant content for your {template.name.toLowerCase()}.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {template.fields.map(field => (
             <div key={field.id}>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {field.name}
+                  {field.required && (
+                    <span className="text-red-500 ml-1" title="Required for AI generation">*</span>
+                  )}
                   <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
                     ({field.type})
                   </span>
                 </label>
                 <AIGenerateButton
                   onClick={() => openAIModal(field.id)}
-                  disabled={generateEntityFields.isPending}
+                  disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
                   isGenerating={generateEntityFields.isPending && aiGenerationTarget === field.id}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
+                  title={
+                    !getRequiredFieldsStatus().hasRequiredFields
+                      ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
+                      : `Generate ${field.name} using AI`
+                  }
                 >
                   Generate
                 </AIGenerateButton>

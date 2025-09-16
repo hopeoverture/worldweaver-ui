@@ -20,6 +20,7 @@ interface VirtualTemplateGridProps {
   containerHeight?: number;
   /** List of template IDs that are customized versions of system templates */
   customizedTemplateIds?: string[];
+  worldId?: string;
 }
 
 export function VirtualTemplateGrid({
@@ -32,7 +33,8 @@ export function VirtualTemplateGrid({
   minItemWidth = 300,
   maxColumns = 4,
   containerHeight,
-  customizedTemplateIds = []
+  customizedTemplateIds = [],
+  worldId
 }: VirtualTemplateGridProps) {
   
   // Empty state
@@ -57,6 +59,7 @@ export function VirtualTemplateGrid({
         onDelete={() => onDelete?.(template.id)}
         onDragStart={onDragStart}
         isCustomized={customizedTemplateIds.includes(template.id)}
+        worldId={worldId}
       />
     </div>
   );

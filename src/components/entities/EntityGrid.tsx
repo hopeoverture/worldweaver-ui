@@ -10,9 +10,11 @@ interface EntityGridProps {
   entities: Entity[];
   onCreateEntity?: () => void;
   onDragStart?: (entity: Entity) => void;
+  worldId?: string;
+  onDelete?: (entityId: string) => void;
 }
 
-export function EntityGrid({ entities, onCreateEntity, onDragStart }: EntityGridProps) {
+export function EntityGrid({ entities, onCreateEntity, onDragStart, worldId, onDelete }: EntityGridProps) {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
 
   // Empty state component
@@ -52,6 +54,8 @@ export function EntityGrid({ entities, onCreateEntity, onDragStart }: EntityGrid
             entity={entity}
             onClick={() => setSelectedEntity(entity)}
             onDragStart={onDragStart}
+            worldId={worldId}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -71,6 +75,8 @@ export function EntityGrid({ entities, onCreateEntity, onDragStart }: EntityGrid
       entities={items}
       onCreateEntity={onCreateEntity}
       onDragStart={onDragStart}
+      worldId={worldId}
+      onDelete={onDelete}
     />
   );
 

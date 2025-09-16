@@ -17,6 +17,8 @@ interface VirtualEntityGridProps {
   maxColumns?: number;
   /** Container height (optional, defaults to viewport-based) */
   containerHeight?: number;
+  worldId?: string;
+  onDelete?: (entityId: string) => void;
 }
 
 export function VirtualEntityGrid({
@@ -26,7 +28,9 @@ export function VirtualEntityGrid({
   itemHeight = 280,
   minItemWidth = 280,
   maxColumns = 4,
-  containerHeight
+  containerHeight,
+  worldId,
+  onDelete
 }: VirtualEntityGridProps) {
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
 
@@ -69,6 +73,8 @@ export function VirtualEntityGrid({
         entity={entity}
         onClick={() => setSelectedEntity(entity)}
         onDragStart={onDragStart}
+        worldId={worldId}
+        onDelete={onDelete}
       />
     </div>
   );
