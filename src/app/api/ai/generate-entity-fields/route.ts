@@ -71,8 +71,15 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    // Get template data - use a safer query that doesn't fail with .single()
-    const { data: templateResults, error: templateError } = await supabase
+    // Get template data - use service role for system template access
+    // Core templates require elevated permissions, so we need to use service role
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const serviceSupabase = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: templateResults, error: templateError } = await serviceSupabase
       .from('templates')
       .select('id, name, fields')
       .eq('id', validatedData.templateId);
