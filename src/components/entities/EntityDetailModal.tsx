@@ -63,7 +63,9 @@ export function EntityDetailModal({
   const [aiGenerationTarget, setAiGenerationTarget] = useState<'all' | string>('all');
   const [showImageModal, setShowImageModal] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedDataRef = useRef<Partial<Entity> | null>(null);
   const updateEntityMut = useUpdateEntity(worldId);
   const createEntityMut = useCreateEntity(worldId);
   const { toast } = useToast();
@@ -112,6 +114,15 @@ export function EntityDetailModal({
       setAiImageUrl(null);
       setErrors({});
       setIsEditing(false); // Start in view mode for existing entities
+
+      // Set initial saved state for change tracking
+      lastSavedDataRef.current = {
+        name: entity.name,
+        summary: entity.summary,
+        folderId: entity.folderId,
+        fields: { ...entity.fields }
+      };
+      setHasUnsavedChanges(false);
     } else if (isCreating) {
       // Creation mode - initialize with defaults
       setFormData({
@@ -125,12 +136,29 @@ export function EntityDetailModal({
       setAiImageUrl(null);
       setErrors({});
       setIsEditing(true); // Start in edit mode for creation
+
+      // No saved state for creation mode
+      lastSavedDataRef.current = null;
+      setHasUnsavedChanges(false);
     }
   }, [entity, isCreating, initialFolderId]);
 
+  // Helper to check if data has changed from last saved state
+  const hasDataChanged = useCallback(() => {
+    if (!lastSavedDataRef.current) return true;
+
+    const current = lastSavedDataRef.current;
+    return (
+      formData.name !== current.name ||
+      formData.summary !== current.summary ||
+      formData.folderId !== current.folderId ||
+      JSON.stringify(formData.fields) !== JSON.stringify(current.fields)
+    );
+  }, [formData]);
+
   // Auto-save functionality - debounced save on form changes
   const debouncedAutoSave = useCallback(async () => {
-    if (!entity || isCreating || !autoSaveEnabled || !isEditing) return;
+    if (!entity || isCreating || !autoSaveEnabled || !isEditing || !hasUnsavedChanges) return;
     if (!template) return;
 
     // Don't auto-save if there are validation errors
@@ -156,17 +184,27 @@ export function EntityDetailModal({
         },
       });
 
-      // Update local state silently
+      // Update last saved state and clear unsaved changes flag
+      lastSavedDataRef.current = { ...formData };
+      setHasUnsavedChanges(false);
       setErrors({});
     } catch (error) {
       // Silently fail auto-saves, user can manually save
       console.error('Auto-save failed:', error);
     }
-  }, [entity, isCreating, autoSaveEnabled, isEditing, formData, template, updateEntityMut]);
+  }, [entity, isCreating, autoSaveEnabled, isEditing, hasUnsavedChanges, formData, template, updateEntityMut]);
 
-  // Debounced auto-save effect
+  // Track changes to formData and set unsaved flag
   useEffect(() => {
-    if (!entity || isCreating || !autoSaveEnabled || !isEditing) return;
+    if (!entity || isCreating || !autoSaveEnabled) return;
+
+    const changed = hasDataChanged();
+    setHasUnsavedChanges(changed);
+  }, [entity, isCreating, autoSaveEnabled, hasDataChanged]);
+
+  // Debounced auto-save effect - only runs when there are unsaved changes
+  useEffect(() => {
+    if (!entity || isCreating || !autoSaveEnabled || !isEditing || !hasUnsavedChanges) return;
 
     // Clear existing timeout
     if (autoSaveTimeoutRef.current) {
@@ -183,7 +221,7 @@ export function EntityDetailModal({
         clearTimeout(autoSaveTimeoutRef.current);
       }
     };
-  }, [formData, debouncedAutoSave, entity, isCreating, autoSaveEnabled, isEditing]);
+  }, [hasUnsavedChanges, debouncedAutoSave, entity, isCreating, autoSaveEnabled, isEditing]);
 
   // Enable auto-save after initial load to prevent immediate saves
   useEffect(() => {
@@ -286,6 +324,11 @@ export function EntityDetailModal({
         setErrors({});
         setImageFile(null);
         setAutoSaveEnabled(false); // Disable auto-save when manually saving
+
+        // Update last saved state and clear unsaved changes
+        lastSavedDataRef.current = { ...formData };
+        setHasUnsavedChanges(false);
+
         toast({ title: 'Entity updated', variant: 'success' });
 
         // Re-enable auto-save after a short delay
@@ -315,6 +358,17 @@ export function EntityDetailModal({
       setIsEditing(false);
       setErrors({});
       setAutoSaveEnabled(false); // Disable auto-save when canceling
+
+      // Reset to last saved state
+      if (lastSavedDataRef.current) {
+        lastSavedDataRef.current = {
+          name: entity.name,
+          summary: entity.summary,
+          folderId: entity.folderId,
+          fields: { ...entity.fields }
+        };
+      }
+      setHasUnsavedChanges(false);
 
       // Re-enable auto-save after a short delay
       setTimeout(() => setAutoSaveEnabled(true), 1000);
@@ -366,10 +420,118 @@ export function EntityDetailModal({
     console.log('Remove link:', linkId);
   };
 
+  // Build a contextual prompt from entity data
+  const buildImagePromptFromContext = (entityName: string, template: Template, entityFields: Record<string, any>, customPrompt: string = '') => {
+    const parts: string[] = [];
+
+    // Start with entity name and template type
+    if (entityName && entityName !== 'New Entity') {
+      parts.push(`${entityName}, a ${template.name.toLowerCase()}`);
+    } else {
+      parts.push(`A ${template.name.toLowerCase()}`);
+    }
+
+    // Add significant field values
+    if (entityFields) {
+      template.fields.forEach(field => {
+        const value = entityFields[field.id];
+        if (value && typeof value === 'string' && value.trim()) {
+          // Include important visual or descriptive fields
+          if (field.name.toLowerCase().includes('appearance') ||
+              field.name.toLowerCase().includes('description') ||
+              field.name.toLowerCase().includes('look') ||
+              field.name.toLowerCase().includes('color') ||
+              field.name.toLowerCase().includes('size') ||
+              field.name.toLowerCase().includes('style') ||
+              field.name.toLowerCase().includes('outfit') ||
+              field.name.toLowerCase().includes('clothing') ||
+              field.name.toLowerCase().includes('feature')) {
+            parts.push(value.trim());
+          }
+        }
+      });
+    }
+
+    // Add custom prompt if provided
+    if (customPrompt && customPrompt.trim()) {
+      parts.push(customPrompt.trim());
+    }
+
+    // Ensure we have at least a basic description
+    if (parts.length === 1) {
+      parts.push('detailed and visually striking');
+    }
+
+    return parts.join(', ');
+  };
+
+  // Generate image using context without requiring user prompt
+  const handleGenerateImageFromContext = async (artStyle?: any) => {
+    if (!template || !world) {
+      toast({
+        title: 'Error',
+        description: 'Missing required data for image generation',
+        variant: 'error'
+      });
+      return;
+    }
+
+    try {
+      const entityName = isCreating ? (formData.name || 'New Entity') : entity!.name;
+      const entityFields = isCreating ? formData.fields : entity!.fields;
+
+      // Build a contextual prompt from the entity data
+      const contextualPrompt = buildImagePromptFromContext(entityName, template, entityFields || {}, '');
+
+      const result = await generateImage.mutateAsync({
+        worldId: worldId,
+        type: 'entity' as const,
+        prompt: contextualPrompt,
+        artStyle,
+        entityName,
+        templateName: template.name,
+        entityFields: entityFields || {},
+        worldName: world.name,
+        worldDescription: world.description
+      });
+
+      if (isCreating) {
+        // For creation mode, set the image in the form
+        setAiImageUrl(result.imageUrl);
+        setCurrentImageUrl(result.imageUrl);
+        setImageFile(null);
+        toast({ title: 'Image generated', description: 'AI image has been generated from entity context.', variant: 'success' });
+      } else {
+        // For edit mode, update the entity immediately
+        await updateEntityMut.mutateAsync({
+          id: entity!.id,
+          patch: { imageUrl: result.imageUrl }
+        });
+
+        // Update local state
+        setCurrentImageUrl(result.imageUrl);
+        toast({ title: 'Image updated', description: 'Entity image has been updated with context-based AI image.', variant: 'success' });
+      }
+    } catch (error) {
+      console.error('Image generation failed:', error);
+      toast({ title: 'Image generation failed', description: 'Failed to generate AI image. Please try again.', variant: 'error' });
+    }
+  };
+
   const handleAIGenerate = async (prompt: string) => {
     if (!world) {
       console.error('AI Generation failed: World not loaded');
       toast({ title: 'Error', description: 'World not loaded', variant: 'error' });
+      return;
+    }
+
+    // Validate prompt is not empty
+    if (!prompt || prompt.trim().length === 0) {
+      toast({
+        title: 'Prompt required',
+        description: 'Please provide a description for the AI generation.',
+        variant: 'error'
+      });
       return;
     }
 
@@ -517,7 +679,7 @@ export function EntityDetailModal({
     }
   };
 
-  const handleGenerateImageInViewMode = async (prompt: string, artStyle?: any) => {
+  const handleGenerateImageInViewMode = async (customPrompt: string = '', artStyle?: any) => {
     if (!template || !world) {
       toast({
         title: 'Error',
@@ -531,10 +693,13 @@ export function EntityDetailModal({
       const entityName = isCreating ? (formData.name || 'New Entity') : entity!.name;
       const entityFields = isCreating ? formData.fields : entity!.fields;
 
+      // Build a contextual prompt from the entity data
+      const contextualPrompt = buildImagePromptFromContext(entityName, template, entityFields || {}, customPrompt);
+
       const result = await generateImage.mutateAsync({
         worldId: worldId,
         type: 'entity' as const,
-        prompt,
+        prompt: contextualPrompt,
         artStyle,
         entityName,
         templateName: template.name,
@@ -881,13 +1046,29 @@ export function EntityDetailModal({
             )}
           </div>
           {isEditing ? (
-            <AIImageUpload
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Entity Image
+                </label>
+                <AIGenerateButton
+                  onClick={() => handleGenerateImageFromContext()}
+                  disabled={generateImage.isPending}
+                  isGenerating={generateImage.isPending}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  Generate from Context
+                </AIGenerateButton>
+              </div>
+
+              <AIImageUpload
               value={currentImageUrl || undefined}
               onChange={handleImageChange}
               onAIGenerate={handleAIImageGenerate}
               worldId={worldId}
               label=""
-              description="Upload an image or generate one with AI. Drag and drop or click to select."
+              description="Upload an image or use 'Generate with Prompt' for custom AI generation. Drag and drop or click to select."
               error={errors.image}
               disabled={updateEntityMut.isPending}
               aiType="entity"
@@ -902,6 +1083,7 @@ export function EntityDetailModal({
                 keyThemes: world.keyThemes
               } : undefined}
             />
+            </div>
           ) : (
             <div className="text-gray-700 dark:text-gray-300">
               {currentImageUrl ? (

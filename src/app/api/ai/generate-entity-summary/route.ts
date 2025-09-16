@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       .from('entities')
       .select(`
         *,
-        templates (
+        template:templates (
           id, name, category, description, fields
         )
       `)
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     // Adapt entity and template data
     const entity = adaptEntityFromDatabase(entityData);
-    const templateData = entityData.templates;
+    const templateData = entityData.template;
 
     if (!templateData) {
       return NextResponse.json({ error: 'Entity template not found' }, { status: 400 });
