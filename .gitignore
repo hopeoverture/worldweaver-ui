@@ -49,3 +49,19 @@ tailwindcss-*.log
 
 .mcp.json
 
+# Claude Flow directories and files
+.swarm/
+.hive-mind/
+.claude-flow/
+memory/
+coordination/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Backup files created during integration
+.claude.backup/
+.mcp.json.backup
+package.json.backup
+
