@@ -160,7 +160,7 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
   };
 
 
-  // Get status of required fields for AI generation and validation
+  // Get status of required fields for form submission validation
   const getRequiredFieldsStatus = () => {
     const requiredFields = template.fields.filter(f => f.required);
     const missingFields: string[] = [];
@@ -176,6 +176,17 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
       hasRequiredFields: missingFields.length === 0,
       missingFields,
       requiredFields
+    };
+  };
+
+  // Get status for AI generation - allows generation to help fill required fields
+  const getRequiredFieldsStatusForAI = () => {
+    // For AI generation in create mode, we allow generation even without required fields
+    // This lets AI help users fill those required fields
+    return {
+      hasRequiredFields: true,
+      missingFields: [],
+      requiredFields: template.fields.filter(f => f.required)
     };
   };
 
@@ -488,13 +499,11 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
               <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
               <AIGenerateButton
                 onClick={() => openAIModal('all')}
-                disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
+                disabled={generateEntityFields.isPending || !getRequiredFieldsStatusForAI().hasRequiredFields}
                 isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
                 className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
                 title={
-                  !getRequiredFieldsStatus().hasRequiredFields
-                    ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
-                    : getAIContextFieldsStatus().totalAIContextFields > 0 && !getAIContextFieldsStatus().hasAIContextFields
+                  getAIContextFieldsStatus().totalAIContextFields > 0 && !getAIContextFieldsStatus().hasAIContextFields
                     ? `Consider filling AI context fields for better results: ${getAIContextFieldsStatus().missingFields.join(', ')}`
                     : 'Generate values for all fields using AI'
                 }
@@ -524,19 +533,22 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
             )}
           </div>
 
-          {/* Warning banners */}
+          {/* Required fields reminder (non-blocking) */}
           {!getRequiredFieldsStatus().hasRequiredFields && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                    Required fields needed for AI generation
+                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Required fields for entity creation
                   </h3>
-                  <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-                    Fill these required fields first to enable AI generation: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
+                  <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                    These fields will be required to create the entity: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
+                  </p>
+                  <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                    💡 Tip: Use AI generation to help fill these required fields!
                   </p>
                 </div>
               </div>
@@ -586,15 +598,11 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
                 </label>
                 <AIGenerateButton
                   onClick={() => openAIModal(field.id)}
-                  disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
+                  disabled={generateEntityFields.isPending || !getRequiredFieldsStatusForAI().hasRequiredFields}
                   isGenerating={generateEntityFields.isPending && aiGenerationTarget === field.id}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
-                  title={
-                    !getRequiredFieldsStatus().hasRequiredFields
-                      ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
-                      : `Generate ${field.name} using AI`
-                  }
+                  title={`Generate ${field.name} using AI`}
                 >
                   Generate
                 </AIGenerateButton>
