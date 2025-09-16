@@ -397,6 +397,7 @@ Example format:
 
       let result;
       try {
+        // Try with the custom model first
         result = await generateObject({
           model: openai('gpt-5-mini'),
           schema: WorldFieldsSchema,
@@ -404,14 +405,52 @@ Example format:
           prompt: userPrompt
         });
       } catch (modelError) {
-        logError('Error calling Vercel AI generateObject for world fields', modelError as Error, {
+        // Log the full error details for debugging
+        logError('Error calling Vercel AI generateObject for world fields with gpt-5-mini', modelError as Error, {
           action: 'generate_world_fields_vercel_model_call',
           metadata: {
             model: 'gpt-5-mini',
-            hasApiKey: !!process.env.OPENAI_API_KEY
+            hasApiKey: !!process.env.OPENAI_API_KEY,
+            errorMessage: (modelError as Error).message,
+            errorStack: (modelError as Error).stack,
+            errorName: (modelError as Error).name
           }
         });
-        throw new Error(`AI model call failed: ${(modelError as Error).message}`);
+
+        // Try fallback to a known working model
+        try {
+          logError('Attempting fallback to gpt-4o-mini for world fields generation', new Error('Fallback attempt'), {
+            action: 'generate_world_fields_fallback_attempt',
+            metadata: {
+              originalModel: 'gpt-5-mini',
+              fallbackModel: 'gpt-4o-mini'
+            }
+          });
+
+          result = await generateObject({
+            model: openai('gpt-4o-mini'),
+            schema: WorldFieldsSchema,
+            system: systemPrompt,
+            prompt: userPrompt
+          });
+
+          logError('Fallback to gpt-4o-mini succeeded', new Error('Fallback success'), {
+            action: 'generate_world_fields_fallback_success',
+            metadata: {
+              fallbackModel: 'gpt-4o-mini'
+            }
+          });
+        } catch (fallbackError) {
+          logError('Fallback model also failed', fallbackError as Error, {
+            action: 'generate_world_fields_fallback_failed',
+            metadata: {
+              fallbackModel: 'gpt-4o-mini',
+              originalError: (modelError as Error).message,
+              fallbackErrorMessage: (fallbackError as Error).message
+            }
+          });
+          throw new Error(`AI model call failed with both gpt-5-mini and gpt-4o-mini: ${(fallbackError as Error).message}`);
+        }
       }
 
       // Calculate usage metrics
