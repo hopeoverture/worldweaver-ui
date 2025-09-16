@@ -96,6 +96,8 @@ export function VirtualEntityGrid({
       {selectedEntity && (
         <EntityDetailModal
           entity={selectedEntity}
+          worldId={worldId || selectedEntity.worldId}
+          open={selectedEntity !== null}
           onClose={() => setSelectedEntity(null)}
         />
       )}

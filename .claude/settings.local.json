@@ -3,7 +3,8 @@
     "allow": [
       "mcp__ruv-swarm",
       "mcp__claude-flow",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(npm run typecheck:*)"
     ],
     "deny": []
   }
