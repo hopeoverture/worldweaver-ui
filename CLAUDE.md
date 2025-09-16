@@ -193,11 +193,12 @@ The application manages "worlds" containing entities, templates, folders, and re
 
 ## MCP (Model Context Protocol) Integration
 
-This project includes comprehensive MCP server configuration for enhanced development workflow:
+This project includes comprehensive MCP server configuration for enhanced development workflow. All MCP servers are configured in `.mcp.json` which Claude Code automatically loads.
 
 ### Available MCP Servers
 - **Memory**: Persistent context and note-taking (`@modelcontextprotocol/server-memory`)
-- **Filesystem**: File operations and code analysis (`@modelcontextprotocol/server-filesystem`) 
+- **Filesystem**: File operations and code analysis (`@modelcontextprotocol/server-filesystem`)
+- **Shell**: Command execution with PowerShell support (`@modelcontextprotocol/server-shell`)
 - **Sequential Thinking**: Complex problem solving (`@modelcontextprotocol/server-sequential-thinking`)
 - **Supabase Official**: Standard database operations (`@supabase/mcp-server-supabase`)
 - **Supabase Advanced**: Advanced database tools (`mcp-supabase`)
@@ -207,8 +208,8 @@ This project includes comprehensive MCP server configuration for enhanced develo
 ### Setup Instructions
 1. Run `npm run test:mcp` to check configuration status
 2. Configure environment variables in `.env.local` (see MCP_SETUP.md)
-3. Update `.claude/config.json` with your Supabase credentials
-4. Restart Claude Code to load MCP servers
+3. MCP servers are automatically loaded from `.mcp.json` configuration
+4. Restart Claude Code to reload MCP servers after configuration changes
 
 ### Usage Examples
 - "Use Supabase MCP to show all tables in the database"

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { aiService } from '@/lib/services/aiService';
+import { aiServiceVercel } from '@/lib/services/aiServiceVercel';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       });
 
       const aiStartTime = Date.now();
-      generationResult = await aiService.generateWorldFields({
+      generationResult = await aiServiceVercel.generateWorldFields({
         prompt: validatedData.prompt,
         fieldsToGenerate: validatedData.fieldsToGenerate,
         existingData: validatedData.existingData || {},

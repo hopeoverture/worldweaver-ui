@@ -24,6 +24,13 @@ export const AI_PRICING = {
     output: 2.00 / 1_000_000,    // $2.00 per 1M output tokens
   },
 
+  // GPT-5-mini pricing (per token) - Custom model from user
+  'gpt-5-mini': {
+    input: 0.15 / 1_000_000,     // Estimated pricing for mini variant
+    cached_input: 0.015 / 1_000_000,  // Estimated cached pricing
+    output: 0.75 / 1_000_000,    // Estimated output pricing
+  },
+
   // GPT-image-1 pricing (per token for multimodal)
   'gpt-image-1': {
     text_input: 5.00 / 1_000_000,      // $5.00 per 1M text input tokens

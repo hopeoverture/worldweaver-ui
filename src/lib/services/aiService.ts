@@ -164,7 +164,6 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Generate a template for: ${prompt}` }
         ],
-        temperature: 0.7,
         response_format: { type: 'json_object' }
       });
 
@@ -302,7 +301,6 @@ Example format:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.8,
         response_format: { type: 'json_object' }
       });
 
@@ -618,7 +616,6 @@ Example format:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.8,
         response_format: { type: 'json_object' }
       });
 

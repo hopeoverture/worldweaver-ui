@@ -19,6 +19,7 @@
     "kill-ports": "kill-port 3000 3001 54321 5432 8000"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.30",
     "@modelcontextprotocol/server-filesystem": "^2025.8.21",
     "@modelcontextprotocol/server-memory": "^2025.8.4",
     "@modelcontextprotocol/server-sequential-thinking": "^2025.7.1",
@@ -27,6 +28,7 @@
     "@supabase/supabase-js": "^2.57.2",
     "@tanstack/react-query": "^5",
     "@types/pg": "^8.15.5",
+    "ai": "^5.0.44",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "dompurify": "^3.2.6",
@@ -34,14 +36,15 @@
     "glob": "^11.0.3",
     "mcp-supabase": "^0.1.0",
     "next": "^15.5.2",
-    "openai": "^5.20.2",
+    "node-fetch": "^3.3.2",
+    "openai": "^5.20.3",
     "postcss": "^8.5.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-error-boundary": "^6.0.0",
     "server-only": "^0.0.1",
     "tsx": "^4.20.5",
-    "zod": "^3.23.8",
+    "zod": "^3.25.76",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

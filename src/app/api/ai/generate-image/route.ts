@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { aiService } from '@/lib/services/aiService';
+import { aiServiceVercel } from '@/lib/services/aiServiceVercel';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
           keyThemes: world.key_themes || undefined,
         };
 
-        generationResult = await aiService.generateEntityImage({
+        generationResult = await aiServiceVercel.generateEntityImage({
           entityName: validatedData.entityName || 'Entity',
           templateName: validatedData.templateName,
           entityFields: validatedData.entityFields,
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
           aestheticDirection: world.aesthetic_direction || undefined,
         };
 
-        generationResult = await aiService.generateWorldCoverImage({
+        generationResult = await aiServiceVercel.generateWorldCoverImage({
           worldName: validatedData.worldName || world.name,
           worldDescription: validatedData.worldDescription || world.description || undefined,
           worldData,

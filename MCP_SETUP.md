@@ -53,7 +53,7 @@ The MCP configuration is stored in `.claude/config.json`. Update the placeholder
 
 ### 4. **Official Supabase Server**
 - **Package**: `@supabase/mcp-server-supabase`
-- **Environment**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+- **Environment**: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, 'SUPABASE_SERVICE_ROLE_KEY', 'DATABASE_URL', 
 - **Purpose**: Standard Supabase operations using official SDK
 - **Capabilities**:
   - Database queries via PostgREST
