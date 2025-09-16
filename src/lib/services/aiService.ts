@@ -159,7 +159,7 @@ Return a JSON object with this exact structure:
 Include 3-8 relevant fields. Use appropriate field types. Always include a Name field as the first field.`;
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Generate a template for: ${prompt}` }
@@ -189,7 +189,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
         totalTokens: usage?.total_tokens || 0
       };
 
-      const costBreakdown = calculateTextGenerationCost('gpt-5-2025-08-07', tokenUsage);
+      const costBreakdown = calculateTextGenerationCost('gpt-5-mini', tokenUsage);
 
       const endTime = new Date();
 
@@ -197,7 +197,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
         result: parsed,
         usage: {
           operation: 'template',
-          model: 'gpt-5-2025-08-07',
+          model: 'gpt-5-mini',
           provider: 'openai',
           requestId: completion.id,
           promptTokens: tokenUsage.inputTokens,
@@ -248,7 +248,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           result: { fields: {} },
           usage: {
             operation: 'entity_fields',
-            model: 'gpt-5-2025-08-07',
+            model: 'gpt-5-mini',
             provider: 'openai',
             requestId: undefined,
             promptTokens: 0,
@@ -296,7 +296,7 @@ Example format:
         : 'Generate appropriate field values based on the context.';
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -311,6 +311,24 @@ Example format:
 
       const parsed = JSON.parse(response);
 
+      // Map field names to field IDs for UI compatibility
+      // The AI returns fields by name, but the UI expects them by field ID
+      const fieldNameToIdMap = new Map<string, string>();
+      fieldsToGenerate.forEach(field => {
+        fieldNameToIdMap.set(field.name, field.id);
+      });
+
+      const mappedFields: Record<string, unknown> = {};
+      Object.entries(parsed).forEach(([fieldName, value]) => {
+        const fieldId = fieldNameToIdMap.get(fieldName);
+        if (fieldId) {
+          mappedFields[fieldId] = value;
+        } else {
+          // Log unmapped fields for debugging
+          console.warn(`AI generated field "${fieldName}" not found in template fields`);
+        }
+      });
+
       // Calculate usage metrics
       const usage = completion.usage;
       const responseTimeMs = Date.now() - startTime;
@@ -321,15 +339,15 @@ Example format:
         totalTokens: usage?.total_tokens || 0
       };
 
-      const costBreakdown = calculateTextGenerationCost('gpt-5-2025-08-07', tokenUsage);
+      const costBreakdown = calculateTextGenerationCost('gpt-5-mini', tokenUsage);
 
       const endTime = new Date();
 
       return {
-        result: { fields: parsed },
+        result: { fields: mappedFields },
         usage: {
           operation: 'entity_fields',
-          model: 'gpt-5-2025-08-07',
+          model: 'gpt-5-mini',
           provider: 'openai',
           requestId: completion.id,
           promptTokens: tokenUsage.inputTokens,
@@ -341,7 +359,7 @@ Example format:
           metadata: {
             entityName: entityName || null,
             templateName: templateName || null,
-            fieldsGenerated: Object.keys(parsed).length,
+            fieldsGenerated: Object.keys(mappedFields).length,
             worldContext: worldContext?.name || null
           },
           startedAt: new Date(startTime),
@@ -611,7 +629,7 @@ Example format:
         : 'Generate creative and consistent values for the requested world fields.';
 
       const completion = await getOpenAIClient().chat.completions.create({
-        model: 'gpt-5-2025-08-07',
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -636,7 +654,7 @@ Example format:
         totalTokens: usage?.total_tokens || 0
       };
 
-      const costBreakdown = calculateTextGenerationCost('gpt-5-2025-08-07', tokenUsage);
+      const costBreakdown = calculateTextGenerationCost('gpt-5-mini', tokenUsage);
 
       const endTime = new Date();
 
@@ -644,7 +662,7 @@ Example format:
         result: { fields: parsed },
         usage: {
           operation: 'world_fields',
-          model: 'gpt-5-2025-08-07',
+          model: 'gpt-5-mini',
           provider: 'openai',
           requestId: completion.id,
           promptTokens: tokenUsage.inputTokens,

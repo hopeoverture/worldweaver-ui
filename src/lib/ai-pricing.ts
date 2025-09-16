@@ -196,13 +196,13 @@ export function estimateTextCost(
 export function getPricingInfo() {
   return {
     textGeneration: {
-      model: 'gpt-5-2025-08-07',
-      inputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].input,
-      cachedInputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].cached_input,
-      outputPricePerToken: AI_PRICING['gpt-5-2025-08-07'].output,
-      inputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].input * 1_000_000,
-      cachedInputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].cached_input * 1_000_000,
-      outputPricePer1M: AI_PRICING['gpt-5-2025-08-07'].output * 1_000_000,
+      model: 'gpt-5-mini',
+      inputPricePerToken: AI_PRICING['gpt-5-mini'].input,
+      cachedInputPricePerToken: AI_PRICING['gpt-5-mini'].cached_input,
+      outputPricePerToken: AI_PRICING['gpt-5-mini'].output,
+      inputPricePer1M: AI_PRICING['gpt-5-mini'].input * 1_000_000,
+      cachedInputPricePer1M: AI_PRICING['gpt-5-mini'].cached_input * 1_000_000,
+      outputPricePer1M: AI_PRICING['gpt-5-mini'].output * 1_000_000,
     },
     imageGeneration: {
       model: 'gpt-image-1',
