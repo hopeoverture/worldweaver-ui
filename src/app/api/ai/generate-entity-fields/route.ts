@@ -8,7 +8,7 @@ import { TemplateField } from '@/lib/types';
 
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID'),
-  templateId: z.string().uuid('Invalid template ID').optional(),
+  templateId: z.string().uuid('Invalid template ID'),
   entityName: z.string().optional(),
   prompt: z.string().max(500, 'Prompt too long').optional(),
   existingFields: z.record(z.unknown()).optional(),
@@ -63,25 +63,38 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get template data if templateId provided
+    // Get template data - templateId is required for entity field generation
+    if (!validatedData.templateId) {
+      return NextResponse.json({
+        error: 'Template ID is required for entity field generation',
+        details: 'Please provide a templateId to generate entity fields'
+      }, { status: 400 });
+    }
+
     let template = null;
-    if (validatedData.templateId) {
-      const { data: templateData, error: templateError } = await supabase
-        .from('templates')
-        .select('id, name, fields')
-        .eq('id', validatedData.templateId)
-        .single();
+    const { data: templateData, error: templateError } = await supabase
+      .from('templates')
+      .select('id, name, fields')
+      .eq('id', validatedData.templateId)
+      .single();
 
-      if (templateError || !templateData) {
-        return NextResponse.json({ error: 'Template not found' }, { status: 404 });
-      }
-
-      template = templateData;
+    if (templateError) {
+      console.error('Template lookup error:', templateError);
+      return NextResponse.json({
+        error: 'Template not found',
+        details: `Could not find template with ID: ${validatedData.templateId}`,
+        templateError: templateError.message
+      }, { status: 404 });
     }
 
-    if (!template) {
-      return NextResponse.json({ error: 'Template is required for field generation' }, { status: 400 });
+    if (!templateData) {
+      return NextResponse.json({
+        error: 'Template not found',
+        details: `Template with ID ${validatedData.templateId} does not exist`
+      }, { status: 404 });
     }
+
+    template = templateData;
 
     // Prepare world context using all the extended fields the user filled in
     const worldContext = {

@@ -133,7 +133,7 @@ export interface AITemplateGenerationResponse {
 
 export interface AIEntityFieldsGenerationRequest {
   worldId: string;
-  templateId?: string;
+  templateId: string;  // Required for entity field generation
   entityName?: string;
   prompt?: string;
   existingFields?: Record<string, unknown>;

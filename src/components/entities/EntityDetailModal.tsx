@@ -199,7 +199,40 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   };
 
   const handleAIGenerate = async (prompt: string) => {
-    if (!world || !entity || !template) return;
+    if (!world) {
+      console.error('AI Generation failed: World not loaded');
+      toast({ title: 'Error', description: 'World not loaded', variant: 'error' });
+      return;
+    }
+
+    if (!entity) {
+      console.error('AI Generation failed: Entity not provided');
+      toast({ title: 'Error', description: 'Entity not found', variant: 'error' });
+      return;
+    }
+
+    if (!template) {
+      console.error('AI Generation failed: Template not found', {
+        entityTemplateId: entity.templateId,
+        availableTemplates: templates.map(t => ({ id: t.id, name: t.name })),
+        templatesLoaded: templates.length > 0
+      });
+      toast({
+        title: 'Template not found',
+        description: `Cannot find template for this entity. Entity template ID: ${entity.templateId}`,
+        variant: 'error'
+      });
+      return;
+    }
+
+    console.log('Starting AI generation for entity fields', {
+      entityName: formData.name || entity.name,
+      templateId: template.id,
+      templateName: template.name,
+      worldId,
+      generateAllFields: aiGenerationTarget === 'all',
+      specificField: aiGenerationTarget !== 'all' ? aiGenerationTarget : undefined
+    });
 
     try {
       const result = await generateEntityFields.mutateAsync({
