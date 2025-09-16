@@ -166,6 +166,16 @@ export interface AIImageGenerationResponse {
   revisedPrompt?: string;
 }
 
+export interface AIEntitySummaryGenerationRequest {
+  worldId: string;
+  entityId: string;
+  customPrompt?: string;
+}
+
+export interface AIEntitySummaryGenerationResponse {
+  summary: string;
+}
+
 export interface AIWorldFieldsGenerationRequest {
   worldId?: string;
   prompt?: string;
@@ -371,7 +381,7 @@ export type Entity = {
   folderId?: ID;
   templateId?: ID;
   name: string;
-  summary?: string; // Not in database schema
+  summary?: string; // Maps to summary column in database
   description?: string; // Not in database schema
   fields: Record<string, unknown>; // Maps to data JSONB field in database
   links: Link[]; // Computed from relationships

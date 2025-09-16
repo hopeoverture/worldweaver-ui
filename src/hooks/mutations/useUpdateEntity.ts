@@ -9,6 +9,7 @@ type Patch = {
   fields?: Record<string, unknown>;
   tags?: string[] | null;
   imageUrl?: string | null;
+  summary?: string;
 };
 
 export function useUpdateEntity(worldId: string) {

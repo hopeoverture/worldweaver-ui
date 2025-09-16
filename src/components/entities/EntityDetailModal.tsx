@@ -15,6 +15,8 @@ import { useWorldRelationships } from '@/hooks/query/useWorldRelationships';
 import { useWorld } from '@/hooks/query/useWorld';
 import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useGenerateEntityFields } from '@/hooks/mutations/useGenerateEntityFields';
+import { useGenerateEntitySummary } from '@/hooks/mutations/useGenerateEntitySummary';
+import { useGenerateImage } from '@/hooks/mutations/useGenerateImage';
 import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate } from '@/lib/utils';
 import { AIGenerateButton } from '@/components/ai/AIGenerateButton';
@@ -33,6 +35,8 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   const { data: relationships = [] } = useWorldRelationships(worldId);
   const { data: world } = useWorld(worldId);
   const generateEntityFields = useGenerateEntityFields();
+  const generateEntitySummary = useGenerateEntitySummary();
+  const generateImage = useGenerateImage();
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Entity>>({});
@@ -42,6 +46,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
   const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [showAIModal, setShowAIModal] = useState(false);
   const [aiGenerationTarget, setAiGenerationTarget] = useState<'all' | string>('all');
+  const [showImageModal, setShowImageModal] = useState(false);
   const updateEntityMut = useUpdateEntity(worldId);
   const { toast } = useToast();
 
@@ -269,6 +274,87 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     }
   };
 
+  const handleGenerateSummary = async () => {
+    if (!entity || !template || !world) {
+      toast({
+        title: 'Error',
+        description: 'Missing required data for summary generation',
+        variant: 'error'
+      });
+      return;
+    }
+
+    try {
+      const result = await generateEntitySummary.mutateAsync({
+        worldId: entity.worldId,
+        entityId: entity.id,
+      });
+
+      // Update the form data with the generated summary
+      setFormData(prev => ({
+        ...prev,
+        summary: result.summary
+      }));
+
+      // If not in editing mode, we should trigger a save or update the entity directly
+      if (!isEditing) {
+        try {
+          await updateEntityMut.mutateAsync({
+            id: entity.id,
+            patch: { summary: result.summary }
+          });
+        } catch (error) {
+          // Error handling done by mutation hook
+          console.error('Failed to save generated summary:', error);
+        }
+      }
+    } catch (error) {
+      // Error handling is done by the mutation hook
+      console.error('Summary generation failed:', error);
+    }
+  };
+
+  const handleGenerateImageInViewMode = async (prompt: string, artStyle?: any) => {
+    if (!entity || !template || !world) {
+      toast({
+        title: 'Error',
+        description: 'Missing required data for image generation',
+        variant: 'error'
+      });
+      return;
+    }
+
+    try {
+      const result = await generateImage.mutateAsync({
+        worldId: entity.worldId,
+        type: 'entity' as const,
+        prompt,
+        artStyle,
+        entityName: entity.name,
+        templateName: template.name,
+        entityFields: entity.fields,
+        worldName: world.name,
+        worldDescription: world.description
+      });
+
+      // Update entity with generated image
+      try {
+        await updateEntityMut.mutateAsync({
+          id: entity.id,
+          patch: { imageUrl: result.imageUrl }
+        });
+
+        // Update local state
+        setCurrentImageUrl(result.imageUrl);
+        setShowImageModal(false);
+      } catch (error) {
+        console.error('Failed to save generated image:', error);
+      }
+    } catch (error) {
+      console.error('Image generation failed:', error);
+    }
+  };
+
   // Check if required fields are filled for basic validation
   const getRequiredFieldsStatus = () => {
     if (!template) return { hasRequiredFields: false, missingFields: [] };
@@ -465,24 +551,51 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
 
         {/* Summary */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Summary</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Summary</h3>
+            <AIGenerateButton
+              onClick={handleGenerateSummary}
+              disabled={generateEntitySummary.isPending || updateEntityMut.isPending}
+              isGenerating={generateEntitySummary.isPending}
+              size="sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              title="Generate a comprehensive summary from all entity details"
+            >
+              Generate Summary
+            </AIGenerateButton>
+          </div>
           {isEditing ? (
             <Textarea
               value={formData.summary || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
               placeholder="Entity summary..."
-              rows={3}
+              rows={4}
+              disabled={generateEntitySummary.isPending}
             />
           ) : (
             <div className="text-gray-700 dark:text-gray-300">
-              {entity.summary || <span className="text-gray-400 italic">No summary provided</span>}
+              {(formData.summary !== undefined ? formData.summary : entity.summary) || <span className="text-gray-400 italic">No summary provided</span>}
             </div>
           )}
         </div>
 
         {/* Image */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Image</h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Image</h3>
+            {!isEditing && (
+              <AIGenerateButton
+                onClick={() => setShowImageModal(true)}
+                disabled={generateImage.isPending || updateEntityMut.isPending}
+                isGenerating={generateImage.isPending}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                title="Generate an AI image for this entity"
+              >
+                Generate Image
+              </AIGenerateButton>
+            )}
+          </div>
           {isEditing ? (
             <AIImageUpload
               value={currentImageUrl || undefined}
@@ -714,6 +827,19 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
             : `Describe what you want for the ${template?.fields.find(f => f.id === aiGenerationTarget)?.name} field...`
         }
         isGenerating={generateEntityFields.isPending}
+      />
+
+      {/* Image Generation Modal */}
+      <AIPromptModal
+        open={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        onGenerate={handleGenerateImageInViewMode}
+        title={`Generate Image for ${entity?.name || 'Entity'}`}
+        description={`Generate an AI image for this ${template?.name.toLowerCase() || 'entity'}. Select an art style and provide an optional description.`}
+        placeholder={`Describe how ${entity?.name || 'this entity'} should look...`}
+        isGenerating={generateImage.isPending}
+        maxLength={1000}
+        showArtStyleSelection={true}
       />
     </Modal>
   );

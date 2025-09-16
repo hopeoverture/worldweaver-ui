@@ -127,6 +127,17 @@ export interface GenerateImageResponse {
   revisedPrompt?: string;
 }
 
+export interface GenerateEntitySummaryRequest {
+  entity: Entity;
+  template: Template;
+  worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>;
+  customPrompt?: string;
+}
+
+export interface GenerateEntitySummaryResponse {
+  summary: string;
+}
+
 export class AIService {
 
   /**
@@ -385,6 +396,120 @@ Example format:
         action: 'generate_entity_fields'
       });
       throw new Error(`Failed to generate entity fields: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Generate a comprehensive summary for an entity that synthesizes all field data
+   */
+  async generateEntitySummary({
+    entity,
+    template,
+    worldContext,
+    customPrompt
+  }: GenerateEntitySummaryRequest): Promise<AIGenerationResult<GenerateEntitySummaryResponse>> {
+    const startTime = Date.now();
+
+    try {
+      const contextPrompt = this.buildWorldContext(worldContext);
+
+      // Build field context from entity data
+      const fieldDescriptions: string[] = [];
+      template.fields.forEach(field => {
+        const value = entity.fields[field.id] || entity.fields[field.name];
+        if (value !== undefined && value !== null && value !== '') {
+          // Format the value based on field type
+          let formattedValue = '';
+          if (Array.isArray(value)) {
+            formattedValue = value.join(', ');
+          } else if (typeof value === 'object') {
+            formattedValue = JSON.stringify(value);
+          } else {
+            formattedValue = String(value);
+          }
+          fieldDescriptions.push(`${field.name}: ${formattedValue}`);
+        }
+      });
+
+      const entityContext = fieldDescriptions.length > 0
+        ? `\nEntity Details:\n${fieldDescriptions.join('\n')}`
+        : '\nNo additional entity details provided.';
+
+      const systemPrompt = `You are a worldbuilding assistant specializing in creating compelling narrative summaries.
+
+${contextPrompt}
+
+Your task is to create a comprehensive, engaging summary for this ${template.name.toLowerCase()} named "${entity.name}".
+
+Guidelines:
+- Write in 2-3 well-structured paragraphs
+- Weave together all provided details into a coherent narrative
+- Match the tone and style of the world setting
+- Focus on what makes this ${template.name.toLowerCase()} unique and interesting
+- Write in third person
+- Avoid simply listing facts - create flowing, engaging prose
+- Include relationships and connections where relevant
+${customPrompt ? `\nSpecial instructions: ${customPrompt}` : ''}
+
+Return only the summary text, no additional formatting or metadata.`;
+
+      const userPrompt = `Create a compelling summary for this ${template.name.toLowerCase()}:
+
+Name: ${entity.name}
+Type: ${template.name}${entityContext}`;
+
+      const completion = await getOpenAIClient().chat.completions.create({
+        model: 'gpt-5-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7, // Slightly creative for narrative flow
+        max_tokens: 500 // Reasonable length for summaries
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No response from OpenAI');
+      }
+
+      const endTime = Date.now();
+      const tokens = completion.usage;
+
+      const usage: AIUsageMetrics = {
+        operation: 'entity-summary',
+        model: 'gpt-5-mini',
+        provider: 'openai',
+        promptTokens: tokens?.prompt_tokens || 0,
+        completionTokens: tokens?.completion_tokens || 0,
+        totalTokens: tokens?.total_tokens || 0,
+        costUsd: calculateTextGenerationCost('gpt-5-mini', {
+          inputTokens: tokens?.prompt_tokens || 0,
+          outputTokens: tokens?.completion_tokens || 0,
+          totalTokens: tokens?.total_tokens || 0
+        }).totalCost,
+        currency: 'USD',
+        success: true,
+        metadata: {
+          entityId: entity.id,
+          entityName: entity.name,
+          templateName: template.name,
+          worldId: entity.worldId,
+          fieldCount: fieldDescriptions.length,
+          hasCustomPrompt: !!customPrompt
+        },
+        responseTimeMs: endTime - startTime
+      };
+
+      return {
+        result: { summary: response.trim() },
+        usage
+      };
+    } catch (error) {
+      logError('Error generating entity summary', error as Error, {
+        action: 'generate_entity_summary'
+      });
+      throw new Error(`Failed to generate entity summary: ${(error as Error).message}`);
     }
   }
 

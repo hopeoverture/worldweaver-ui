@@ -309,3 +309,4 @@ See `MCP_SETUP.md` for detailed configuration and usage guide.
 - GIN indexes for JSONB field searches (entities.data, templates.fields, etc.)
 
 Always make sure all tests pass (especially typescript) before committing changes to git
+- image model for ai generation is gpt-image-1 and the text model is gpt-5-mini. do not ever change them unless the user asks.

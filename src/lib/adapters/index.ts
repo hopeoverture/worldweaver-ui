@@ -122,7 +122,7 @@ export function adaptEntityFromDatabase(
     folderId: dbEntity.folder_id || undefined,
     templateId: dbEntity.template_id || undefined,
     name: dbEntity.name,
-    summary: '', // Entities don't have description in current schema
+    summary: (dbEntity as any).summary || undefined,
     description: undefined,
     fields: (dbEntity.data as Record<string, unknown>) ?? {},
     links: [], // Will be populated by relationship service
@@ -151,6 +151,7 @@ export function adaptEntityToDatabase(
   if (templateId !== undefined) dbEntity.template_id = templateId;
   if (folderId !== undefined) dbEntity.folder_id = folderId;
   if (name !== undefined) dbEntity.name = name;
+  if (summary !== undefined) (dbEntity as any).summary = summary;
   if (Object.keys(allCustomFields).length > 0) dbEntity.data = allCustomFields as Database['public']['Tables']['entities']['Row']['data'];
   if (tags !== undefined) dbEntity.tags = tags;
   if (imageUrl !== undefined) dbEntity.image_url = imageUrl;
