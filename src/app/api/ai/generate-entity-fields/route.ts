@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { aiServiceVercel } from '@/lib/services/aiServiceVercel';
+import { aiService } from '@/lib/services/aiService';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     // Generate entity fields using AI service
     let generationResult;
     try {
-      generationResult = await aiServiceVercel.generateEntityFields({
+      generationResult = await aiService.generateEntityFields({
         prompt: validatedData.prompt,
         entityName: validatedData.entityName,
         templateName: template.name,

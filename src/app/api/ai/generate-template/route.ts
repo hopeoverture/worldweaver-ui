@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { aiServiceVercel } from '@/lib/services/aiServiceVercel';
+import { aiService } from '@/lib/services/aiService';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
@@ -107,10 +107,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate template using Vercel AI service
+    // Generate template using original AI service
     let generationResult;
     try {
-      generationResult = await aiServiceVercel.generateTemplate({
+      generationResult = await aiService.generateTemplate({
         prompt: validatedData.prompt,
         worldContext,
       });
