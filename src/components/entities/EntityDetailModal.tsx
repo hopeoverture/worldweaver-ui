@@ -214,12 +214,20 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     if (!template) {
       console.error('AI Generation failed: Template not found', {
         entityTemplateId: entity.templateId,
+        entityName: entity.name,
         availableTemplates: templates.map(t => ({ id: t.id, name: t.name })),
-        templatesLoaded: templates.length > 0
+        templatesLoaded: templates.length > 0,
+        totalTemplatesCount: templates.length
       });
+
+      const hasTemplates = templates.length > 0;
+      const templateList = hasTemplates
+        ? templates.map(t => t.name).slice(0, 3).join(', ') + (templates.length > 3 ? '...' : '')
+        : 'None loaded';
+
       toast({
         title: 'Template not found',
-        description: `Cannot find template for this entity. Entity template ID: ${entity.templateId}`,
+        description: `This entity references a template that doesn't exist (ID: ${entity.templateId}). ${hasTemplates ? `Available templates: ${templateList}` : 'No templates are loaded for this world.'}`,
         variant: 'error'
       });
       return;

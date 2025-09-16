@@ -71,30 +71,42 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    let template = null;
-    const { data: templateData, error: templateError } = await supabase
+    // Get template data - use a safer query that doesn't fail with .single()
+    const { data: templateResults, error: templateError } = await supabase
       .from('templates')
       .select('id, name, fields')
-      .eq('id', validatedData.templateId)
-      .single();
+      .eq('id', validatedData.templateId);
 
     if (templateError) {
       console.error('Template lookup error:', templateError);
       return NextResponse.json({
-        error: 'Template not found',
-        details: `Could not find template with ID: ${validatedData.templateId}`,
-        templateError: templateError.message
-      }, { status: 404 });
+        error: 'Database error while looking up template',
+        details: `Database error occurred: ${templateError.message}`,
+        templateId: validatedData.templateId
+      }, { status: 500 });
     }
 
-    if (!templateData) {
+    if (!templateResults || templateResults.length === 0) {
+      console.error('Template not found in database:', {
+        templateId: validatedData.templateId,
+        worldId: validatedData.worldId
+      });
       return NextResponse.json({
         error: 'Template not found',
-        details: `Template with ID ${validatedData.templateId} does not exist`
+        details: `No template found with ID: ${validatedData.templateId}. The template may have been deleted or the entity has an invalid template reference.`,
+        templateId: validatedData.templateId,
+        suggestion: 'Please check that the template exists or update the entity to use a valid template.'
       }, { status: 404 });
     }
 
-    template = templateData;
+    if (templateResults.length > 1) {
+      console.warn('Multiple templates found with same ID:', {
+        templateId: validatedData.templateId,
+        count: templateResults.length
+      });
+    }
+
+    const template = templateResults[0];
 
     // Prepare world context using all the extended fields the user filled in
     const worldContext = {
