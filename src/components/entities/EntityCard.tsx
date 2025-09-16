@@ -53,8 +53,12 @@ function EntityCardComponent({ entity, onClick, onDragStart, onDelete, worldId }
 
   const handleDeleteConfirm = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log(`🗑️ EntityCard: Attempting to delete entity "${entity.name}" (${entity.id})`);
+
     try {
-      await deleteEntity.mutateAsync(entity.id);
+      const result = await deleteEntity.mutateAsync(entity.id);
+      console.log(`✅ EntityCard: Delete successful for "${entity.name}":`, result);
+
       toast({
         title: 'Entity deleted',
         description: `${entity.name} has been deleted`,
@@ -62,6 +66,8 @@ function EntityCardComponent({ entity, onClick, onDragStart, onDelete, worldId }
       });
       onDelete?.(entity.id);
     } catch (error) {
+      console.error(`🚨 EntityCard: Delete failed for "${entity.name}":`, error);
+
       toast({
         title: 'Failed to delete entity',
         description: String((error as Error)?.message || error),

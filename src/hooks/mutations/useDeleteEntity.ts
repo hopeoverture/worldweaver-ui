@@ -6,11 +6,32 @@ export function useDeleteEntity(worldId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (entityId: string) => {
-      const res = await fetch(`/api/entities/${entityId}`, { method: "DELETE" });
+      console.log(`🗑️ Attempting to delete entity:`, entityId);
+
+      const res = await fetch(`/api/entities/${entityId}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+
+      console.log(`🗑️ Delete response:`, {
+        status: res.status,
+        statusText: res.statusText,
+        ok: res.ok
+      });
+
       if (!res.ok) {
         const text = await res.text().catch(() => "");
-        throw new Error(text || "Failed to delete entity");
+        console.error(`🚨 Delete failed:`, {
+          status: res.status,
+          statusText: res.statusText,
+          responseText: text,
+          entityId
+        });
+        throw new Error(text || `Failed to delete entity (${res.status})`);
       }
+
+      const result = await res.json().catch(() => ({ ok: true }));
+      console.log(`✅ Delete successful:`, result);
       return { entityId };
     },
     onMutate: async (entityId: string) => {
