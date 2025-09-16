@@ -533,16 +533,6 @@ export function EntityDetailModal({
       return;
     }
 
-    // Validate prompt is not empty
-    if (!prompt || prompt.trim().length === 0) {
-      toast({
-        title: 'Prompt required',
-        description: 'Please provide a description for the AI generation.',
-        variant: 'error'
-      });
-      return;
-    }
-
     // In creation mode, entity is null - this is expected
     if (!isCreating && !entity) {
       console.error('AI Generation failed: Entity not provided for edit mode');
