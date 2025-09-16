@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { TemplateField, FieldType, World, Entity, Template } from '@/lib/types';
 import { logError } from '@/lib/logging';
+import { ArtStyle, buildImagePrompt } from '@/lib/artStyles';
 import {
   calculateTextGenerationCost,
   calculateImageGenerationCost,
@@ -239,10 +240,10 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
     try {
       const contextPrompt = this.buildWorldContext(worldContext);
 
-      // Check if required fields are filled to provide better context
-      const requiredFields = templateFields.filter(f => f.required);
-      const filledRequiredFields = requiredFields.filter(f => existingFields[f.id] || existingFields[f.name]);
-      const hasRequiredFieldContext = filledRequiredFields.length === requiredFields.length;
+      // Check if AI context fields are filled to provide better context
+      const aiContextFields = templateFields.filter(f => f.requireForAIContext);
+      const filledAIContextFields = aiContextFields.filter(f => existingFields[f.id] || existingFields[f.name]);
+      const hasRequiredFieldContext = filledAIContextFields.length === aiContextFields.length;
 
       const fieldsToGenerate = generateAllFields
         ? templateFields
@@ -278,8 +279,10 @@ Entity: ${entityName || 'Unnamed'}
 Template: ${templateName || 'Unknown'}
 
 ${hasRequiredFieldContext
-  ? 'ℹ️ All required template fields are filled, providing good context for generation.'
-  : '⚠️ Some required template fields are missing. Generate content that works generally but may lack specific context.'
+  ? 'ℹ️ All AI context fields are filled, providing good context for generation.'
+  : aiContextFields.length > 0
+    ? '⚠️ Some AI context fields are missing. Generate content that works generally but may lack specific context.'
+    : 'ℹ️ No AI context fields are defined for this template.'
 }
 
 Existing fields:
@@ -390,8 +393,9 @@ Example format:
    */
   async generateImage({
     prompt,
-    quality = 'medium'
-  }: GenerateImageRequest): Promise<AIGenerationResult<GenerateImageResponse>> {
+    quality = 'medium',
+    artStyle
+  }: GenerateImageRequest & { artStyle?: ArtStyle }): Promise<AIGenerationResult<GenerateImageResponse>> {
     const startTime = Date.now();
 
     try {
@@ -402,10 +406,13 @@ Example format:
         high: '1024x1024'
       } as const;
 
+      // Build the final prompt with art style
+      const finalPrompt = buildImagePrompt(prompt, artStyle);
+
       // Use proper OpenAI Images API
       const response = await getOpenAIClient().images.generate({
         model: 'gpt-image-1',
-        prompt: prompt,
+        prompt: finalPrompt,
         n: 1,
         size: sizeMap[quality],
         quality: quality === 'high' ? 'hd' : 'standard',
@@ -446,7 +453,13 @@ Example format:
           metadata: {
             imageQuality: quality,
             size: sizeMap[quality],
-            revisedPrompt: imageData.revised_prompt || prompt
+            revisedPrompt: imageData.revised_prompt || finalPrompt,
+            originalPrompt: prompt,
+            artStyle: artStyle ? {
+              id: artStyle.id,
+              name: artStyle.name,
+              isBuiltIn: artStyle.isBuiltIn
+            } : null
           },
           startedAt: new Date(startTime),
           finishedAt: endTime,
@@ -469,13 +482,15 @@ Example format:
     templateName,
     entityFields,
     worldContext,
-    customPrompt
+    customPrompt,
+    artStyle
   }: {
     entityName: string;
     templateName?: string;
     entityFields?: Record<string, unknown>;
     worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
     customPrompt?: string;
+    artStyle?: ArtStyle;
   }): Promise<AIGenerationResult<GenerateImageResponse>> {
     try {
       let prompt = customPrompt || `A ${templateName || 'character'} named ${entityName}`;
@@ -503,9 +518,7 @@ Example format:
         }
       }
 
-      prompt += '. High quality, detailed artwork.';
-
-      return await this.generateImage({ prompt, quality: 'high' });
+      return await this.generateImage({ prompt, quality: 'high', artStyle });
     } catch (error) {
       logError('Error generating entity image', error as Error, { action: 'generate_entity_image' });
       throw new Error(`Failed to generate entity image: ${(error as Error).message}`);
@@ -519,12 +532,14 @@ Example format:
     worldName,
     worldDescription,
     worldData,
-    customPrompt
+    customPrompt,
+    artStyle
   }: {
     worldName: string;
     worldDescription?: string;
     worldData?: Pick<World, 'genreBlend' | 'overallTone' | 'keyThemes' | 'scopeScale' | 'aestheticDirection'>;
     customPrompt?: string;
+    artStyle?: ArtStyle;
   }): Promise<AIGenerationResult<GenerateImageResponse>> {
     try {
       let prompt = customPrompt || `Epic landscape artwork for "${worldName}"`;
@@ -548,11 +563,10 @@ Example format:
         }
       }
 
-      prompt += '. Cinematic, high quality, detailed environment art.';
-
       return await this.generateImage({
         prompt,
         quality: 'high',
+        artStyle
       });
     } catch (error) {
       logError('Error generating world cover image', error as Error, { action: 'generate_world_cover_image' });

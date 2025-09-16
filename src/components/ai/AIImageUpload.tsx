@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { AIGenerateButton } from './AIGenerateButton';
 import { AIPromptModal } from './AIPromptModal';
 import { useGenerateImage } from '@/hooks/mutations/useGenerateImage';
+import { useUserArtStyles } from '@/hooks/query/useUserArtStyles';
+import { useSaveArtStyle } from '@/hooks/mutations/useSaveArtStyle';
+import { ArtStyle, SavedArtStyle } from '@/lib/artStyles';
 
 interface AIImageUploadProps {
   /** Current image URL if any */
@@ -69,6 +72,8 @@ export function AIImageUpload({
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const generateImage = useGenerateImage();
+  const { data: savedArtStyles = [], isLoading: isLoadingArtStyles } = useUserArtStyles();
+  const saveArtStyle = useSaveArtStyle();
 
   const validateFile = useCallback((file: File): string | null => {
     // Check file type
@@ -150,12 +155,13 @@ export function AIImageUpload({
     }
   }, [onChange]);
 
-  const handleAIGenerate = async (prompt: string) => {
+  const handleAIGenerate = async (prompt: string, artStyle?: ArtStyle) => {
     try {
       const result = await generateImage.mutateAsync({
         worldId,
         type: aiType,
         prompt,
+        artStyle,
         entityName,
         templateName,
         entityFields,
@@ -314,8 +320,8 @@ export function AIImageUpload({
         title={`Generate ${aiType === 'entity' ? 'Entity' : 'World Cover'} Image`}
         description={
           aiType === 'entity'
-            ? `Generate an image for ${entityName || 'this entity'}. The AI will consider your world context and entity details.`
-            : `Generate a cover image for your world. The AI will use your world description and settings.`
+            ? `Generate an image for ${entityName || 'this entity'}. Select an art style and provide an optional description.`
+            : `Generate a cover image for your world. Select an art style and describe the scene.`
         }
         placeholder={
           aiType === 'entity'
@@ -324,6 +330,9 @@ export function AIImageUpload({
         }
         isGenerating={generateImage.isPending}
         maxLength={1000}
+        showArtStyleSelection={true}
+        savedArtStyles={savedArtStyles}
+        onSaveArtStyle={(artStyle) => saveArtStyle.mutate(artStyle)}
       />
     </div>
   );

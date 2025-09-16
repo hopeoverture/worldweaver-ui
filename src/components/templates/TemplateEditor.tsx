@@ -70,6 +70,15 @@ export function TemplateEditor({
     }));
   };
 
+  const updateFieldRequireForAIContext = (fieldId: string, requireForAIContext: boolean) => {
+    setTemplate(t => ({
+      ...t,
+      fields: t.fields.map(field =>
+        field.id === fieldId ? { ...field, requireForAIContext } : field
+      )
+    }));
+  };
+
   const updateFieldOptions = (fieldId: string, options: string[]) => {
     setTemplate(t => ({
       ...t,
@@ -85,6 +94,7 @@ export function TemplateEditor({
       name: 'New Field',
       type: 'shortText',
       required: false,
+      requireForAIContext: false,
       prompt: ''
     };
     setTemplate(t => ({ ...t, fields: [...t.fields, newField] }));
@@ -245,8 +255,8 @@ export function TemplateEditor({
                   </select>
                 </div>
 
-                {/* Required Checkbox */}
-                <div className="flex items-center pt-6">
+                {/* Required and AI Context Checkboxes */}
+                <div className="flex flex-col gap-2 pt-6">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
@@ -255,6 +265,20 @@ export function TemplateEditor({
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-neutral-600 dark:bg-neutral-800"
                     />
                     <span className="ml-2 text-xs text-gray-700 dark:text-gray-300">Required</span>
+                  </label>
+                  <label className="flex items-center" title="When checked, this field should be filled before AI generation for better context">
+                    <input
+                      type="checkbox"
+                      checked={field.requireForAIContext || false}
+                      onChange={(e) => updateFieldRequireForAIContext(field.id, e.target.checked)}
+                      className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 dark:border-neutral-600 dark:bg-neutral-800"
+                    />
+                    <span className="ml-2 text-xs text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                      AI Context
+                      <svg className="w-3 h-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </span>
                   </label>
                 </div>
 

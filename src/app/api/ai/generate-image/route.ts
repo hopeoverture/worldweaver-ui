@@ -4,11 +4,22 @@ import { aiService } from '@/lib/services/aiService';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
+import { ArtStyle, getArtStyleById, BUILTIN_ART_STYLES } from '@/lib/artStyles';
+
+const artStyleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  promptModifier: z.string(),
+  isBuiltIn: z.boolean(),
+});
 
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID'),
   type: z.enum(['entity', 'world-cover']),
   prompt: z.string().min(1, 'Prompt is required').max(1000, 'Prompt too long'),
+  // Art style selection
+  artStyle: artStyleSchema.optional(),
   // For entity images
   entityName: z.string().optional(),
   templateName: z.string().optional(),
@@ -116,6 +127,7 @@ export async function POST(req: NextRequest) {
           entityFields: validatedData.entityFields,
           worldContext,
           customPrompt: validatedData.prompt,
+          artStyle: validatedData.artStyle,
         });
       } else {
         // Generate world cover image
@@ -132,6 +144,7 @@ export async function POST(req: NextRequest) {
           worldDescription: validatedData.worldDescription || world.description || undefined,
           worldData,
           customPrompt: validatedData.prompt,
+          artStyle: validatedData.artStyle,
         });
       }
     } catch (error) {

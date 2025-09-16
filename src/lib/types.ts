@@ -33,6 +33,7 @@ export interface TemplateFieldData {
   type: FieldType;
   prompt?: string;
   required?: boolean;
+  requireForAIContext?: boolean;
   options?: string[];
   referenceType?: string;
 }
@@ -149,6 +150,7 @@ export interface AIImageGenerationRequest {
   worldId: string;
   type: 'entity' | 'world-cover';
   prompt: string;
+  artStyle?: import('./artStyles').ArtStyle;
   entityName?: string;
   templateName?: string;
   entityFields?: Record<string, unknown>;
@@ -339,6 +341,7 @@ export type TemplateField = {
   prompt?: string;
   type: FieldType;
   required?: boolean;
+  requireForAIContext?: boolean;
   options?: string[];
   referenceType?: string;
 };

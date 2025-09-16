@@ -126,7 +126,35 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
     }
   };
 
+  // Check AI context fields for AI generation guidance
+  const getAIContextFieldsStatus = () => {
+    const aiContextFields = template.fields.filter(f => f.requireForAIContext);
+    const missingFields: string[] = [];
+
+    aiContextFields.forEach(field => {
+      const value = formData.fields[field.id];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        missingFields.push(field.name);
+      }
+    });
+
+    return {
+      hasAIContextFields: missingFields.length === 0,
+      missingFields,
+      aiContextFields: aiContextFields.map(f => f.name),
+      totalAIContextFields: aiContextFields.length
+    };
+  };
+
   const openAIModal = (target: 'all' | string) => {
+    const { hasAIContextFields, missingFields, totalAIContextFields } = getAIContextFieldsStatus();
+
+    // Show warning but don't block if AI context fields are missing
+    if (target === 'all' && totalAIContextFields > 0 && !hasAIContextFields) {
+      // Don't block, just show a toast warning
+      console.warn('AI context fields missing for optimal generation:', missingFields);
+    }
+
     setAiGenerationTarget(target);
     setShowAIModal(true);
   };
@@ -455,24 +483,48 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
       {/* Template fields */}
       {template.fields.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
-            <AIGenerateButton
-              onClick={() => openAIModal('all')}
-              disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
-              isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
-              className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
-              title={
-                !getRequiredFieldsStatus().hasRequiredFields
-                  ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
-                  : 'Generate values for all fields using AI'
-              }
-            >
-              Generate All Fields
-            </AIGenerateButton>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">Template Fields</h4>
+              <AIGenerateButton
+                onClick={() => openAIModal('all')}
+                disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
+                isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
+                className="bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
+                title={
+                  !getRequiredFieldsStatus().hasRequiredFields
+                    ? `Fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
+                    : getAIContextFieldsStatus().totalAIContextFields > 0 && !getAIContextFieldsStatus().hasAIContextFields
+                    ? `Consider filling AI context fields for better results: ${getAIContextFieldsStatus().missingFields.join(', ')}`
+                    : 'Generate values for all fields using AI'
+                }
+              >
+                Generate All Fields
+              </AIGenerateButton>
+            </div>
+
+            {/* Field legend */}
+            {(template.fields.some(f => f.required) || template.fields.some(f => f.requireForAIContext)) && (
+              <div className="text-xs text-gray-600 dark:text-gray-400 flex gap-4">
+                {template.fields.some(f => f.required) && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-red-500">*</span>
+                    Required
+                  </span>
+                )}
+                {template.fields.some(f => f.requireForAIContext) && (
+                  <span className="flex items-center gap-1">
+                    <svg className="w-3 h-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    AI Context
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Warning banner for missing required fields */}
+          {/* Warning banners */}
           {!getRequiredFieldsStatus().hasRequiredFields && (
             <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -486,8 +538,27 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
                   <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
                     Fill these required fields first to enable AI generation: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
                   </p>
-                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                    Required fields provide essential context that helps the AI generate better, more relevant content for your {template.name.toLowerCase()}.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI context fields guidance */}
+          {getRequiredFieldsStatus().hasRequiredFields && getAIContextFieldsStatus().totalAIContextFields > 0 && !getAIContextFieldsStatus().hasAIContextFields && (
+            <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                    AI context fields for better results
+                  </h3>
+                  <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
+                    Consider filling these fields for more contextual AI generation: <strong>{getAIContextFieldsStatus().missingFields.join(', ')}</strong>
+                  </p>
+                  <p className="mt-2 text-xs text-purple-600 dark:text-purple-400">
+                    AI generation will work without these, but filling them helps create more accurate content.
                   </p>
                 </div>
               </div>
@@ -500,7 +571,14 @@ export function StepFillForm({ template, worldId, initialFolderId, onSave, onBac
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {field.name}
                   {field.required && (
-                    <span className="text-red-500 ml-1" title="Required for AI generation">*</span>
+                    <span className="text-red-500 ml-1" title="Required field">*</span>
+                  )}
+                  {field.requireForAIContext && (
+                    <span className="text-purple-500 ml-1" title="AI Context field - helps generate better content">
+                      <svg className="w-3 h-3 inline" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </span>
                   )}
                   <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
                     ({field.type})

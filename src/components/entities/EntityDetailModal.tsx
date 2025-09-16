@@ -269,7 +269,7 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     }
   };
 
-  // Check if required fields are filled for AI generation
+  // Check if required fields are filled for basic validation
   const getRequiredFieldsStatus = () => {
     if (!template) return { hasRequiredFields: false, missingFields: [] };
 
@@ -290,16 +290,38 @@ export function EntityDetailModal({ entity, onClose }: EntityDetailModalProps) {
     };
   };
 
-  const openAIModal = (target: 'all' | string) => {
-    const { hasRequiredFields, missingFields } = getRequiredFieldsStatus();
+  // Check if AI context fields are filled for AI generation
+  const getAIContextFieldsStatus = () => {
+    if (!template) return { hasAIContextFields: false, missingFields: [], aiContextFields: [], totalAIContextFields: 0 };
 
-    if (target === 'all' && !hasRequiredFields) {
+    const aiContextFields = template.fields.filter(f => f.requireForAIContext);
+    const missingFields: string[] = [];
+
+    aiContextFields.forEach(field => {
+      const value = formData.fields?.[field.id] || entity.fields?.[field.id];
+      if (!value || (typeof value === 'string' && value.trim() === '')) {
+        missingFields.push(field.name);
+      }
+    });
+
+    return {
+      hasAIContextFields: missingFields.length === 0,
+      missingFields,
+      aiContextFields: aiContextFields.map(f => f.name),
+      totalAIContextFields: aiContextFields.length
+    };
+  };
+
+  const openAIModal = (target: 'all' | string) => {
+    const { hasAIContextFields, missingFields, totalAIContextFields } = getAIContextFieldsStatus();
+
+    // Show warning for 'all' generation if AI context fields are missing, but don't block
+    if (target === 'all' && totalAIContextFields > 0 && !hasAIContextFields) {
       toast({
-        title: 'Required fields missing',
-        description: `Please fill in these required fields first: ${missingFields.join(', ')}. AI needs this basic information to generate contextually appropriate content.`,
-        variant: 'error'
+        title: 'AI context fields missing',
+        description: `For better results, consider filling these AI context fields: ${missingFields.join(', ')}. Generation will proceed but may be less contextually relevant.`,
+        variant: 'warning'
       });
-      return;
     }
 
     setAiGenerationTarget(target);

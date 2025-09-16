@@ -47,7 +47,7 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
     }
   }, [open, currentFolderId, templateFolders]);
   const [fields, setFields] = useState<Omit<TemplateField, 'id'>[]>([
-    { name: 'Name', type: 'shortText' as FieldType, required: true }
+    { name: 'Name', type: 'shortText' as FieldType, required: true, requireForAIContext: true }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
@@ -86,7 +86,7 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
 
       // Reset form and close modal
       setFormData({ name: '', folderId: '' });
-      setFields([{ name: 'Name', type: 'shortText', required: true }]);
+      setFields([{ name: 'Name', type: 'shortText', required: true, requireForAIContext: true }]);
       onClose();
       toast({ title: 'Template created', description: `“${formData.name.trim()}”`, variant: 'success' });
     } catch (error) {
@@ -121,6 +121,7 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
         type: field.type,
         prompt: field.prompt,
         required: field.required || false,
+        requireForAIContext: field.required || false, // Default AI context to same as required for generated fields
         options: field.options,
       }));
 
@@ -134,12 +135,12 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
 
   const handleCancel = () => {
     setFormData({ name: '', folderId: '' });
-    setFields([{ name: 'Name', type: 'shortText', required: true }]);
+    setFields([{ name: 'Name', type: 'shortText', required: true, requireForAIContext: true }]);
     onClose();
   };
 
   const addField = () => {
-    setFields(prev => [...prev, { name: '', type: 'shortText', required: false }]);
+    setFields(prev => [...prev, { name: '', type: 'shortText', required: false, requireForAIContext: false }]);
   };
 
   const updateField = (index: number, update: Partial<Omit<TemplateField, 'id'>>) => {
@@ -271,7 +272,7 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
                       </div>
                     )}
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-6">
                       <label className="flex items-center gap-2 text-sm">
                         <input
                           type="checkbox"
@@ -280,6 +281,20 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
                           className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                         />
                         Required
+                      </label>
+                      <label className="flex items-center gap-2 text-sm" title="When checked, this field should be filled before AI generation for better context">
+                        <input
+                          type="checkbox"
+                          checked={field.requireForAIContext || false}
+                          onChange={(e) => updateField(index, { requireForAIContext: e.target.checked })}
+                          className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        />
+                        <span className="flex items-center gap-1">
+                          AI Context
+                          <svg className="w-3 h-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </span>
                       </label>
                     </div>
                   </div>
@@ -301,18 +316,36 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
           </div>
         </div>
 
-        <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-          <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
-                Design Your Template
-              </h4>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                Templates define the structure for your entities. Add fields that will be common across entities of this type.
-              </p>
+        <div className="space-y-3">
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                  Design Your Template
+                </h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  Templates define the structure for your entities. Add fields that will be common across entities of this type.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h4 className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-1">
+                  AI Context Fields
+                </h4>
+                <p className="text-xs text-purple-700 dark:text-purple-300">
+                  Mark fields as "AI Context" to indicate they should be filled before AI generation for the best results. These don't have to be required fields.
+                </p>
+              </div>
             </div>
           </div>
         </div>
