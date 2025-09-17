@@ -260,6 +260,10 @@ export type World = {
   conflictDrivers?: string[];
   rulesConstraints?: string;
   aestheticDirection?: string;
+  // Shared world metadata
+  userRole?: MemberRole; // Current user's role in this world
+  isShared?: boolean; // True if user is not the owner
+  ownerName?: string; // Name of the world owner (for shared worlds)
 }
 
 // Note: 'owner' is a virtual role for UI purposes only

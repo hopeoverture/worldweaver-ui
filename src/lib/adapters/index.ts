@@ -18,10 +18,14 @@ type DatabaseProfile = Database['public']['Tables']['profiles']['Row'];
  * Convert database world row to domain World type
  */
 export function adaptWorldFromDatabase(
-  dbWorld: DatabaseWorld & { entities?: any }
+  dbWorld: DatabaseWorld & { entities?: any; user_role?: string; owner_name?: string; is_shared?: boolean }
 ): World {
   // Extract entity count from the entities array returned by Supabase count query
   const entityCount = Array.isArray(dbWorld.entities) ? dbWorld.entities[0]?.count || 0 : 0;
+
+  // Determine user role and shared status
+  const userRole = (dbWorld.user_role as MemberRole) || 'owner';
+  const isShared = dbWorld.is_shared ?? (userRole !== 'owner');
 
   return {
     id: dbWorld.id,
@@ -59,6 +63,10 @@ export function adaptWorldFromDatabase(
     inviteLinkRole: dbWorld.invite_link_role as MemberRole | undefined,
     inviteLinkExpires: dbWorld.invite_link_expires || undefined,
     inviteLinkMaxUses: dbWorld.invite_link_max_uses || undefined,
+    // Shared world metadata
+    userRole,
+    isShared,
+    ownerName: dbWorld.owner_name || undefined,
   };
 }
 
