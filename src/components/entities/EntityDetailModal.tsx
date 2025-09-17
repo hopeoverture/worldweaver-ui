@@ -301,6 +301,12 @@ export function EntityDetailModal({
 
       if (isCreating) {
         // Create new entity
+        console.log('💾 Creating entity with image:', {
+          finalImageUrl,
+          aiImageUrl,
+          currentImageUrl,
+          hasImageFile: !!imageFile
+        });
         await createEntityMut.mutateAsync({
           name: formData.name!,
           templateId: template.id,
@@ -509,10 +515,11 @@ export function EntityDetailModal({
 
       if (isCreating) {
         // For creation mode, set the image in the form
+        console.log('🖼️ Setting AI image in create mode:', result.imageUrl);
         setAiImageUrl(result.imageUrl);
         setCurrentImageUrl(result.imageUrl);
         setImageFile(null);
-        toast({ title: 'Image generated', description: 'AI image has been generated from entity context.', variant: 'success' });
+        toast({ title: 'Image generated', description: 'AI image has been generated from entity context. Don\'t forget to save your entity!', variant: 'success' });
       } else {
         // For edit mode, update the entity immediately
         await updateEntityMut.mutateAsync({
