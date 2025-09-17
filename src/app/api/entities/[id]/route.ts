@@ -48,6 +48,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
       fields: z.record(z.unknown()).optional(),
       tags: z.array(z.string()).nullable().optional(),
       imageUrl: z.string().url().nullable().optional(),
+      summary: z.string().optional(),
     })
 
     let body: z.infer<typeof schema>
@@ -71,6 +72,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
         fields: body.fields,
         tags: body.tags ?? undefined,
         imageUrl: body.imageUrl ?? undefined,
+        summary: body.summary,
       },
       user.id,
     )

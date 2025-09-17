@@ -8,17 +8,56 @@ import {
   type TokenUsage,
   type ImageGenerationParams
 } from '@/lib/ai-pricing';
+import { aiContextCache } from '@/lib/cache/aiContextCache';
+import { getOpenAIApiKey, validateOpenAIApiKey, loadEnvironmentVariables, getEnvironmentStatus } from '@/lib/config/environment';
 
 // Initialize OpenAI client lazily to avoid build-time errors
 let openai: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
+    // Explicitly ensure environment variables are loaded
+    const { success, error: envError } = loadEnvironmentVariables();
+    if (!success) {
+      console.error('❌ Failed to load environment variables:', envError);
+      throw new Error(`Environment loading failed: ${envError}`);
     }
+
+    const apiKey = getOpenAIApiKey();
+    console.log('🔍 Environment status:', {
+      envLoaded: success,
+      hasOpenAIKey: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      keyPrefix: apiKey?.substring(0, 7) || 'none'
+    });
+
+    if (!apiKey) {
+      const envStatus = getEnvironmentStatus();
+      console.error('❌ Environment status:', envStatus);
+      throw new Error('OPENAI_API_KEY not found in environment variables (.env.local or .env)');
+    }
+
+    // Validate the API key format
+    const validation = validateOpenAIApiKey(apiKey);
+    if (!validation.valid) {
+      console.error('❌ API key validation failed:', validation);
+      throw new Error(`OpenAI API key validation failed: ${validation.error}`);
+    }
+
+    // Log warnings but don't throw
+    if (validation.warnings) {
+      validation.warnings.forEach(warning => {
+        console.warn('⚠️ OpenAI API key warning:', warning);
+        logError('OpenAI API key warning', new Error(warning), {
+          action: 'openai_key_validation_warning',
+          metadata: { warning }
+        });
+      });
+    }
+
+    console.log('✅ Using API key from secure env ending with:', apiKey.slice(-10));
     openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: apiKey,
     });
   }
   return openai;
@@ -59,7 +98,8 @@ export interface AIGenerationResult<T> {
 // =====================================================
 
 export interface GenerateTemplateRequest {
-  prompt: string;
+  prompt?: string;
+  templateName?: string;
   worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>;
 }
 
@@ -143,7 +183,7 @@ export class AIService {
   /**
    * Generate a template from a user prompt with world context
    */
-  async generateTemplate({ prompt, worldContext }: GenerateTemplateRequest): Promise<AIGenerationResult<GenerateTemplateResponse>> {
+  async generateTemplate({ prompt, templateName, worldContext }: GenerateTemplateRequest): Promise<AIGenerationResult<GenerateTemplateResponse>> {
     const startTime = Date.now();
 
     try {
@@ -174,9 +214,10 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
         model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate a template for: ${prompt}` }
+          { role: 'user', content: `Generate a template for: ${prompt || templateName || 'a general template'}` }
         ],
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
+        max_completion_tokens: 2000 // High limit to account for GPT-5-mini reasoning tokens
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -220,7 +261,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           success: true,
           metadata: {
             worldContext: worldContext?.name || null,
-            promptLength: prompt.length
+            promptLength: prompt?.length || 0
           },
           startedAt: new Date(startTime),
           finishedAt: endTime,
@@ -259,6 +300,17 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
       const fieldsToGenerate = generateAllFields
         ? templateFields
         : templateFields.filter(f => specificField ? f.name === specificField : !existingFields[f.name]);
+
+      console.log('🔍 AI Entity Fields Generation Debug:', {
+        templateName,
+        totalTemplateFields: templateFields.length,
+        fieldsToGenerateCount: fieldsToGenerate.length,
+        generateAllFields,
+        specificField,
+        templateFieldNames: templateFields.map(f => f.name),
+        fieldsToGenerateNames: fieldsToGenerate.map(f => f.name),
+        existingFieldKeys: Object.keys(existingFields)
+      });
 
       if (fieldsToGenerate.length === 0) {
         return {
@@ -302,17 +354,30 @@ ${Object.entries(existingFields).map(([key, value]) => `${key}: ${value}`).join(
 Generate values for these fields:
 ${fieldsToGenerate.map(f => `- ${f.name} (${f.type})${f.prompt ? `: ${f.prompt}` : ''}`).join('\n')}
 
-Return a JSON object with field names as keys and generated values as values.
+CRITICAL FORMATTING REQUIREMENTS:
+1. Return a JSON object with EXACT field names as keys and generated values as values
+2. DO NOT include type information like (shortText), (longText), (select), etc. in your field names
+3. DO NOT add extra annotations like (3-5), (optional), etc. to field names
+4. Use the EXACT field names shown above, stripping only the type information in parentheses
+
 For text fields, provide appropriate strings.
 For number fields, provide numbers.
 For select fields, choose from valid options if provided.
 For multiSelect fields, provide arrays of strings.
 
-Example format:
+CORRECT example format:
 {
-  "Field Name": "Generated value",
-  "Number Field": 42,
-  "Multi Select Field": ["option1", "option2"]
+  "Character Name": "Zara Nightwhisper",
+  "Age & Appearance Snapshot": "Mid-20s, tall and lean with silver hair",
+  "Personality Traits": ["Curious", "Loyal", "Impulsive"],
+  "Role / Archetype": "Ally"
+}
+
+INCORRECT examples (DO NOT DO THIS):
+{
+  "Character Name (shortText)": "...",
+  "Personality Traits (3-5) (multiSelect)": [...],
+  "Age & Appearance Snapshot (shortText)": "..."
 }`;
 
       const userPrompt = prompt
@@ -335,22 +400,94 @@ Example format:
 
       const parsed = JSON.parse(response);
 
+      console.log('🔍 AI Response Debug:', {
+        rawResponse: response,
+        parsedFields: Object.keys(parsed),
+        parsedData: parsed
+      });
+
       // Map field names to field IDs for UI compatibility
       // The AI returns fields by name, but the UI expects them by field ID
       const fieldNameToIdMap = new Map<string, string>();
       fieldsToGenerate.forEach(field => {
         fieldNameToIdMap.set(field.name, field.id);
+        // Also map normalized versions for better matching
+        fieldNameToIdMap.set(field.name.toLowerCase().trim(), field.id);
       });
 
       const mappedFields: Record<string, unknown> = {};
-      Object.entries(parsed).forEach(([fieldName, value]) => {
-        const fieldId = fieldNameToIdMap.get(fieldName);
+      Object.entries(parsed).forEach(([aiFieldName, value]) => {
+        // Multiple cleaning strategies for AI field names
+        let cleanFieldName = aiFieldName;
+
+        // 1. Remove type annotations in parentheses: "(shortText)", "(longText)", etc.
+        cleanFieldName = cleanFieldName.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+
+        // 2. Remove extra annotations like "(3–5)", "(optional)", etc.
+        cleanFieldName = cleanFieldName.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+
+        // 3. Remove multiple parenthetical annotations if any remain
+        cleanFieldName = cleanFieldName.replace(/\s*\([^)]*\).*$/g, '').trim();
+
+        // 4. Normalize spacing around common separators
+        cleanFieldName = cleanFieldName.replace(/\s*\/\s*/g, ' / ');
+        cleanFieldName = cleanFieldName.replace(/\s*&\s*/g, ' & ');
+
+        console.log(`🔍 Cleaning AI field: "${aiFieldName}" -> "${cleanFieldName}"`);
+
+        // Try multiple matching strategies
+        let fieldId = fieldNameToIdMap.get(aiFieldName) ||  // Exact match with original
+                     fieldNameToIdMap.get(cleanFieldName) ||  // Clean match
+                     fieldNameToIdMap.get(cleanFieldName.toLowerCase().trim()); // Normalized match
+
+        // If no direct match, try case-insensitive exact match
+        if (!fieldId) {
+          for (const [templateFieldName, templateFieldId] of fieldNameToIdMap.entries()) {
+            if (templateFieldName.toLowerCase() === cleanFieldName.toLowerCase()) {
+              fieldId = templateFieldId;
+              console.log(`🔄 Case-insensitive matched AI field "${aiFieldName}" -> template field "${templateFieldName}"`);
+              break;
+            }
+          }
+        }
+
+        // If still no match, try fuzzy matching
+        if (!fieldId) {
+          for (const [templateFieldName, templateFieldId] of fieldNameToIdMap.entries()) {
+            const templateLower = templateFieldName.toLowerCase();
+            const cleanLower = cleanFieldName.toLowerCase();
+
+            // Check if one contains the other, or if they share significant word overlap
+            if (templateLower.includes(cleanLower) ||
+                cleanLower.includes(templateLower) ||
+                this.calculateSimilarity(templateLower, cleanLower) > 0.8) {
+              fieldId = templateFieldId;
+              console.log(`🔄 Fuzzy matched AI field "${aiFieldName}" -> template field "${templateFieldName}"`);
+              break;
+            }
+          }
+        }
+
         if (fieldId) {
           mappedFields[fieldId] = value;
+          console.log(`✅ Mapped AI field "${aiFieldName}" -> field ID "${fieldId}"`);
         } else {
           // Log unmapped fields for debugging
-          console.warn(`AI generated field "${fieldName}" not found in template fields`);
+          console.warn(`❌ AI generated field "${aiFieldName}" (cleaned: "${cleanFieldName}") not found in template fields:`,
+            Array.from(fieldNameToIdMap.keys()));
         }
+      });
+
+      console.log('🔍 Final Mapping Result:', {
+        aiGeneratedFieldCount: Object.keys(parsed).length,
+        successfullyMappedCount: Object.keys(mappedFields).length,
+        mappedFieldIds: Object.keys(mappedFields),
+        unmappedAIFields: Object.keys(parsed).filter(aiField => {
+          const cleanFieldName = aiField.replace(/\s*\([^)]*\).*$/, '').trim();
+          return !fieldNameToIdMap.has(aiField) &&
+                 !fieldNameToIdMap.has(cleanFieldName) &&
+                 !fieldNameToIdMap.has(cleanFieldName.toLowerCase().trim());
+        })
       });
 
       // Calculate usage metrics
@@ -464,8 +601,21 @@ Type: ${template.name}${entityContext}`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7, // Slightly creative for narrative flow
-        max_tokens: 500 // Reasonable length for summaries
+        max_completion_tokens: 2000 // Very high limit to account for GPT-5-mini reasoning tokens
+      });
+
+      console.log('📝 Summary API Response Debug:', {
+        hasCompletion: !!completion,
+        hasChoices: !!completion.choices,
+        choicesLength: completion.choices?.length || 0,
+        firstChoice: completion.choices?.[0] ? {
+          hasMessage: !!completion.choices[0].message,
+          messageKeys: Object.keys(completion.choices[0].message || {}),
+          hasContent: !!completion.choices[0].message?.content,
+          contentLength: completion.choices[0].message?.content?.length || 0,
+          finishReason: completion.choices[0].finish_reason
+        } : 'none',
+        fullCompletion: JSON.stringify(completion, null, 2)
       });
 
       const response = completion.choices[0]?.message?.content;
@@ -540,8 +690,15 @@ Type: ${template.name}${entityContext}`;
         prompt: finalPrompt,
         n: 1,
         size: sizeMap[quality],
-        quality: quality === 'high' ? 'hd' : 'standard',
-        response_format: 'url'
+        quality: quality === 'high' ? 'high' : 'standard'
+      });
+
+      console.log('🖼️ Image API Response Debug:', {
+        hasData: !!response.data,
+        dataLength: response.data?.length || 0,
+        responseKeys: Object.keys(response),
+        dataStructure: response.data?.[0] ? Object.keys(response.data[0]) : 'none',
+        fullResponse: JSON.stringify(response, null, 2)
       });
 
       if (!response.data || response.data.length === 0) {
@@ -549,8 +706,18 @@ Type: ${template.name}${entityContext}`;
       }
 
       const imageData = response.data[0];
-      if (!imageData?.url) {
-        throw new Error('No image URL returned from GPT-image-1');
+      console.log('🖼️ Image Data Debug:', {
+        hasUrl: !!imageData?.url,
+        hasB64Json: !!imageData?.b64_json,
+        imageDataKeys: Object.keys(imageData || {}),
+        imageData: JSON.stringify(imageData, null, 2)
+      });
+
+      // GPT-image-1 might return base64 data instead of URL
+      const imageUrl = imageData?.url || (imageData?.b64_json ? `data:image/png;base64,${imageData.b64_json}` : null);
+
+      if (!imageUrl) {
+        throw new Error('No image URL or base64 data returned from GPT-image-1');
       }
 
       // Calculate usage metrics for image generation
@@ -561,7 +728,7 @@ Type: ${template.name}${entityContext}`;
 
       return {
         result: {
-          imageUrl: imageData.url,
+          imageUrl,
           revisedPrompt: imageData.revised_prompt || prompt
         },
         usage: {
@@ -842,39 +1009,21 @@ Example format:
    * Build world context string for prompts using all available world information
    */
   private buildWorldContext(worldContext?: Pick<World, 'name' | 'description' | 'summary' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>): string {
-    if (!worldContext) return '';
+    // Use cached context building to reduce repeated processing
+    return aiContextCache.getWorldContext(worldContext);
+  }
 
-    let context = '';
-    if (worldContext.name) context += `World: ${worldContext.name}\n`;
-    if (worldContext.summary) context += `Summary: ${worldContext.summary}\n`;
-    if (worldContext.description) context += `Description: ${worldContext.description}\n`;
-    if (worldContext.logline) context += `Logline: ${worldContext.logline}\n`;
-    if (worldContext.genreBlend?.length) context += `Genre: ${worldContext.genreBlend.join(', ')}\n`;
-    if (worldContext.overallTone) {
-      const tone = Array.isArray(worldContext.overallTone)
-        ? worldContext.overallTone.join(', ')
-        : worldContext.overallTone;
-      context += `Tone: ${tone}\n`;
-    }
-    if (worldContext.keyThemes?.length) context += `Theme: ${worldContext.keyThemes.join(', ')}\n`;
-    if (worldContext.audienceRating) context += `Audience Rating: ${worldContext.audienceRating}\n`;
-    if (worldContext.scopeScale) context += `Scope & Scale: ${worldContext.scopeScale}\n`;
-    if (worldContext.technologyLevel?.length) context += `Technology Level: ${worldContext.technologyLevel.join(', ')}\n`;
-    if (worldContext.magicLevel?.length) context += `Magic Level: ${worldContext.magicLevel.join(', ')}\n`;
-    if (worldContext.cosmologyModel) context += `Cosmology: ${worldContext.cosmologyModel}\n`;
-    if (worldContext.climateBiomes?.length) context += `Travel Difficulty: ${worldContext.climateBiomes.join(', ')}\n`;
-    if (worldContext.calendarTimekeeping) context += `Calendar & Timekeeping: ${worldContext.calendarTimekeeping}\n`;
-    if (worldContext.societalOverview) context += `Societal Overview: ${worldContext.societalOverview}\n`;
-    if (worldContext.conflictDrivers) {
-      const drivers = Array.isArray(worldContext.conflictDrivers)
-        ? worldContext.conflictDrivers.join(', ')
-        : worldContext.conflictDrivers;
-      context += `Conflict Drivers: ${drivers}\n`;
-    }
-    if (worldContext.rulesConstraints) context += `Rules & Constraints: ${worldContext.rulesConstraints}\n`;
-    if (worldContext.aestheticDirection) context += `Aesthetic Direction: ${worldContext.aestheticDirection}\n`;
+  /**
+   * Calculate similarity between two strings using a simple word-based approach
+   */
+  private calculateSimilarity(str1: string, str2: string): number {
+    const words1 = str1.toLowerCase().split(/\s+/);
+    const words2 = str2.toLowerCase().split(/\s+/);
 
-    return context ? `World Context:\n${context}\n` : '';
+    const commonWords = words1.filter(word => words2.includes(word));
+    const totalWords = Math.max(words1.length, words2.length);
+
+    return totalWords > 0 ? commonWords.length / totalWords : 0;
   }
 }
 

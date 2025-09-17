@@ -116,15 +116,21 @@ export function adaptWorldToDatabase(
 export function adaptEntityFromDatabase(
   dbEntity: DatabaseEntity & { templates?: { name: string; category: string | null } | null }
 ): Entity {
+  const dataFields = (dbEntity.data as Record<string, unknown>) ?? {};
+  const summary = dataFields.summary as string | undefined;
+
+  // Remove summary from fields to avoid duplication
+  const { summary: _, ...fieldsWithoutSummary } = dataFields;
+
   return {
     id: dbEntity.id,
     worldId: dbEntity.world_id,
     folderId: dbEntity.folder_id || undefined,
     templateId: dbEntity.template_id || undefined,
     name: dbEntity.name,
-    summary: (dbEntity as any).summary || undefined,
+    summary: summary || undefined,
     description: undefined,
-    fields: (dbEntity.data as Record<string, unknown>) ?? {},
+    fields: fieldsWithoutSummary,
     links: [], // Will be populated by relationship service
     updatedAt: dbEntity.updated_at,
     tags: dbEntity.tags ?? [],
@@ -142,16 +148,19 @@ export function adaptEntityToDatabase(
   domainEntity: Partial<Entity> & { [key: string]: any }
 ): Partial<Database['public']['Tables']['entities']['Insert']> {
   const { templateId, folderId, name, fields, tags, id, worldId, summary, description, links, updatedAt, templateName, templateCategory, imageUrl, isArchived, ...customFields } = domainEntity;
-  
-  // Merge custom fields with regular fields
-  const allCustomFields = { ...(fields || {}), ...customFields };
-  
+
+  // Merge custom fields with regular fields and include summary in the data JSON field
+  const allCustomFields = {
+    ...(fields || {}),
+    ...customFields,
+    ...(summary !== undefined ? { summary } : {})
+  };
+
   const dbEntity: Partial<Database['public']['Tables']['entities']['Insert']> = {};
   if (id !== undefined) dbEntity.id = id;
   if (templateId !== undefined) dbEntity.template_id = templateId;
   if (folderId !== undefined) dbEntity.folder_id = folderId;
   if (name !== undefined) dbEntity.name = name;
-  if (summary !== undefined) (dbEntity as any).summary = summary;
   if (Object.keys(allCustomFields).length > 0) dbEntity.data = allCustomFields as Database['public']['Tables']['entities']['Row']['data'];
   if (tags !== undefined) dbEntity.tags = tags;
   if (imageUrl !== undefined) dbEntity.image_url = imageUrl;

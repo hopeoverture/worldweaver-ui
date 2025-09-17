@@ -15,7 +15,7 @@ export const LazyRelationshipGraph = lazy(() => import('../relationships/Relatio
 export const LazyRelationshipTable = lazy(() => import('../relationships/RelationshipTable').then(module => ({ default: module.RelationshipTable })));
 
 // Modal Components
-export const LazyCreateEntityModal = lazy(() => import('../entities/CreateEntityModal/CreateEntityModal').then(module => ({ default: module.CreateEntityModal })));
+export const LazyEntityDetailModal = lazy(() => import('../entities/EntityDetailModal').then(module => ({ default: module.EntityDetailModal })));
 export const LazyCreateTemplateModal = lazy(() => import('../templates/CreateTemplateModal').then(module => ({ default: module.CreateTemplateModal })));
 export const LazyCreateFolderModal = lazy(() => import('../folders/CreateFolderModal').then(module => ({ default: module.CreateFolderModal })));
 export const LazyCreateRelationshipModal = lazy(() => import('../relationships/CreateRelationshipModal').then(module => ({ default: module.CreateRelationshipModal })));

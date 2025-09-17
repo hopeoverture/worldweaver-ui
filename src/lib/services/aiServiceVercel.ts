@@ -9,17 +9,34 @@ import {
   type TokenUsage,
   type ImageGenerationParams
 } from '@/lib/ai-pricing';
+import { getOpenAIApiKey, validateOpenAIApiKey } from '@/lib/config/environment';
 
-// Create configured OpenAI provider instance
+// Create configured OpenAI provider instance using secure environment loading
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: getOpenAIApiKey() || undefined,
   baseURL: 'https://api.openai.com/v1', // Ensure we're using the standard OpenAI endpoint
 });
 
-// Verify OpenAI configuration
+// Verify OpenAI configuration with enhanced validation
 function ensureOpenAIConfigured() {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = getOpenAIApiKey();
+  if (!apiKey) {
     throw new Error('OPENAI_API_KEY environment variable is not set');
+  }
+
+  const validation = validateOpenAIApiKey(apiKey);
+  if (!validation.valid) {
+    throw new Error(`OpenAI API key validation failed: ${validation.error}`);
+  }
+
+  // Log warnings but don't throw
+  if (validation.warnings) {
+    validation.warnings.forEach(warning => {
+      logError('OpenAI API key warning', new Error(warning), {
+        action: 'openai_key_validation_warning',
+        metadata: { warning }
+      });
+    });
   }
 }
 
@@ -160,7 +177,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           success: true,
           metadata: {
             worldContext: worldContext?.name || null,
-            promptLength: prompt.length,
+            promptLength: prompt?.length || 0,
             finishReason: result.finishReason
           },
           startedAt: new Date(startTime),

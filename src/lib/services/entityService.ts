@@ -176,6 +176,7 @@ export class EntityService {
     fields: Record<string, unknown>;
     tags: string[] | null;
     imageUrl: string | null;
+    summary: string;
   }>, userId: string): Promise<Entity> {
     // Fetch current entity to determine world and access
     const current = await this.getEntityById(entityId, userId);
@@ -190,9 +191,19 @@ export class EntityService {
     if (data.name !== undefined) payload.name = data.name;
     if (data.templateId !== undefined) payload.template_id = data.templateId;
     if (data.folderId !== undefined) payload.folder_id = data.folderId;
-    if (data.fields !== undefined) payload.data = (data.fields as unknown as Database['public']['Tables']['entities']['Row']['data']) ?? {};
     if (data.tags !== undefined) payload.tags = data.tags;
     if (data.imageUrl !== undefined) payload.image_url = data.imageUrl;
+
+    // Handle fields and summary in the data JSON column
+    if (data.fields !== undefined || data.summary !== undefined) {
+      const currentData = (current.fields || {}) as Record<string, unknown>;
+      const newData = {
+        ...currentData,
+        ...(data.fields || {}),
+        ...(data.summary !== undefined ? { summary: data.summary } : {})
+      };
+      payload.data = newData as Database['public']['Tables']['entities']['Row']['data'];
+    }
 
     const { data: row, error } = await adminClient
       .from('entities')

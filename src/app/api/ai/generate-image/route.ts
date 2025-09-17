@@ -17,7 +17,7 @@ const artStyleSchema = z.object({
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID'),
   type: z.enum(['entity', 'world-cover']),
-  prompt: z.string().min(1, 'Prompt is required').max(1000, 'Prompt too long'),
+  prompt: z.string().min(1, 'Prompt is required').max(4000, 'Prompt too long'),
   // Art style selection
   artStyle: artStyleSchema.optional(),
   // For entity images
@@ -29,8 +29,8 @@ const schema = z.object({
   worldDescription: z.string().optional(),
   // Image generation options
   style: z.enum(['natural', 'vivid']).default('natural'),
-  size: z.enum(['1024x1024', '1024x1792', '1792x1024']).default('1024x1024'),
-  quality: z.enum(['standard', 'hd']).default('hd'),
+  size: z.enum(['1024x1024', '1536x1024', '1024x1536', 'auto']).default('1024x1024'),
+  quality: z.enum(['standard', 'high']).default('high'),
 });
 
 export async function POST(req: NextRequest) {
@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
         });
       }
     } catch (error) {
+      console.error('Detailed error from aiService:', error);
       // Track the failed attempt
       await aiUsageService.trackUsage({
         userId: user.id,

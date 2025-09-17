@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getOpenAIApiKey, validateOpenAIApiKey, getEnvironmentStatus } from '@/lib/config/environment';
 
 /**
  * Debug endpoint to check AI configuration
@@ -16,16 +17,26 @@ export async function GET(req: NextRequest) {
     }
 
     // Only allow debugging for authenticated users
+    const apiKey = getOpenAIApiKey();
+    const keyValidation = validateOpenAIApiKey(apiKey || undefined);
+    const envStatus = getEnvironmentStatus();
+
     const debugInfo = {
       timestamp: new Date().toISOString(),
       environment: {
         nodeEnv: process.env.NODE_ENV,
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        openAIKeyLength: process.env.OPENAI_API_KEY?.length || 0,
-        openAIKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7) || 'none',
+        hasOpenAIKey: !!apiKey,
+        openAIKeyLength: apiKey?.length || 0,
+        openAIKeyPrefix: apiKey?.substring(0, 7) || 'none',
+        openAIKeyValid: keyValidation.valid,
+        openAIKeyValidationError: keyValidation.error,
+        openAIKeyWarnings: keyValidation.warnings,
         hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
         hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         hasSupabaseServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        environmentLoaded: envStatus.loaded,
+        environmentError: envStatus.error,
+        securityStatus: envStatus.securityStatus
       },
       packages: {
         hasAiSdk: (() => {

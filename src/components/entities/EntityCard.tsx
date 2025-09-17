@@ -97,12 +97,13 @@ function EntityCardComponent({ entity, onClick, onDragStart, onDelete, worldId }
 
       <div className="relative">
         {entity.imageUrl && (
-          <div className="relative w-full h-32 mb-3 overflow-hidden rounded-lg">
+          <div className="relative w-full mb-3 overflow-hidden rounded-lg bg-gray-50 dark:bg-gray-800">
             <Image
               src={entity.imageUrl}
               alt={entity.name}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              width={400}
+              height={400}
+              className="w-full h-auto object-contain transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>

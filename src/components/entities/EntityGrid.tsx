@@ -63,6 +63,8 @@ export function EntityGrid({ entities, onCreateEntity, onDragStart, worldId, onD
       {selectedEntity && (
         <EntityDetailModal
           entity={selectedEntity}
+          worldId={worldId || selectedEntity.worldId}
+          open={selectedEntity !== null}
           onClose={() => setSelectedEntity(null)}
         />
       )}

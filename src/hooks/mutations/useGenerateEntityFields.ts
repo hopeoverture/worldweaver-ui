@@ -25,20 +25,26 @@ export function useGenerateEntityFields() {
 
       return res.json();
     },
-    onSuccess: (data, variables) => {
-      const fieldCount = Object.keys(data.fields).length;
-      const fieldText = fieldCount === 1 ? "field" : "fields";
+    onError: (e: any) => {
+      console.error('AI field generation error:', e);
+
+      // Parse error response for better error messages
+      let errorMessage = String(e?.message || e);
+      try {
+        const errorData = JSON.parse(errorMessage);
+        if (errorData.error) {
+          errorMessage = errorData.error;
+          if (errorData.details) {
+            errorMessage += `: ${errorData.details}`;
+          }
+        }
+      } catch {
+        // If parsing fails, use the original message
+      }
 
       toast({
-        title: "Entity fields generated successfully",
-        description: `Generated ${fieldCount} ${fieldText}. Review and edit as needed.`,
-        variant: "success"
-      });
-    },
-    onError: (e: any) => {
-      toast({
         title: "Failed to generate entity fields",
-        description: String(e?.message || e),
+        description: errorMessage,
         variant: "error"
       });
     }

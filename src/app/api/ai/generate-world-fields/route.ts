@@ -5,6 +5,7 @@ import { aiService } from '@/lib/services/aiService';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
+import { getOpenAIApiKey } from '@/lib/config/environment';
 
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID').optional(),
@@ -245,7 +246,7 @@ export async function POST(req: NextRequest) {
         message: (error as Error).message,
         name: (error as Error).name,
         timestamp: new Date().toISOString(),
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
+        hasOpenAIKey: !!getOpenAIApiKey(),
         nodeEnv: process.env.NODE_ENV
       }
     };

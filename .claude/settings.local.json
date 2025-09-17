@@ -1,36 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsx:*)",
-      "Bash(npx supabase:*)",
-      "Bash(node:*)",
-      "Bash(curl:*)",
-      "Bash(taskkill:*)",
+      "mcp__ruv-swarm",
+      "mcp__claude-flow",
+      "Bash(npx:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(npm run:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npx next:*)",
-      "Bash(chmod:*)",
-      "Bash(cat:*)",
-      "Bash(npm ls:*)",
-      "Bash(npm install:*)",
-      "Bash(timeout 10 npm run dev)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(npm audit:*)",
       "Read(//c/Users/jason/Downloads/**)",
-      "Bash(psql:*)",
-      "Bash(rm:*)",
-      "Bash(TEST_EMAIL=jlaphotos88@gmail.com TEST_PASSWORD=\"WorldWeaver2024!@#\" npm run test:api)",
-      "Bash(echo \"You need to run this SQL in your Supabase SQL Editor:\n\n-- Add folder_id column to templates table for template folder organization\nALTER TABLE public.templates\nADD COLUMN folder_id UUID REFERENCES public.folders(id) ON DELETE SET NULL;\n\n-- Add index for performance on folder queries\nCREATE INDEX idx_templates_folder_id ON public.templates(folder_id);\n\n-- Add a comment to document the purpose\nCOMMENT ON COLUMN public.templates.folder_id IS ''References folders table for template organization. Only templates folders (kind = templates) should be used.'';\")",
-      "Bash(powershell:*)",
-      "WebFetch(domain:ai-sdk.dev)",
-      "WebSearch",
-      "Bash(findstr:*)",
-      "Bash(git checkout:*)"
+      "Bash(npm run dev:*)"
     ],
-    "deny": [],
-    "ask": []
+    "deny": []
   }
 }

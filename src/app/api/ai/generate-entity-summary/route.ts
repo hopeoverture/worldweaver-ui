@@ -59,15 +59,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get the entity with its template
+    // Get the entity first
     const { data: entityData, error: entityError } = await supabase
       .from('entities')
-      .select(`
-        *,
-        templates (
-          id, name, category, description, fields
-        )
-      `)
+      .select('*')
       .eq('id', validatedData.entityId)
       .eq('world_id', validatedData.worldId)
       .single();
@@ -75,6 +70,38 @@ export async function POST(req: NextRequest) {
     if (entityError || !entityData) {
       return NextResponse.json({ error: 'Entity not found' }, { status: 404 });
     }
+
+    // Get template data separately - try user templates first, then system templates
+    if (!entityData.template_id) {
+      return NextResponse.json({ error: 'Entity has no template assigned' }, { status: 400 });
+    }
+
+    let { data: templateResults, error: templateError } = await supabase
+      .from('templates')
+      .select('id, name, category, description, fields')
+      .eq('id', entityData.template_id);
+
+    // If not found, try with service role for system templates
+    if (templateError || !templateResults || templateResults.length === 0) {
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const serviceSupabase = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+
+      const { data: systemTemplateResults, error: systemTemplateError } = await serviceSupabase
+        .from('templates')
+        .select('id, name, category, description, fields')
+        .eq('id', entityData.template_id);
+
+      if (systemTemplateError || !systemTemplateResults || systemTemplateResults.length === 0) {
+        return NextResponse.json({ error: 'Entity template not found' }, { status: 400 });
+      }
+
+      templateResults = systemTemplateResults;
+    }
+
+    const templateData = templateResults[0];
 
     // Check user's AI quota before generation
     const hasQuota = await checkAIQuota(user.id);
@@ -105,13 +132,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Adapt entity and template data
+    // Adapt entity data
     const entity = adaptEntityFromDatabase(entityData);
-    const templateData = entityData.templates;
-
-    if (!templateData) {
-      return NextResponse.json({ error: 'Entity template not found' }, { status: 400 });
-    }
 
     // Convert template data to proper Template type
     const template = {

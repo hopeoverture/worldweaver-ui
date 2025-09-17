@@ -106,6 +106,7 @@ export function CreateTemplateModal({ open, worldId, onClose, currentFolderId }:
     try {
       const result = await generateTemplate.mutateAsync({
         prompt,
+        templateName: formData.name.trim(),
         worldId,
       });
 

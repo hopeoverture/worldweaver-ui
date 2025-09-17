@@ -27,6 +27,8 @@ export default [
       'validate-*.js',
       // Generated types – keep out of lint
       'src/lib/supabase/types.generated.ts',
+      // Ignore AI agent tooling
+      '.claude/**',
     ],
   },
 ]

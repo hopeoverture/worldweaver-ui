@@ -219,14 +219,14 @@ function UngroupedTemplatesDropZone({
 }
 
 // Lazy-loaded components for better performance
-import { 
+import {
   LazyEntityGrid,
-  LazyTemplateGrid, 
+  LazyTemplateGrid,
   LazyFolderGrid,
   LazyRelationshipGraph,
   LazyRelationshipTable,
   LazyMembershipTab,
-  LazyCreateEntityModal,
+  LazyEntityDetailModal,
   LazyCreateTemplateModal,
   LazyCreateFolderModal,
   LazyCreateRelationshipModal,
@@ -1122,10 +1122,11 @@ export default function WorldDashboard() {
         }}
       />
       <Suspense fallback={<LazyComponentLoader message="Loading..." />}>
-        <LazyCreateEntityModal
-          open={isCreateEntityModalOpen}
+        <LazyEntityDetailModal
+          entity={null}
           worldId={world.id}
-          folderId={selectedFolder && remoteFolders.find(f => f.id === selectedFolder && f.kind === 'entities') ? selectedFolder : undefined}
+          initialFolderId={selectedFolder && remoteFolders.find(f => f.id === selectedFolder && f.kind === 'entities') ? selectedFolder : undefined}
+          open={isCreateEntityModalOpen}
           onClose={() => setCreateEntityModalOpen(false)}
         />
       </Suspense>

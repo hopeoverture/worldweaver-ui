@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
 
 const schema = z.object({
-  prompt: z.string().min(1, 'Prompt is required').max(500, 'Prompt too long'),
+  prompt: z.string().max(500, 'Prompt too long').optional(),
+  templateName: z.string().min(1, 'Template name is required').max(100, 'Template name too long').optional(),
   worldId: z.string().uuid('Invalid world ID'),
 });
 
@@ -111,7 +112,8 @@ export async function POST(req: NextRequest) {
     let generationResult;
     try {
       generationResult = await aiService.generateTemplate({
-        prompt: validatedData.prompt,
+        prompt: validatedData.prompt || '',
+        templateName: validatedData.templateName,
         worldContext,
       });
     } catch (error) {

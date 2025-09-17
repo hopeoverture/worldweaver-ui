@@ -116,7 +116,8 @@ export interface AIGenerationStatus {
 }
 
 export interface AITemplateGenerationRequest {
-  prompt: string;
+  prompt?: string;
+  templateName?: string;
   worldId: string;
 }
 
@@ -157,8 +158,8 @@ export interface AIImageGenerationRequest {
   worldName?: string;
   worldDescription?: string;
   style?: 'natural' | 'vivid';
-  size?: '1024x1024' | '1024x1792' | '1792x1024';
-  quality?: 'standard' | 'hd';
+  size?: '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
+  quality?: 'standard' | 'high';
 }
 
 export interface AIImageGenerationResponse {
@@ -173,6 +174,18 @@ export interface AIEntitySummaryGenerationRequest {
 }
 
 export interface AIEntitySummaryGenerationResponse {
+  summary: string;
+}
+
+export interface AIEntitySummaryPreviewRequest {
+  worldId: string;
+  templateId: string;
+  entityName: string;
+  entityFields: Record<string, unknown>;
+  customPrompt?: string;
+}
+
+export interface AIEntitySummaryPreviewResponse {
   summary: string;
 }
 
