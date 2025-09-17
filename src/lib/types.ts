@@ -157,8 +157,8 @@ export interface AIImageGenerationRequest {
   worldName?: string;
   worldDescription?: string;
   style?: 'natural' | 'vivid';
-  size?: '1024x1024' | '1024x1792' | '1792x1024';
-  quality?: 'standard' | 'hd';
+  size?: '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
+  quality?: 'standard' | 'high';
 }
 
 export interface AIImageGenerationResponse {

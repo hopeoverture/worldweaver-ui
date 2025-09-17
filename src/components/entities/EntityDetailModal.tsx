@@ -235,6 +235,18 @@ export function EntityDetailModal({
     }
   }, [entity, isCreating]);
 
+  // Debug logging for currentImageUrl changes
+  useEffect(() => {
+    console.log('🖼️ currentImageUrl state changed:', {
+      currentImageUrl,
+      isCreating,
+      isEditing,
+      aiImageUrl,
+      entityName: entity?.name || formData.name,
+      hasImageFile: !!imageFile
+    });
+  }, [currentImageUrl, isCreating, isEditing, aiImageUrl, entity?.name, formData.name, imageFile]);
+
   // Don't render if we need a template but don't have one
   if (step === 'form' && !template) return null;
 
@@ -476,7 +488,7 @@ export function EntityDetailModal({
   };
 
   // Generate image using context without requiring user prompt
-  const handleGenerateImageFromContext = async (artStyle?: any) => {
+  const handleGenerateImageFromContext = async (artStyle?: any, resolution?: string) => {
     if (!template || !world) {
       toast({
         title: 'Error',
@@ -510,7 +522,8 @@ export function EntityDetailModal({
         templateName: template.name,
         entityFields: entityFields || {},
         worldName: world.name,
-        worldDescription: world.description
+        worldDescription: world.description,
+        size: resolution as '1024x1024' | '1536x1024' | '1024x1536' | 'auto' | undefined
       });
 
       if (isCreating) {
@@ -744,7 +757,7 @@ export function EntityDetailModal({
     }
   };
 
-  const handleGenerateImageInViewMode = async (customPrompt: string = '', artStyle?: any) => {
+  const handleGenerateImageInViewMode = async (customPrompt: string = '', artStyle?: any, resolution?: string) => {
     if (!template || !world) {
       toast({
         title: 'Error',
@@ -770,16 +783,22 @@ export function EntityDetailModal({
         templateName: template.name,
         entityFields: entityFields || {},
         worldName: world.name,
-        worldDescription: world.description
+        worldDescription: world.description,
+        size: resolution as '1024x1024' | '1536x1024' | '1024x1536' | 'auto' | undefined
       });
 
       if (isCreating) {
         // For creation mode, set the image in the form
+        console.log('🎨 Generated image in create mode with art style:', {
+          imageUrl: result.imageUrl,
+          artStyle: artStyle?.name || 'default',
+          willSetCurrentImageUrl: true
+        });
         setAiImageUrl(result.imageUrl);
         setCurrentImageUrl(result.imageUrl);
         setImageFile(null);
         setShowImageModal(false);
-        toast({ title: 'Image generated', description: 'AI image has been generated for your new entity.', variant: 'success' });
+        toast({ title: 'Image generated', description: `AI image generated with ${artStyle?.name || 'default'} style. Image should appear above!`, variant: 'success' });
       } else {
         // For edit mode, update the entity immediately
         await updateEntityMut.mutateAsync({
@@ -1107,14 +1126,14 @@ export function EntityDetailModal({
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Image</h3>
-            {!isEditing && (
+            {(!isEditing || isCreating) && (
               <AIGenerateButton
                 onClick={() => setShowImageModal(true)}
                 disabled={generateImage.isPending || updateEntityMut.isPending}
                 isGenerating={generateImage.isPending}
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                title="Generate an AI image for this entity"
+                title="Generate an AI image with art style selection"
               >
                 Generate Image
               </AIGenerateButton>
@@ -1167,6 +1186,8 @@ export function EntityDetailModal({
                     src={currentImageUrl}
                     alt={entity?.name || formData.name || 'Entity'}
                     className="w-full h-auto rounded-lg border border-gray-200 dark:border-neutral-700"
+                    onLoad={() => console.log('🖼️ Image loaded successfully in preview:', currentImageUrl)}
+                    onError={() => console.error('❌ Image failed to load in preview:', currentImageUrl)}
                   />
                 </div>
               ) : (
@@ -1407,6 +1428,7 @@ export function EntityDetailModal({
         isGenerating={generateImage.isPending}
         maxLength={1000}
         showArtStyleSelection={true}
+        showResolutionSelection={true}
       />
     </Modal>
   );

@@ -7,16 +7,19 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Input } from '@/components/ui/Input';
 import { ArtStyle, BUILTIN_ART_STYLES, SavedArtStyle, createCustomArtStyle, isValidArtStyleName, isValidPromptModifier } from '@/lib/artStyles';
 
+type ImageResolution = '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
+
 interface AIPromptModalProps {
   open: boolean;
   onClose: () => void;
-  onGenerate: (prompt: string, artStyle?: ArtStyle) => void;
+  onGenerate: (prompt: string, artStyle?: ArtStyle, resolution?: ImageResolution) => void;
   title: string;
   description?: string;
   placeholder?: string;
   isGenerating?: boolean;
   maxLength?: number;
   showArtStyleSelection?: boolean;
+  showResolutionSelection?: boolean;
   savedArtStyles?: SavedArtStyle[];
   onSaveArtStyle?: (artStyle: SavedArtStyle) => void;
 }
@@ -31,11 +34,13 @@ export function AIPromptModal({
   isGenerating = false,
   maxLength = 500,
   showArtStyleSelection = false,
+  showResolutionSelection = false,
   savedArtStyles = [],
   onSaveArtStyle
 }: AIPromptModalProps) {
   const [prompt, setPrompt] = useState('');
   const [selectedArtStyle, setSelectedArtStyle] = useState<ArtStyle | null>(null);
+  const [selectedResolution, setSelectedResolution] = useState<ImageResolution>('1024x1024');
   const [showCustomStyle, setShowCustomStyle] = useState(false);
   const [customStyleName, setCustomStyleName] = useState('');
   const [customStyleModifier, setCustomStyleModifier] = useState('');
@@ -60,13 +65,14 @@ export function AIPromptModal({
       finalArtStyle = customStyle;
     }
 
-    onGenerate(prompt.trim(), finalArtStyle || undefined);
+    onGenerate(prompt.trim(), finalArtStyle || undefined, showResolutionSelection ? selectedResolution : undefined);
   };
 
   const handleClose = () => {
     if (!isGenerating) {
       setPrompt('');
       setSelectedArtStyle(null);
+      setSelectedResolution('1024x1024');
       setShowCustomStyle(false);
       setCustomStyleName('');
       setCustomStyleModifier('');
@@ -214,6 +220,36 @@ export function AIPromptModal({
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {showResolutionSelection && (
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Image Resolution
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { value: '1024x1024', label: '1024×1024', description: 'Square' },
+                { value: '1536x1024', label: '1536×1024', description: 'Landscape' },
+                { value: '1024x1536', label: '1024×1536', description: 'Portrait' },
+                { value: 'auto', label: 'Auto', description: 'Let AI decide' }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedResolution(option.value as ImageResolution)}
+                  disabled={isGenerating}
+                  className={`p-3 text-left rounded-lg border transition-colors ${
+                    selectedResolution === option.value
+                      ? 'border-green-500 bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-300'
+                      : 'border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 bg-white dark:bg-neutral-800'
+                  }`}
+                >
+                  <div className="font-medium text-sm">{option.label}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{option.description}</div>
+                </button>
+              ))}
             </div>
           </div>
         )}

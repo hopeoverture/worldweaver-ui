@@ -197,7 +197,8 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Generate a template for: ${prompt}` }
         ],
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
+        max_completion_tokens: 2000 // High limit to account for GPT-5-mini reasoning tokens
       });
 
       const response = completion.choices[0]?.message?.content;
