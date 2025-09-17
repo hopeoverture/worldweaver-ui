@@ -5,6 +5,7 @@
   "scripts": {
     "predev": "kill-port 3000 3001 54321 5432 8000 || true",
     "dev": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next dev",
+    "check-api-health": "node scripts/check-openai-usage.js",
     "dev:clean": "npm run predev && npm run dev",
     "dev:all": "concurrently -k -n \"WEB,SEED\" \"npm run dev\" \"wait-on http://localhost:3000 && npm run seed:core\"",
     "build": "node -r ./scripts/patch-fs-readlink.cjs ./node_modules/next/dist/bin/next build",

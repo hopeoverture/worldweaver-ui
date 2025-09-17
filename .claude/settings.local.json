@@ -4,7 +4,8 @@
       "mcp__ruv-swarm",
       "mcp__claude-flow",
       "Bash(npx:*)",
-      "Bash(npm run typecheck:*)"
+      "Bash(npm run typecheck:*)",
+      "Read(//c/Users/jason/Downloads/**)"
     ],
     "deny": []
   }
