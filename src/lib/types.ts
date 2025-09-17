@@ -116,7 +116,8 @@ export interface AIGenerationStatus {
 }
 
 export interface AITemplateGenerationRequest {
-  prompt: string;
+  prompt?: string;
+  templateName?: string;
   worldId: string;
 }
 

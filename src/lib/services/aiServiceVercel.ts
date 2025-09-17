@@ -177,7 +177,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           success: true,
           metadata: {
             worldContext: worldContext?.name || null,
-            promptLength: prompt.length,
+            promptLength: prompt?.length || 0,
             finishReason: result.finishReason
           },
           startedAt: new Date(startTime),

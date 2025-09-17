@@ -9,27 +9,45 @@ import {
   type ImageGenerationParams
 } from '@/lib/ai-pricing';
 import { aiContextCache } from '@/lib/cache/aiContextCache';
-import { getOpenAIApiKey, validateOpenAIApiKey } from '@/lib/config/environment';
+import { getOpenAIApiKey, validateOpenAIApiKey, loadEnvironmentVariables, getEnvironmentStatus } from '@/lib/config/environment';
 
 // Initialize OpenAI client lazily to avoid build-time errors
 let openai: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
+    // Explicitly ensure environment variables are loaded
+    const { success, error: envError } = loadEnvironmentVariables();
+    if (!success) {
+      console.error('❌ Failed to load environment variables:', envError);
+      throw new Error(`Environment loading failed: ${envError}`);
+    }
+
     const apiKey = getOpenAIApiKey();
+    console.log('🔍 Environment status:', {
+      envLoaded: success,
+      hasOpenAIKey: !!apiKey,
+      keyLength: apiKey?.length || 0,
+      keyPrefix: apiKey?.substring(0, 7) || 'none'
+    });
+
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
+      const envStatus = getEnvironmentStatus();
+      console.error('❌ Environment status:', envStatus);
+      throw new Error('OPENAI_API_KEY not found in environment variables (.env.local or .env)');
     }
 
     // Validate the API key format
     const validation = validateOpenAIApiKey(apiKey);
     if (!validation.valid) {
+      console.error('❌ API key validation failed:', validation);
       throw new Error(`OpenAI API key validation failed: ${validation.error}`);
     }
 
     // Log warnings but don't throw
     if (validation.warnings) {
       validation.warnings.forEach(warning => {
+        console.warn('⚠️ OpenAI API key warning:', warning);
         logError('OpenAI API key warning', new Error(warning), {
           action: 'openai_key_validation_warning',
           metadata: { warning }
@@ -37,7 +55,7 @@ function getOpenAIClient(): OpenAI {
       });
     }
 
-    console.log('🔑 Using API key from secure env ending with:', apiKey.slice(-10));
+    console.log('✅ Using API key from secure env ending with:', apiKey.slice(-10));
     openai = new OpenAI({
       apiKey: apiKey,
     });
@@ -80,7 +98,8 @@ export interface AIGenerationResult<T> {
 // =====================================================
 
 export interface GenerateTemplateRequest {
-  prompt: string;
+  prompt?: string;
+  templateName?: string;
   worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>;
 }
 
@@ -164,7 +183,7 @@ export class AIService {
   /**
    * Generate a template from a user prompt with world context
    */
-  async generateTemplate({ prompt, worldContext }: GenerateTemplateRequest): Promise<AIGenerationResult<GenerateTemplateResponse>> {
+  async generateTemplate({ prompt, templateName, worldContext }: GenerateTemplateRequest): Promise<AIGenerationResult<GenerateTemplateResponse>> {
     const startTime = Date.now();
 
     try {
@@ -195,7 +214,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
         model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Generate a template for: ${prompt}` }
+          { role: 'user', content: `Generate a template for: ${prompt || templateName || 'a general template'}` }
         ],
         response_format: { type: 'json_object' },
         max_completion_tokens: 2000 // High limit to account for GPT-5-mini reasoning tokens
@@ -242,7 +261,7 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
           success: true,
           metadata: {
             worldContext: worldContext?.name || null,
-            promptLength: prompt.length
+            promptLength: prompt?.length || 0
           },
           startedAt: new Date(startTime),
           finishedAt: endTime,
