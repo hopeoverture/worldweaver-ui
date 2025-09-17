@@ -176,6 +176,18 @@ export interface AIEntitySummaryGenerationResponse {
   summary: string;
 }
 
+export interface AIEntitySummaryPreviewRequest {
+  worldId: string;
+  templateId: string;
+  entityName: string;
+  entityFields: Record<string, unknown>;
+  customPrompt?: string;
+}
+
+export interface AIEntitySummaryPreviewResponse {
+  summary: string;
+}
+
 export interface AIWorldFieldsGenerationRequest {
   worldId?: string;
   prompt?: string;

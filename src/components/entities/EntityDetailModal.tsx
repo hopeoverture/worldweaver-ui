@@ -17,6 +17,7 @@ import { useUpdateEntity } from '@/hooks/mutations/useUpdateEntity';
 import { useCreateEntity } from '@/hooks/mutations/useCreateEntity';
 import { useGenerateEntityFields } from '@/hooks/mutations/useGenerateEntityFields';
 import { useGenerateEntitySummary } from '@/hooks/mutations/useGenerateEntitySummary';
+import { useGenerateEntitySummaryPreview } from '@/hooks/mutations/useGenerateEntitySummaryPreview';
 import { useGenerateImage } from '@/hooks/mutations/useGenerateImage';
 import { useToast } from '@/components/ui/ToastProvider';
 import { formatDate } from '@/lib/utils';
@@ -51,6 +52,7 @@ export function EntityDetailModal({
   const { data: world } = useWorld(worldId);
   const generateEntityFields = useGenerateEntityFields();
   const generateEntitySummary = useGenerateEntitySummary();
+  const generateEntitySummaryPreview = useGenerateEntitySummaryPreview();
   const generateImage = useGenerateImage();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -304,6 +306,7 @@ export function EntityDetailModal({
           templateId: template.id,
           folderId: formData.folderId && formData.folderId.trim() !== '' ? formData.folderId : undefined,
           fields: formData.fields || {},
+          summary: formData.summary || undefined,
           imageUrl: finalImageUrl || undefined,
         });
         toast({ title: 'Entity created', description: formData.name, variant: 'success' });
@@ -316,6 +319,7 @@ export function EntityDetailModal({
             name: formData.name!,
             folderId: formData.folderId || undefined,
             fields: formData.fields || {},
+            summary: formData.summary || undefined,
             imageUrl: finalImageUrl || null,
           // tags and templateId unchanged here
         },
@@ -628,30 +632,43 @@ export function EntityDetailModal({
       return;
     }
 
-    // For creation mode, we can't generate summary until entity is created
-    if (isCreating) {
-      toast({
-        title: 'Cannot generate summary',
-        description: 'Please create the entity first, then you can generate a summary.',
-        variant: 'warning'
-      });
-      return;
-    }
-
-    if (!entity) {
-      toast({
-        title: 'Error',
-        description: 'Entity not found',
-        variant: 'error'
-      });
-      return;
-    }
-
     try {
-      const result = await generateEntitySummary.mutateAsync({
-        worldId: entity.worldId,
-        entityId: entity.id,
-      });
+      let result;
+
+      if (isCreating) {
+        // For creation mode, use the preview API with current form data
+        if (!formData.name?.trim()) {
+          toast({
+            title: 'Entity name required',
+            description: 'Please enter an entity name before generating a summary.',
+            variant: 'warning'
+          });
+          return;
+        }
+
+        result = await generateEntitySummaryPreview.mutateAsync({
+          worldId: worldId,
+          templateId: template.id,
+          entityName: formData.name,
+          entityFields: formData.fields || {},
+          customPrompt: undefined // Could be extended to support custom prompts
+        });
+      } else {
+        // For edit mode, use the existing API with saved entity
+        if (!entity) {
+          toast({
+            title: 'Error',
+            description: 'Entity not found',
+            variant: 'error'
+          });
+          return;
+        }
+
+        result = await generateEntitySummary.mutateAsync({
+          worldId: entity.worldId,
+          entityId: entity.id,
+        });
+      }
 
       // Update the form data with the generated summary
       setFormData(prev => ({
@@ -659,8 +676,8 @@ export function EntityDetailModal({
         summary: result.summary
       }));
 
-      // If not in editing mode, we should trigger a save or update the entity directly
-      if (!isEditing) {
+      // If not in editing mode and we have a saved entity, update it directly
+      if (!isEditing && !isCreating && entity) {
         try {
           await updateEntityMut.mutateAsync({
             id: entity.id,
@@ -672,7 +689,7 @@ export function EntityDetailModal({
         }
       }
     } catch (error) {
-      // Error handling is done by the mutation hook
+      // Error handling is done by the mutation hooks
       console.error('Summary generation failed:', error);
     }
   };
@@ -1002,11 +1019,21 @@ export function EntityDetailModal({
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Summary</h3>
             <AIGenerateButton
               onClick={handleGenerateSummary}
-              disabled={!entity || generateEntitySummary.isPending || updateEntityMut.isPending}
-              isGenerating={generateEntitySummary.isPending}
+              disabled={
+                (isCreating && !formData.name?.trim()) ||
+                (!isCreating && !entity) ||
+                generateEntitySummary.isPending ||
+                generateEntitySummaryPreview.isPending ||
+                updateEntityMut.isPending
+              }
+              isGenerating={generateEntitySummary.isPending || generateEntitySummaryPreview.isPending}
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white"
-              title="Generate a comprehensive summary from all entity details"
+              title={
+                isCreating
+                  ? "Generate a comprehensive summary from current entity details"
+                  : "Generate a comprehensive summary from all entity details"
+              }
             >
               Generate Summary
             </AIGenerateButton>

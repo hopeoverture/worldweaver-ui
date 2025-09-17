@@ -9,6 +9,7 @@ type Body = {
   fields: Record<string, unknown>;
   tags?: string[];
   imageUrl?: string;
+  summary?: string;
 };
 
 export function useCreateEntity(worldId: string) {

@@ -15,11 +15,13 @@ let openai: OpenAI | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is required');
     }
+    console.log('🔑 Using API key from env ending with:', apiKey.slice(-10));
     openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey: apiKey,
     });
   }
   return openai;
@@ -541,8 +543,7 @@ Type: ${template.name}${entityContext}`;
         prompt: finalPrompt,
         n: 1,
         size: sizeMap[quality],
-        quality: quality === 'high' ? 'hd' : 'standard',
-        response_format: 'url'
+        quality: quality === 'high' ? 'hd' : 'standard'
       });
 
       if (!response.data || response.data.length === 0) {

@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       fields: z.record(z.unknown()).default({}),
       tags: z.array(z.string()).optional(),
       imageUrl: z.string().url().optional(),
+      summary: z.string().optional(),
     })
 
     let body: z.infer<typeof schema>
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       fields: body.fields,
       tags: body.tags,
       imageUrl: body.imageUrl,
+      summary: body.summary,
     }, user.id)
 
     // Log entity creation activity

@@ -4,11 +4,13 @@ import { aiService } from '@/lib/services/aiService';
 import { aiUsageService, checkAIQuota } from '@/lib/services/aiUsageService';
 import { createClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logging';
-import { adaptEntityFromDatabase } from '@/lib/adapters';
+import { TemplateField } from '@/lib/types';
 
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID'),
-  entityId: z.string().uuid('Invalid entity ID'),
+  templateId: z.string().uuid('Invalid template ID'),
+  entityName: z.string().min(1, 'Entity name is required'),
+  entityFields: z.record(z.unknown()).default({}),
   customPrompt: z.string().max(500, 'Prompt too long').optional(),
 });
 
@@ -59,29 +61,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Get the entity first
-    const { data: entityData, error: entityError } = await supabase
-      .from('entities')
-      .select('*')
-      .eq('id', validatedData.entityId)
-      .eq('world_id', validatedData.worldId)
-      .single();
+    // Get template data - try user templates first, then system templates
+    const userSupabase = await createClient();
 
-    if (entityError || !entityData) {
-      return NextResponse.json({ error: 'Entity not found' }, { status: 404 });
-    }
-
-    // Get template data separately - try user templates first, then system templates
-    if (!entityData.template_id) {
-      return NextResponse.json({ error: 'Entity has no template assigned' }, { status: 400 });
-    }
-
-    let { data: templateResults, error: templateError } = await supabase
+    // First try to get the template as a regular user (for world-specific templates)
+    let { data: templateResults, error: templateError } = await userSupabase
       .from('templates')
-      .select('id, name, category, description, fields')
-      .eq('id', entityData.template_id);
+      .select('id, name, fields')
+      .eq('id', validatedData.templateId);
 
-    // If not found, try with service role for system templates
+    // If not found and we get permission error, try with service role for system templates
     if (templateError || !templateResults || templateResults.length === 0) {
       const { createClient: createServiceClient } = await import('@supabase/supabase-js');
       const serviceSupabase = createServiceClient(
@@ -91,11 +80,15 @@ export async function POST(req: NextRequest) {
 
       const { data: systemTemplateResults, error: systemTemplateError } = await serviceSupabase
         .from('templates')
-        .select('id, name, category, description, fields')
-        .eq('id', entityData.template_id);
+        .select('id, name, fields')
+        .eq('id', validatedData.templateId);
 
       if (systemTemplateError || !systemTemplateResults || systemTemplateResults.length === 0) {
-        return NextResponse.json({ error: 'Entity template not found' }, { status: 400 });
+        return NextResponse.json({
+          error: 'Template not found',
+          details: `No template found with ID: ${validatedData.templateId}`,
+          templateId: validatedData.templateId
+        }, { status: 404 });
       }
 
       templateResults = systemTemplateResults;
@@ -110,7 +103,7 @@ export async function POST(req: NextRequest) {
       await aiUsageService.trackUsage({
         userId: user.id,
         usage: {
-          operation: 'entity-summary',
+          operation: 'entity-summary-preview',
           model: 'gpt-5-mini',
           provider: 'openai',
           promptTokens: 0,
@@ -120,7 +113,8 @@ export async function POST(req: NextRequest) {
           success: false,
           metadata: {
             worldId: validatedData.worldId,
-            entityId: validatedData.entityId
+            templateId: validatedData.templateId,
+            entityName: validatedData.entityName
           }
         },
         error: 'AI quota exceeded'
@@ -132,20 +126,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Adapt entity data
-    const entity = adaptEntityFromDatabase(entityData);
+    // Create a mock entity object for the AI service
+    const mockEntity = {
+      id: 'preview', // Temporary ID for preview
+      worldId: validatedData.worldId,
+      templateId: validatedData.templateId,
+      name: validatedData.entityName,
+      fields: validatedData.entityFields,
+      summary: '', // Will be generated
+      folderId: undefined,
+      tags: [],
+      imageUrl: undefined,
+      links: [], // Required by Entity type
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    // Convert template data to proper Template type
+    // Create template object for the AI service
     const template = {
       id: templateData.id,
-      worldId: validatedData.worldId, // Add the missing worldId
+      worldId: validatedData.worldId,
       name: templateData.name,
-      category: templateData.category || undefined,
-      description: templateData.description || undefined, // Convert null to undefined
-      fields: templateData.fields as any, // Cast the JSONB fields
-      isSystemTemplate: false, // Default for world-specific templates
-      createdAt: new Date().toISOString(), // Default value
-      updatedAt: new Date().toISOString(), // Default value
+      category: undefined,
+      description: undefined,
+      fields: (templateData.fields || []) as TemplateField[],
+      isSystemTemplate: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     // Prepare world context
@@ -173,7 +180,7 @@ export async function POST(req: NextRequest) {
 
     try {
       generationResult = await aiService.generateEntitySummary({
-        entity,
+        entity: mockEntity,
         template,
         worldContext,
         customPrompt: validatedData.customPrompt,
@@ -183,7 +190,7 @@ export async function POST(req: NextRequest) {
       await aiUsageService.trackUsage({
         userId: user.id,
         usage: {
-          operation: 'entity-summary',
+          operation: 'entity-summary-preview',
           model: 'gpt-5-mini',
           provider: 'openai',
           promptTokens: 0,
@@ -193,7 +200,8 @@ export async function POST(req: NextRequest) {
           success: false,
           metadata: {
             worldId: validatedData.worldId,
-            entityId: validatedData.entityId
+            templateId: validatedData.templateId,
+            entityName: validatedData.entityName
           }
         },
         error: (error as Error).message
@@ -218,12 +226,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    logError('Error in generate-entity-summary API', error as Error, {
-      action: 'generate_entity_summary'
+    logError('Error in generate-entity-summary-preview API', error as Error, {
+      action: 'generate_entity_summary_preview'
     });
 
     return NextResponse.json(
-      { error: 'Failed to generate entity summary' },
+      { error: 'Failed to generate entity summary preview' },
       { status: 500 }
     );
   }
