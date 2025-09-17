@@ -17,7 +17,7 @@ const artStyleSchema = z.object({
 const schema = z.object({
   worldId: z.string().uuid('Invalid world ID'),
   type: z.enum(['entity', 'world-cover']),
-  prompt: z.string().min(1, 'Prompt is required').max(1000, 'Prompt too long'),
+  prompt: z.string().min(1, 'Prompt is required').max(4000, 'Prompt too long'),
   // Art style selection
   artStyle: artStyleSchema.optional(),
   // For entity images
