@@ -115,6 +115,13 @@ export async function POST(req: NextRequest) {
 
     const template = templateResults[0];
 
+    console.log('🔍 Template Debug Info:', {
+      templateId: validatedData.templateId,
+      templateName: template.name,
+      templateFieldsCount: template.fields?.length || 0,
+      templateFields: template.fields?.map((f: any) => ({ id: f.id, name: f.name, type: f.type })) || []
+    });
+
     // Prepare world context using all the extended fields the user filled in
     const worldContext = {
       name: world.name,

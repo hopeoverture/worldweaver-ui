@@ -615,6 +615,49 @@ export function EntityDetailModal({
         }
       }));
 
+      // If in edit mode and not currently editing, save the changes immediately
+      if (!isCreating && entity && !isEditing) {
+        try {
+          await updateEntityMut.mutateAsync({
+            id: entity.id,
+            patch: {
+              fields: {
+                ...entity.fields,
+                ...result.fields
+              }
+            }
+          });
+
+          // Update last saved state
+          lastSavedDataRef.current = {
+            ...lastSavedDataRef.current,
+            fields: {
+              ...entity.fields,
+              ...result.fields
+            }
+          };
+
+          toast({
+            title: 'Entity updated',
+            description: `Generated ${Object.keys(result.fields).length} field${Object.keys(result.fields).length !== 1 ? 's' : ''} and saved automatically.`,
+            variant: 'success'
+          });
+        } catch (error) {
+          console.error('Failed to save AI-generated fields:', error);
+          toast({
+            title: 'Generation successful, save failed',
+            description: 'Fields were generated but could not be saved. Please save manually.',
+            variant: 'warning'
+          });
+        }
+      } else if (isCreating) {
+        toast({
+          title: 'Fields generated',
+          description: `Generated ${Object.keys(result.fields).length} field${Object.keys(result.fields).length !== 1 ? 's' : ''}. Remember to click "Create Entity" to save.`,
+          variant: 'success'
+        });
+      }
+
       setShowAIModal(false);
     } catch (error) {
       // Error handling is done by the mutation hook
@@ -1153,22 +1196,24 @@ export function EntityDetailModal({
                 <div className="relative">
                   <AIGenerateButton
                     onClick={() => openAIModal('all')}
-                    disabled={generateEntityFields.isPending || !getRequiredFieldsStatus().hasRequiredFields}
+                    disabled={generateEntityFields.isPending || (!isCreating && !getRequiredFieldsStatus().hasRequiredFields)}
                     isGenerating={generateEntityFields.isPending && aiGenerationTarget === 'all'}
                     className={`text-white ${
-                      getRequiredFieldsStatus().hasRequiredFields
+                      (isCreating || getRequiredFieldsStatus().hasRequiredFields)
                         ? 'bg-purple-600 hover:bg-purple-700'
                         : 'bg-gray-400 cursor-not-allowed'
                     }`}
                     title={
-                      getRequiredFieldsStatus().hasRequiredFields
+                      isCreating
+                        ? 'Generate all fields using AI (works best with entity name filled)'
+                        : getRequiredFieldsStatus().hasRequiredFields
                         ? 'Generate all empty fields using AI'
                         : `Please fill required fields first: ${getRequiredFieldsStatus().missingFields.join(', ')}`
                     }
                   >
                     Generate All Fields
                   </AIGenerateButton>
-                  {!getRequiredFieldsStatus().hasRequiredFields && (
+                  {!isCreating && !getRequiredFieldsStatus().hasRequiredFields && (
                     <div className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
                       <span className="text-white text-xs font-bold">!</span>
                     </div>
@@ -1176,8 +1221,8 @@ export function EntityDetailModal({
                 </div>
               )}
             </div>
-            {/* Warning banner for missing required fields */}
-            {isEditing && !getRequiredFieldsStatus().hasRequiredFields && (
+            {/* Warning banner for missing required fields - only show in edit mode */}
+            {isEditing && !isCreating && !getRequiredFieldsStatus().hasRequiredFields && (
               <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
@@ -1185,12 +1230,32 @@ export function EntityDetailModal({
                   </div>
                   <div className="ml-2">
                     <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                      Required fields needed for AI generation
+                      Required fields needed for optimal AI generation
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
                       Please fill in: <strong>{getRequiredFieldsStatus().missingFields.join(', ')}</strong>
                       <br />
                       <span className="text-xs">AI needs these core details to generate contextually appropriate content.</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Info banner for create mode */}
+            {isCreating && isEditing && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0">
+                    <span className="text-blue-600 dark:text-blue-400">💡</span>
+                  </div>
+                  <div className="ml-2">
+                    <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                      Creating New Entity
+                    </h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Fill in the entity name for better AI generation results.
+                      Generated fields will be saved when you click <strong>"Create Entity"</strong>.
                     </p>
                   </div>
                 </div>
@@ -1215,13 +1280,15 @@ export function EntityDetailModal({
                         size="sm"
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                         title={
-                          !getRequiredFieldsStatus().hasRequiredFields
+                          isCreating
+                            ? 'Generate this field using AI (works best with entity name filled)'
+                            : !getRequiredFieldsStatus().hasRequiredFields
                             ? 'Note: Fill required fields for better AI generation quality'
                             : 'Generate this field using AI'
                         }
                       >
                         Generate
-                        {!getRequiredFieldsStatus().hasRequiredFields && (
+                        {!isCreating && !getRequiredFieldsStatus().hasRequiredFields && (
                           <span className="ml-1 text-xs">⚠️</span>
                         )}
                       </AIGenerateButton>

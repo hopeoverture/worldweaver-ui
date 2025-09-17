@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getOpenAIApiKey, validateOpenAIApiKey } from '@/lib/config/environment';
 
 /**
  * Minimal AI test endpoint to isolate issues
@@ -24,12 +25,17 @@ export async function POST(req: NextRequest) {
     };
 
     // Step 1: Check environment
+    const apiKey = getOpenAIApiKey();
+    const keyValidation = validateOpenAIApiKey(apiKey || undefined);
     results.steps.push({
       step: 'environment_check',
       success: true,
       data: {
-        hasOpenAIKey: !!process.env.OPENAI_API_KEY,
-        keyLength: process.env.OPENAI_API_KEY?.length || 0
+        hasOpenAIKey: !!apiKey,
+        keyLength: apiKey?.length || 0,
+        keyValid: keyValidation.valid,
+        keyValidationError: keyValidation.error,
+        keyWarnings: keyValidation.warnings
       }
     });
 
@@ -47,7 +53,7 @@ export async function POST(req: NextRequest) {
 
       // Step 3: Try creating OpenAI client
       const openai = createOpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: apiKey || undefined,
         baseURL: 'https://api.openai.com/v1',
       });
 
