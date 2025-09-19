@@ -10,6 +10,10 @@ export const createClient = async () => {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Supabase credentials not configured', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey
+    });
     throw new Error('Supabase credentials not configured')
   }
 

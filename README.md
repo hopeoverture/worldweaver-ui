@@ -250,6 +250,10 @@ supabase/
 - Composite indexes for world access, membership, and entity searches
 - GIN indexes for JSONB field searches
 
+## Development Guidance
+
+For comprehensive development guidance, patterns, and architectural documentation, see **[CLAUDE.md](./CLAUDE.md)**. This file provides detailed information for Claude Code and developers working with this codebase.
+
 ## License & Support
 - Private project; no license file present
 - Open issues and discussions on the repository as needed

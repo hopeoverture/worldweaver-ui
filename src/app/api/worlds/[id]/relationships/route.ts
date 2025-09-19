@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerAuth } from '@/lib/auth/server'
 import { safeConsoleError } from '@/lib/logging'
 import { z } from 'zod'
+import { simplifiedUnifiedService } from '@/lib/services/unified-service'
+import { ServiceError, ValidationError, NotFoundError, DatabaseError } from '@/lib/services/errors'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,10 +18,17 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
-    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
-    const relationships = await supabaseWorldService.getWorldRelationships(params.id, user.id)
+    const relationships = await simplifiedUnifiedService.relationships.getWorldRelationships(params.id, user.id)
     return NextResponse.json({ relationships })
   } catch (error) {
+    if (error instanceof ServiceError) {
+      if (error.code === 'NOT_FOUND') {
+        return NextResponse.json({ error: 'World not found' }, { status: 404 })
+      }
+      if (error.code === 'ACCESS_DENIED') {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
+    }
     safeConsoleError('Error fetching relationships', error as Error, { action: 'GET_relationships', worldId: params?.id, userId: user?.id })
     return NextResponse.json({ error: 'Failed to fetch relationships' }, { status: 500 })
   }
@@ -83,6 +92,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       relationshipType: z.string().min(1, 'Relationship type is required').max(200, 'Relationship type too long'),
       description: z.string().max(1000, 'Description too long').nullable().optional(),
       metadata: z.record(z.unknown()).nullable().optional(),
+      strength: z.number().int().min(1).max(10).optional(),
+      isBidirectional: z.boolean().optional(),
     })
 
     let body: z.infer<typeof schema>
@@ -141,33 +152,33 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }, { status: 400 })
     }
 
-    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService')
-    
-    safeConsoleError('🔄 Creating relationship via supabaseWorldService', new Error('DEBUG'), { 
-      worldId, 
+    safeConsoleError('🔄 Creating relationship via unified service', new Error('DEBUG'), {
+      worldId,
       userId: user.id,
       action: 'POST_relationships_service_call',
       metadata: {
         relationshipData: body
       }
     })
-    
+
     let rel
     try {
-      rel = await supabaseWorldService.createRelationship(
-        worldId,
+      rel = await simplifiedUnifiedService.relationships.createRelationship(
         {
-          fromEntityId: body.fromEntityId,
-          toEntityId: body.toEntityId,
+          worldId: worldId,
+          from: body.fromEntityId,
+          to: body.toEntityId,
           relationshipType: body.relationshipType,
-          description: body.description ?? null,
+          description: body.description || undefined,
           metadata: (body.metadata ?? null) as any,
+          strength: body.strength ?? 5,
+          isBidirectional: body.isBidirectional ?? false,
         },
         user.id,
       )
     } catch (serviceError) {
-      safeConsoleError('💥 WorldService.createRelationship failed', serviceError as Error, { 
-        worldId, 
+      safeConsoleError('💥 UnifiedService.createRelationship failed', serviceError as Error, {
+        worldId,
         userId: user.id,
         fromEntityId: body.fromEntityId,
         toEntityId: body.toEntityId,
@@ -178,7 +189,18 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
           relationshipData: body
         }
       })
-      
+
+      // Handle service errors properly
+      if (serviceError instanceof ValidationError) {
+        return NextResponse.json({ error: serviceError.message }, { status: 400 })
+      }
+      if (serviceError instanceof NotFoundError) {
+        return NextResponse.json({ error: 'One or both entities not found in this world' }, { status: 400 })
+      }
+      if (serviceError instanceof ServiceError) {
+        throw serviceError
+      }
+
       // Re-throw with more context
       if (serviceError instanceof Error) {
         throw new Error(`Service layer error: ${serviceError.message}`)

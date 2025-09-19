@@ -10,6 +10,7 @@ import {
 } from '@/lib/ai-pricing';
 import { aiContextCache } from '@/lib/cache/aiContextCache';
 import { getOpenAIApiKey, validateOpenAIApiKey, loadEnvironmentVariables, getEnvironmentStatus } from '@/lib/config/environment';
+import { relationshipContextService, type RelationshipContext } from './relationshipContextService';
 
 // Initialize OpenAI client lazily to avoid build-time errors
 let openai: OpenAI | null = null;
@@ -124,6 +125,10 @@ export interface GenerateEntityFieldsRequest {
   worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>;
   generateAllFields?: boolean;
   specificField?: string;
+  worldId?: string;
+  userId?: string;
+  entityId?: string;
+  includeRelationshipContext?: boolean;
 }
 
 export interface GenerateEntityFieldsResponse {
@@ -172,6 +177,8 @@ export interface GenerateEntitySummaryRequest {
   template: Template;
   worldContext?: Pick<World, 'name' | 'description' | 'logline' | 'genreBlend' | 'overallTone' | 'keyThemes' | 'audienceRating' | 'scopeScale' | 'technologyLevel' | 'magicLevel' | 'cosmologyModel' | 'climateBiomes' | 'calendarTimekeeping' | 'societalOverview' | 'conflictDrivers' | 'rulesConstraints' | 'aestheticDirection'>;
   customPrompt?: string;
+  userId?: string;
+  includeRelationshipContext?: boolean;
 }
 
 export interface GenerateEntitySummaryResponse {
@@ -285,12 +292,33 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
     existingFields = {},
     worldContext,
     generateAllFields = false,
-    specificField
+    specificField,
+    worldId,
+    userId,
+    entityId,
+    includeRelationshipContext = false
   }: GenerateEntityFieldsRequest): Promise<AIGenerationResult<GenerateEntityFieldsResponse>> {
     const startTime = Date.now();
 
     try {
       const contextPrompt = this.buildWorldContext(worldContext);
+
+      // Build relationship context if requested and all required params are provided
+      let relationshipContext = '';
+      if (includeRelationshipContext && worldId && userId) {
+        try {
+          const focusEntityIds = entityId ? [entityId] : undefined;
+          const relContext = await relationshipContextService.getRelationshipContext(
+            worldId,
+            userId,
+            focusEntityIds
+          );
+          relationshipContext = relationshipContextService.buildRelationshipPromptContext(relContext, 8);
+        } catch (error) {
+          console.warn('Failed to load relationship context for AI generation:', error);
+          relationshipContext = 'Relationship context unavailable.';
+        }
+      }
 
       // Check if AI context fields are filled to provide better context
       const aiContextFields = templateFields.filter(f => f.requireForAIContext);
@@ -338,6 +366,8 @@ Include 3-8 relevant fields. Use appropriate field types. Always include a Name 
 
 ${contextPrompt}
 
+${relationshipContext ? `${relationshipContext}\n` : ''}
+
 Entity: ${entityName || 'Unnamed'}
 Template: ${templateName || 'Unknown'}
 
@@ -347,6 +377,8 @@ ${hasRequiredFieldContext
     ? '⚠️ Some AI context fields are missing. Generate content that works generally but may lack specific context.'
     : 'ℹ️ No AI context fields are defined for this template.'
 }
+
+${relationshipContext ? '💡 Consider the entity relationships above when generating content to ensure consistency and narrative coherence.\n' : ''}
 
 Existing fields:
 ${Object.entries(existingFields).map(([key, value]) => `${key}: ${value}`).join('\n')}
@@ -521,7 +553,9 @@ INCORRECT examples (DO NOT DO THIS):
             entityName: entityName || null,
             templateName: templateName || null,
             fieldsGenerated: Object.keys(mappedFields).length,
-            worldContext: worldContext?.name || null
+            worldContext: worldContext?.name || null,
+            hasRelationshipContext: !!relationshipContext,
+            relationshipContextLength: relationshipContext.length
           },
           startedAt: new Date(startTime),
           finishedAt: endTime,
@@ -543,12 +577,30 @@ INCORRECT examples (DO NOT DO THIS):
     entity,
     template,
     worldContext,
-    customPrompt
+    customPrompt,
+    userId,
+    includeRelationshipContext = false
   }: GenerateEntitySummaryRequest): Promise<AIGenerationResult<GenerateEntitySummaryResponse>> {
     const startTime = Date.now();
 
     try {
       const contextPrompt = this.buildWorldContext(worldContext);
+
+      // Build relationship context if requested
+      let relationshipContext = '';
+      if (includeRelationshipContext && entity.worldId && userId) {
+        try {
+          const relContext = await relationshipContextService.getRelationshipContext(
+            entity.worldId,
+            userId,
+            [entity.id]
+          );
+          relationshipContext = relationshipContextService.buildRelationshipPromptContext(relContext, 6);
+        } catch (error) {
+          console.warn('Failed to load relationship context for entity summary:', error);
+          relationshipContext = 'Relationship context unavailable.';
+        }
+      }
 
       // Build field context from entity data
       const fieldDescriptions: string[] = [];
@@ -576,6 +628,8 @@ INCORRECT examples (DO NOT DO THIS):
 
 ${contextPrompt}
 
+${relationshipContext ? `${relationshipContext}\n` : ''}
+
 Your task is to create a comprehensive, engaging summary for this ${template.name.toLowerCase()} named "${entity.name}".
 
 Guidelines:
@@ -585,7 +639,7 @@ Guidelines:
 - Focus on what makes this ${template.name.toLowerCase()} unique and interesting
 - Write in third person
 - Avoid simply listing facts - create flowing, engaging prose
-- Include relationships and connections where relevant
+${relationshipContext ? '- Incorporate relevant relationships and connections mentioned above to provide narrative context' : '- Include relationships and connections where relevant'}
 ${customPrompt ? `\nSpecial instructions: ${customPrompt}` : ''}
 
 Return only the summary text, no additional formatting or metadata.`;
@@ -646,7 +700,9 @@ Type: ${template.name}${entityContext}`;
           templateName: template.name,
           worldId: entity.worldId,
           fieldCount: fieldDescriptions.length,
-          hasCustomPrompt: !!customPrompt
+          hasCustomPrompt: !!customPrompt,
+          hasRelationshipContext: !!relationshipContext,
+          relationshipContextLength: relationshipContext.length
         },
         responseTimeMs: endTime - startTime
       };
@@ -684,6 +740,17 @@ Type: ${template.name}${entityContext}`;
       // Build the final prompt with art style
       const finalPrompt = buildImagePrompt(prompt, artStyle);
 
+      // Add unique identifier to track this specific request
+      const requestId = `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      console.log('📝 DEBUG: Final prompt being sent to gpt-image-1 API:', {
+        requestId,
+        promptLength: finalPrompt.length,
+        originalPrompt: prompt,
+        artStyle: artStyle?.name || 'none',
+        finalPrompt
+      });
+
       // Use proper OpenAI Images API
       const response = await getOpenAIClient().images.generate({
         model: 'gpt-image-1',
@@ -694,6 +761,7 @@ Type: ${template.name}${entityContext}`;
       });
 
       console.log('🖼️ Image API Response Debug:', {
+        requestId,
         hasData: !!response.data,
         dataLength: response.data?.length || 0,
         responseKeys: Object.keys(response),
@@ -707,6 +775,7 @@ Type: ${template.name}${entityContext}`;
 
       const imageData = response.data[0];
       console.log('🖼️ Image Data Debug:', {
+        requestId,
         hasUrl: !!imageData?.url,
         hasB64Json: !!imageData?.b64_json,
         imageDataKeys: Object.keys(imageData || {}),
@@ -715,6 +784,13 @@ Type: ${template.name}${entityContext}`;
 
       // GPT-image-1 might return base64 data instead of URL
       const imageUrl = imageData?.url || (imageData?.b64_json ? `data:image/png;base64,${imageData.b64_json}` : null);
+
+      console.log('🔗 Image URL Generated:', {
+        requestId,
+        imageUrl: imageUrl?.slice(0, 100) + '...',
+        urlType: imageData?.url ? 'external-url' : 'base64-data',
+        urlLength: imageUrl?.length || 0
+      });
 
       if (!imageUrl) {
         throw new Error('No image URL or base64 data returned from GPT-image-1');
@@ -764,6 +840,452 @@ Type: ${template.name}${entityContext}`;
       });
       throw new Error(`Failed to generate image: ${(error as Error).message}`);
     }
+  }
+
+  /**
+   * Generate a comprehensive world map using AI based on specified parameters
+   */
+  async generateWorldMapImage({
+    mapPurpose,
+    mapScale,
+    genreTags,
+    terrainEmphasis,
+    climateZones,
+    settlementDensity,
+    politicalComplexity,
+    travelFocus,
+    signatureFeatures,
+    visualStyle,
+    worldContext,
+    entityContext,
+    customPrompt,
+  }: {
+    mapPurpose: import('@/lib/types').MapPurpose;
+    mapScale: import('@/lib/types').MapScale;
+    genreTags: import('@/lib/types').GenreTag[];
+    terrainEmphasis: import('@/lib/types').TerrainEmphasis[];
+    climateZones: import('@/lib/types').ClimateZone[];
+    settlementDensity: import('@/lib/types').SettlementDensity;
+    politicalComplexity: import('@/lib/types').PoliticalComplexity;
+    travelFocus: import('@/lib/types').TravelFocus[];
+    signatureFeatures?: import('@/lib/types').SignatureFeature[];
+    visualStyle: import('@/lib/types').MapVisualStyle;
+    worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
+    entityContext?: string;
+    customPrompt?: string;
+  }): Promise<AIGenerationResult<GenerateImageResponse>> {
+    try {
+      console.log('🌍 World context received by AI service:', {
+        hasWorldContext: !!worldContext,
+        worldName: worldContext?.name,
+        worldDescription: worldContext?.description?.slice(0, 100) + '...',
+        genreBlend: worldContext?.genreBlend,
+        overallTone: worldContext?.overallTone,
+        keyThemes: worldContext?.keyThemes
+      });
+
+      const prompt = this.buildComprehensiveMapPrompt({
+        mapPurpose,
+        mapScale,
+        genreTags,
+        terrainEmphasis,
+        climateZones,
+        settlementDensity,
+        politicalComplexity,
+        travelFocus,
+        signatureFeatures,
+        visualStyle,
+        worldContext,
+        entityContext,
+        customPrompt,
+          });
+
+      console.log('🎨 Final AI prompt being sent:', prompt);
+
+      return await this.generateImage({
+        prompt,
+        quality: 'high'
+      });
+    } catch (error) {
+      logError('Error generating world map image', error as Error, { action: 'generate_world_map_image' });
+      throw new Error(`Failed to generate world map image: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Generate a prompt for world map creation without actually generating the image
+   * This allows users to preview and edit the prompt before generation
+   */
+  generateWorldMapPrompt({
+    mapPurpose,
+    mapScale,
+    genreTags,
+    terrainEmphasis,
+    climateZones,
+    settlementDensity,
+    politicalComplexity,
+    travelFocus,
+    signatureFeatures,
+    visualStyle,
+    worldContext,
+    entityContext,
+    customPrompt,
+  }: {
+    mapPurpose: import('@/lib/types').MapPurpose;
+    mapScale: import('@/lib/types').MapScale;
+    genreTags: import('@/lib/types').GenreTag[];
+    terrainEmphasis: import('@/lib/types').TerrainEmphasis[];
+    climateZones: import('@/lib/types').ClimateZone[];
+    settlementDensity: import('@/lib/types').SettlementDensity;
+    politicalComplexity: import('@/lib/types').PoliticalComplexity;
+    travelFocus: import('@/lib/types').TravelFocus[];
+    signatureFeatures?: import('@/lib/types').SignatureFeature[];
+    visualStyle: import('@/lib/types').MapVisualStyle;
+    worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
+    entityContext?: string;
+    customPrompt?: string;
+  }): string {
+    return this.buildComprehensiveMapPrompt({
+      mapPurpose,
+      mapScale,
+      genreTags,
+      terrainEmphasis,
+      climateZones,
+      settlementDensity,
+      politicalComplexity,
+      travelFocus,
+      signatureFeatures,
+      visualStyle,
+      worldContext,
+      entityContext,
+      customPrompt,
+    });
+  }
+
+  /**
+   * Generate a world map image using a custom prompt
+   */
+  async generateWorldMapImageWithPrompt(prompt: string): Promise<AIGenerationResult<GenerateImageResponse>> {
+    try {
+      console.log('🎨 Using custom prompt for image generation:', prompt);
+
+      return await this.generateImage({
+        prompt,
+        quality: 'high'
+      });
+    } catch (error) {
+      logError('Error generating world map image with custom prompt', error as Error, { action: 'generate_world_map_image_custom_prompt' });
+      throw new Error(`Failed to generate world map image: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Legacy map generation for backward compatibility
+   */
+  async generateMapImage({
+    mapType,
+    artStyle,
+    viewAngle,
+    aspectRatioAI,
+    worldContext,
+    entityContext,
+    customPrompt,
+  }: {
+    mapType: 'world' | 'region' | 'settlement' | 'site' | 'dungeon';
+    artStyle: 'photorealistic' | 'hand-drawn';
+    viewAngle: 'top-down' | 'isometric';
+    aspectRatioAI: 'square' | 'vertical' | 'landscape';
+    worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
+    entityContext?: string;
+    customPrompt?: string;
+  }): Promise<AIGenerationResult<GenerateImageResponse>> {
+    try {
+      const prompt = this.buildMapPrompt({
+        mapType,
+        artStyle,
+        viewAngle,
+        worldContext,
+        entityContext,
+        customPrompt,
+          });
+
+      return await this.generateImage({
+        prompt,
+        quality: 'high'
+      });
+    } catch (error) {
+      logError('Error generating map image', error as Error, { action: 'generate_map_image' });
+      throw new Error(`Failed to generate map image: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Build a comprehensive world map prompt using all new generation parameters
+   */
+  private buildComprehensiveMapPrompt({
+    mapPurpose,
+    mapScale,
+    genreTags,
+    terrainEmphasis,
+    climateZones,
+    settlementDensity,
+    politicalComplexity,
+    travelFocus,
+    signatureFeatures,
+    visualStyle,
+    worldContext,
+    entityContext,
+    customPrompt,
+  }: {
+    mapPurpose: import('@/lib/types').MapPurpose;
+    mapScale: import('@/lib/types').MapScale;
+    genreTags: import('@/lib/types').GenreTag[];
+    terrainEmphasis: import('@/lib/types').TerrainEmphasis[];
+    climateZones: import('@/lib/types').ClimateZone[];
+    settlementDensity: import('@/lib/types').SettlementDensity;
+    politicalComplexity: import('@/lib/types').PoliticalComplexity;
+    travelFocus: import('@/lib/types').TravelFocus[];
+    signatureFeatures?: import('@/lib/types').SignatureFeature[];
+    visualStyle: import('@/lib/types').MapVisualStyle;
+    worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
+    entityContext?: string;
+    customPrompt?: string;
+  }): string {
+    // Start with map purpose and scale
+    const purposeDescriptions = {
+      campaign_overview: 'Create a comprehensive fantasy map showing major territories, kingdoms, and geographical features for campaign planning',
+      regional_adventuring: 'Generate a detailed regional map optimized for adventure planning with clear landmarks, settlements, and travel routes',
+      local_exploration: 'Design a highly detailed local area map perfect for exploration with abundant terrain features and points of interest',
+      political_boundaries: 'Produce a political map emphasizing territorial borders, faction boundaries, and spheres of influence',
+      trade_logistics: 'Create a commercial map highlighting trade routes, resource locations, ports, and economic centers',
+      war_operations: 'Design a strategic military map showing defensible positions, fortifications, and tactical terrain features'
+    };
+
+    const scaleDescriptions = {
+      world_continent: 'at continental scope showing vast territories and major geographical features',
+      large_region: 'at large regional scope covering multiple kingdoms and major wilderness areas',
+      province_kingdom: 'at kingdom or province scope with detailed settlements and regional features',
+      local_area: 'at local area scope showing counties, duchies, and immediate surroundings',
+      town_surroundings: 'at town scope with fine detail of local features and immediate surroundings'
+    };
+
+    let prompt = `${purposeDescriptions[mapPurpose]} ${scaleDescriptions[mapScale]}`;
+
+    // Genre integration
+    const genreDescriptions = {
+      high_fantasy: 'high fantasy with magical elements, mythical creatures, and arcane locations',
+      low_grim_fantasy: 'low fantasy with gritty realism, sparse magic, and harsh survival elements',
+      post_apocalyptic: 'post-apocalyptic setting with ruined civilizations and wasteland terrain',
+      sword_sorcery: 'sword and sorcery with barbarian cultures and mysterious ancient sites',
+      historical_alt_history: 'historical setting with period-accurate geography and settlements',
+      science_fantasy: 'science fantasy blending advanced technology with magical elements'
+    };
+
+    if (genreTags.length > 0) {
+      prompt += `, set in a ${genreTags.map(tag => genreDescriptions[tag]).join(' and ')} setting`;
+    }
+
+    // Terrain emphasis with natural descriptions
+    const terrainDescriptions = {
+      mountains: 'dramatic mountain ranges with peaks, ridges, and highland plateaus',
+      rivers: 'extensive river systems, deltas, wetlands, and waterway networks',
+      forests: 'dense forests, woodlands, jungles, and tree-covered regions',
+      deserts: 'vast deserts with sand dunes, arid wastelands, and rocky badlands',
+      coasts: 'extensive coastlines with archipelagos, harbors, and maritime regions',
+      grasslands: 'rolling grasslands, plains, steppes, and open savanna'
+    };
+
+    if (terrainEmphasis.length > 0) {
+      prompt += `. Emphasize these terrain types: ${terrainEmphasis.map(terrain => terrainDescriptions[terrain]).join(', ')}`;
+    }
+
+    // Climate zones
+    const climateDescriptions = {
+      tropical: 'tropical zones with lush vegetation and humid conditions',
+      subtropical: 'subtropical regions with seasonal variations and warm climates',
+      temperate: 'temperate zones with four distinct seasons and moderate climates',
+      arid: 'arid and desert regions with sparse vegetation and dry conditions',
+      boreal: 'boreal regions with coniferous forests and cold climates',
+      polar: 'polar and tundra regions with frigid conditions and sparse vegetation'
+    };
+
+    if (climateZones.length > 0) {
+      prompt += `. Include diverse climate zones: ${climateZones.map(climate => climateDescriptions[climate]).join(', ')}`;
+    }
+
+    // Settlement density and technology
+    const settlementDescriptions = {
+      sparse_nomadic: 'with sparse nomadic settlements and hunter-gatherer camps',
+      rural_agrarian: 'with rural farming communities, scattered villages, and market towns',
+      feudal_kingdoms: 'with feudal settlements, walled cities, castle towns, and fortifications',
+      late_medieval: 'with late medieval cities, early gunpowder fortifications, and renaissance architecture',
+      early_industrial: 'with early industrial development, steam technology, and emerging urban centers'
+    };
+
+    prompt += ` ${settlementDescriptions[settlementDensity]}`;
+
+    // Political complexity
+    const politicalDescriptions = {
+      minimal: 'Show simple political structure with 1-2 major realms and clear boundaries',
+      moderate: 'Display moderate political complexity with 3-6 distinct kingdoms or factions',
+      high: 'Present complex political landscape with 7+ realms, city-states, enclaves, and overlapping territories'
+    };
+
+    prompt += `. ${politicalDescriptions[politicalComplexity]}`;
+
+    // Travel and infrastructure
+    const travelDescriptions = {
+      overland_roads: 'well-developed road networks, highways, and caravan routes',
+      river_travel: 'river navigation routes, ferry crossings, and waterway transportation',
+      coastal_shipping: 'maritime trade routes, harbors, ports, and sea lanes',
+      wilderness_treks: 'wilderness paths, mountain passes, and off-road exploration routes',
+      air_arcane: 'magical or aerial transportation networks and mystical travel corridors'
+    };
+
+    if (travelFocus.length > 0) {
+      prompt += `. Feature prominent ${travelFocus.map(travel => travelDescriptions[travel]).join(', ')}`;
+    }
+
+    // Signature features
+    if (signatureFeatures && signatureFeatures.length > 0) {
+      const featureDescriptions = {
+        great_wall: 'a massive great wall or fortified mountain pass',
+        world_scar: 'a dramatic world-scar canyon, great rift, or geological fault',
+        volcano_chain: 'an active volcanic chain with multiple peaks and geothermal features',
+        inland_sea: 'a giant inland sea, massive lake, or extensive river delta',
+        floating_isles: 'magical floating islands or levitating landmasses',
+        megadungeon: 'ancient megadungeon ruins or vast archaeological complex'
+      };
+
+      prompt += `. Include these unique landmarks: ${signatureFeatures.map(feature => featureDescriptions[feature]).join(', ')}`;
+    }
+
+    // Visual style
+    const styleDescriptions = {
+      inked_atlas: 'Render in traditional cartographic style with pen and ink techniques, line work, and crosshatching',
+      painterly: 'Create in painterly illustrated style with rich colors, artistic brushwork, and detailed textures',
+      hex_map: 'Design as a hex-grid gaming map with clear symbols, geometric patterns, and tabletop-friendly layout',
+      minimal_modern: 'Produce in clean minimal modern style with simplified elements and contemporary design',
+      nautical_chart: 'Style as a nautical chart with depth indicators, navigation aids, and maritime cartographic conventions'
+    };
+
+    prompt += `. ${styleDescriptions[visualStyle]}`;
+
+    // World context integration
+    if (worldContext) {
+      if (worldContext.name) {
+        prompt += ` for the fantasy realm "${worldContext.name}"`;
+      }
+      if (worldContext.genreBlend?.length) {
+        prompt += ` reflecting the ${worldContext.genreBlend.join('/')} setting`;
+      }
+      if (worldContext.overallTone) {
+        prompt += ` with a ${worldContext.overallTone} atmosphere`;
+      }
+      if (worldContext.keyThemes?.length) {
+        prompt += ` incorporating themes of ${worldContext.keyThemes.slice(0, 3).join(', ')}`;
+      }
+      if (worldContext.description) {
+        prompt += `. World context: ${worldContext.description.slice(0, 200)}`;
+      }
+    }
+
+    // Entity context
+    if (entityContext && entityContext.trim()) {
+      prompt += `. Important locations to feature: ${entityContext}`;
+    }
+
+    // Custom prompt integration
+    if (customPrompt && customPrompt.trim()) {
+      prompt += `. Additional specifications: ${customPrompt}`;
+    }
+
+    // Technical specifications
+    prompt += '. Create a high-quality, detailed fantasy map suitable for tabletop gaming and worldbuilding';
+    prompt += '. Avoid text labels or written words on the map itself';
+    prompt += '. Focus on clear geographical features, settlements, and infrastructure that tell a story';
+    prompt += '. Use natural color schemes and realistic geographical patterns appropriate for a fantasy setting';
+
+    return prompt;
+  }
+
+  /**
+   * Build a detailed prompt for legacy map generation
+   */
+  private buildMapPrompt({
+    mapType,
+    artStyle,
+    viewAngle,
+    worldContext,
+    entityContext,
+    customPrompt,
+  }: {
+    mapType: 'world' | 'region' | 'settlement' | 'site' | 'dungeon';
+    artStyle: 'photorealistic' | 'hand-drawn';
+    viewAngle: 'top-down' | 'isometric';
+    worldContext?: Pick<World, 'name' | 'description' | 'genreBlend' | 'overallTone' | 'keyThemes'>;
+    entityContext?: string;
+    customPrompt?: string;
+  }): string {
+    let prompt = '';
+
+    // Base map type description
+    const mapTypeDescriptions = {
+      world: 'A detailed world map showing continents, oceans, major mountain ranges, and large-scale geographical features',
+      region: 'A regional map showing multiple kingdoms, cities, roads, rivers, forests, and local landmarks',
+      settlement: 'A settlement map showing buildings, streets, districts, walls, gates, and important locations within a town or city',
+      site: 'A specific site map showing a particular location like a fortress, temple, academy, or other important landmark with detailed architecture',
+      dungeon: 'A dungeon map showing underground chambers, corridors, rooms, traps, and architectural details in a subterranean complex'
+    };
+
+    prompt += mapTypeDescriptions[mapType];
+
+    // Add view angle specification
+    if (viewAngle === 'top-down') {
+      prompt += ', rendered from a true overhead perspective like a classic cartographic map';
+    } else {
+      prompt += ', rendered from an isometric 3/4 perspective showing depth and dimension';
+    }
+
+    // Add art style specification
+    if (artStyle === 'photorealistic') {
+      prompt += ', with photorealistic detail, realistic textures, natural lighting, and high detail';
+    } else {
+      prompt += ', in a hand-drawn sketch style with artistic linework, crosshatching, and traditional cartographic illustration techniques';
+    }
+
+    // Add world context
+    if (worldContext) {
+      if (worldContext.genreBlend?.length) {
+        prompt += ` set in a ${worldContext.genreBlend.join('/')} world`;
+      }
+      if (worldContext.overallTone) {
+        prompt += ` with a ${worldContext.overallTone} atmosphere`;
+      }
+      if (worldContext.keyThemes?.length) {
+        prompt += ` featuring themes of ${worldContext.keyThemes.slice(0, 3).join(', ')}`;
+      }
+    }
+
+    // Add entity context if provided
+    if (entityContext && entityContext.trim()) {
+      prompt += `. Important locations and features to include: ${entityContext}`;
+    }
+
+    // Add reference image context
+
+    // Add custom prompt if provided
+    if (customPrompt && customPrompt.trim()) {
+      prompt += `. Additional details: ${customPrompt}`;
+    }
+
+    // Add technical specifications
+    prompt += '. High quality, detailed, suitable for tabletop gaming and worldbuilding.';
+
+    // Add negative prompts to improve quality
+    prompt += ' Avoid text, labels, legends, or written words on the map.';
+
+    return prompt;
   }
 
   /**

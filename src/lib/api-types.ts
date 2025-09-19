@@ -204,6 +204,8 @@ export type RelationshipResponse = ApiResponse<{
   relationshipType: string
   description?: string
   metadata?: Record<string, unknown>
+  strength?: number
+  isBidirectional?: boolean
   createdAt: string
   updatedAt: string
 }>

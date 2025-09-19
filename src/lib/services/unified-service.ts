@@ -32,6 +32,7 @@ import {
 import { WorldService } from './worldService';
 import { logInfo, logError } from '@/lib/logging';
 import { validateEnv } from '@/lib/env-validation';
+import type { Json } from '@/lib/types';
 
 /**
  * Simplified World Service Implementation
@@ -441,6 +442,254 @@ class SimplifiedEntityService implements IEntityService {
 }
 
 /**
+ * Simplified Relationship Service Implementation
+ */
+class SimplifiedRelationshipService implements IRelationshipService {
+  async getWorldRelationships(worldId: string, userId: string): Promise<RelationshipRow[]> {
+    try {
+      logInfo('Fetching world relationships', { worldId, userId, action: 'getWorldRelationships' });
+
+      const supabase = await createServerSupabaseClient();
+      const { data: relationships, error } = await supabase
+        .from('relationships')
+        .select('id, world_id, from_entity_id, to_entity_id, relationship_type, description, metadata, created_at, updated_at')
+        .eq('world_id', worldId)
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        throw new DatabaseError('getWorldRelationships', error);
+      }
+
+      const adaptedRelationships = (relationships || []).map((rel: any) => ({
+        id: rel.id,
+        worldId: rel.world_id,
+        from: rel.from_entity_id,
+        to: rel.to_entity_id,
+        relationshipType: rel.relationship_type,
+        description: rel.description || undefined,
+        metadata: rel.metadata ? rel.metadata as any : undefined,
+        strength: (rel as any).strength || 5, // Default strength if column doesn't exist
+        isBidirectional: (rel as any).is_bidirectional || false, // Default bidirectional if column doesn't exist
+        createdAt: rel.created_at,
+        updatedAt: rel.updated_at,
+      }));
+
+      logInfo(`Fetched ${adaptedRelationships.length} relationships`, { worldId, userId });
+      return adaptedRelationships;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      logError('Error fetching world relationships', error as Error, { worldId, userId });
+      throw new ServiceError('INTERNAL_ERROR', 'Failed to fetch relationships', error as Error);
+    }
+  }
+
+  async getRelationshipById(relationshipId: string, userId: string): Promise<RelationshipRow | null> {
+    try {
+      logInfo('Fetching relationship by ID', { relationshipId, userId, action: 'getRelationshipById' });
+
+      const supabase = await createServerSupabaseClient();
+      const { data: relationship, error } = await supabase
+        .from('relationships')
+        .select('id, world_id, from_entity_id, to_entity_id, relationship_type, description, metadata, created_at, updated_at')
+        .eq('id', relationshipId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // Not found
+        }
+        throw new DatabaseError('getRelationshipById', error);
+      }
+
+      if (!relationship) {
+        return null;
+      }
+
+      const adaptedRelationship = {
+        id: relationship.id,
+        worldId: relationship.world_id,
+        from: relationship.from_entity_id,
+        to: relationship.to_entity_id,
+        relationshipType: relationship.relationship_type,
+        description: relationship.description || undefined,
+        metadata: relationship.metadata ? relationship.metadata as any : undefined,
+        strength: (relationship as any).strength || 5, // Default strength if column doesn't exist
+        isBidirectional: (relationship as any).is_bidirectional || false, // Default bidirectional if column doesn't exist
+        createdAt: relationship.created_at,
+        updatedAt: relationship.updated_at,
+      };
+
+      logInfo('Relationship fetched successfully', { relationshipId, userId });
+      return adaptedRelationship;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      logError('Error fetching relationship by ID', error as Error, { relationshipId, userId });
+      throw new ServiceError('INTERNAL_ERROR', 'Failed to fetch relationship', error as Error);
+    }
+  }
+
+  async createRelationship(relationshipData: Partial<RelationshipRow>, userId: string): Promise<RelationshipRow> {
+    try {
+      logInfo('Creating relationship', { userId, action: 'createRelationship' });
+
+      // Validate required fields
+      if (!relationshipData.worldId) {
+        throw new ValidationError('worldId', 'World ID is required');
+      }
+      if (!relationshipData.from) {
+        throw new ValidationError('from', 'From entity ID is required');
+      }
+      if (!relationshipData.to) {
+        throw new ValidationError('to', 'To entity ID is required');
+      }
+      if (!relationshipData.relationshipType) {
+        throw new ValidationError('relationshipType', 'Relationship type is required');
+      }
+      if (relationshipData.from === relationshipData.to) {
+        throw new ValidationError('entities', 'Cannot create relationship between the same entity');
+      }
+
+      if (!adminClient) {
+        throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+      }
+
+      const insertData = {
+        world_id: relationshipData.worldId,
+        from_entity_id: relationshipData.from,
+        to_entity_id: relationshipData.to,
+        relationship_type: relationshipData.relationshipType,
+        description: relationshipData.description || null,
+        metadata: relationshipData.metadata || {},
+      };
+
+      const { data: relationship, error } = await adminClient
+        .from('relationships')
+        .insert(insertData)
+        .select('*')
+        .single();
+
+      if (error) {
+        throw new DatabaseError('createRelationship', error);
+      }
+
+      if (!relationship) {
+        throw new ServiceError('INTERNAL_ERROR', 'Relationship creation failed - no data returned');
+      }
+
+      const adaptedRelationship = {
+        id: relationship.id,
+        worldId: relationship.world_id,
+        from: relationship.from_entity_id,
+        to: relationship.to_entity_id,
+        relationshipType: relationship.relationship_type,
+        description: relationship.description || undefined,
+        metadata: relationship.metadata ? relationship.metadata as any : undefined,
+        strength: (relationship as any).strength || 5, // Default strength if column doesn't exist
+        isBidirectional: (relationship as any).is_bidirectional || false, // Default bidirectional if column doesn't exist
+        createdAt: relationship.created_at,
+        updatedAt: relationship.updated_at,
+      };
+
+      logInfo('Relationship created successfully', { relationshipId: relationship.id, userId });
+      return adaptedRelationship;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      logError('Error creating relationship', error as Error, { userId });
+      throw new ServiceError('INTERNAL_ERROR', 'Failed to create relationship', error as Error);
+    }
+  }
+
+  async updateRelationship(relationshipId: string, updates: Partial<RelationshipRow>, userId: string): Promise<RelationshipRow> {
+    try {
+      logInfo('Updating relationship', { relationshipId, userId, action: 'updateRelationship' });
+
+      if (!adminClient) {
+        throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+      }
+
+      const updateData: Record<string, any> = {};
+      if (updates.relationshipType) updateData.relationship_type = updates.relationshipType;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+
+      const { data: relationship, error } = await adminClient
+        .from('relationships')
+        .update(updateData)
+        .eq('id', relationshipId)
+        .select('*')
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          throw new NotFoundError('Relationship', relationshipId);
+        }
+        throw new DatabaseError('updateRelationship', error);
+      }
+
+      if (!relationship) {
+        throw new NotFoundError('Relationship', relationshipId);
+      }
+
+      const adaptedRelationship = {
+        id: relationship.id,
+        worldId: relationship.world_id,
+        from: relationship.from_entity_id,
+        to: relationship.to_entity_id,
+        relationshipType: relationship.relationship_type,
+        description: relationship.description || undefined,
+        metadata: relationship.metadata ? relationship.metadata as any : undefined,
+        strength: (relationship as any).strength || 5, // Default strength if column doesn't exist
+        isBidirectional: (relationship as any).is_bidirectional || false, // Default bidirectional if column doesn't exist
+        createdAt: relationship.created_at,
+        updatedAt: relationship.updated_at,
+      };
+
+      logInfo('Relationship updated successfully', { relationshipId, userId });
+      return adaptedRelationship;
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      logError('Error updating relationship', error as Error, { relationshipId, userId });
+      throw new ServiceError('INTERNAL_ERROR', 'Failed to update relationship', error as Error);
+    }
+  }
+
+  async deleteRelationship(relationshipId: string, userId: string): Promise<void> {
+    try {
+      logInfo('Deleting relationship', { relationshipId, userId, action: 'deleteRelationship' });
+
+      if (!adminClient) {
+        throw new ServiceError('INTERNAL_ERROR', 'Admin client not available');
+      }
+
+      const { error } = await adminClient
+        .from('relationships')
+        .delete()
+        .eq('id', relationshipId);
+
+      if (error) {
+        throw new DatabaseError('deleteRelationship', error);
+      }
+
+      logInfo('Relationship deleted successfully', { relationshipId, userId });
+    } catch (error) {
+      if (error instanceof ServiceError) {
+        throw error;
+      }
+      logError('Error deleting relationship', error as Error, { relationshipId, userId });
+      throw new ServiceError('INTERNAL_ERROR', 'Failed to delete relationship', error as Error);
+    }
+  }
+}
+
+/**
  * Simplified Unified Service Layer
  */
 export class SimplifiedUnifiedServiceLayer implements IServiceLayer {
@@ -454,12 +703,12 @@ export class SimplifiedUnifiedServiceLayer implements IServiceLayer {
     // Initialize services
     this.worlds = new SimplifiedWorldService();
     this.entities = new SimplifiedEntityService(this.worlds);
-    
-    // For now, delegate to existing services for templates, folders, and relationships
+    this.relationships = new SimplifiedRelationshipService();
+
+    // For now, delegate to existing services for templates and folders
     const worldService = new WorldService();
     this.templates = worldService as any;
     this.folders = worldService as any;
-    this.relationships = worldService as any;
   }
 }
 

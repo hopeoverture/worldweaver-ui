@@ -28,77 +28,118 @@ export class SupabaseWorldService {
     try {
       const supabase = await createServerSupabaseClient()
 
-      // First get worlds
-      const { data: worlds, error } = await supabase
-        .from('worlds')
-        .select('*')
-        .eq('is_archived', false)
-        .order('updated_at', { ascending: false });
+      // Fetch both owned worlds and worlds the user is a member of
+      // Using a raw SQL query to join worlds with world_members and get owner names
+      const { data: worldsWithRoles, error } = await supabase
+        .rpc('get_user_accessible_worlds' as any, { user_uuid: userId });
 
       if (error) {
-        logError('Supabase error fetching worlds', error, { action: 'getUserWorlds', userId });
-        throw new Error(`Database error: ${error.message}`);
+        logError('Supabase error fetching user worlds with roles', error, { action: 'getUserWorlds', userId });
+        // Fallback to owned worlds only if the RPC function doesn't exist
+        console.warn('Falling back to owned worlds only. Consider running the migration to add get_user_accessible_worlds function.');
+
+        const { data: ownedWorlds, error: fallbackError } = await supabase
+          .from('worlds')
+          .select(`
+            *,
+            profiles!worlds_owner_id_fkey(full_name, email)
+          `)
+          .eq('owner_id', userId)
+          .eq('is_archived', false)
+          .order('updated_at', { ascending: false });
+
+        if (fallbackError) {
+          logError('Fallback query also failed', fallbackError, { action: 'getUserWorlds', userId });
+          throw new Error(`Database error: ${fallbackError.message}`);
+        }
+
+        // Process fallback results (owned worlds only)
+        const worldsWithEntityCounts = await Promise.all(
+          (ownedWorlds || []).map(async (world) => {
+            const entityCount = await this.getWorldEntityCount(supabase, world.id);
+            return {
+              ...world,
+              entities: [{ count: entityCount }],
+              user_role: 'owner' as const,
+              owner_name: (world.profiles as any)?.full_name || (world.profiles as any)?.email || 'Unknown'
+            };
+          })
+        );
+
+        return worldsWithEntityCounts.map((world: any) => adaptWorldFromDatabase(world));
       }
 
-      // For each world, get the entity count by fetching only displayable entities
-      // This ensures the count matches what users actually see in the interface
+      // Process results from RPC function
+      if (!worldsWithRoles || !Array.isArray(worldsWithRoles)) {
+        throw new Error('Invalid response from get_user_accessible_worlds function');
+      }
+
       const worldsWithEntityCounts = await Promise.all(
-        (worlds || []).map(async (world) => {
-          // Get entities and folders for this world
-          const [entitiesResult, foldersResult] = await Promise.all([
-            supabase
-              .from('entities')
-              .select('id, name, world_id, folder_id')
-              .eq('world_id', world.id)
-              .not('name', 'is', null)
-              .not('id', 'is', null),
-            supabase
-              .from('folders')
-              .select('id, world_id, kind')
-              .eq('world_id', world.id)
-              .eq('kind', 'entities') // Only entity folders count
-          ]);
-
-          let displayableEntityCount = 0;
-
-          if (!entitiesResult.error && entitiesResult.data) {
-            const entities = entitiesResult.data;
-
-            if (!foldersResult.error && foldersResult.data) {
-              // Normal case: both entities and folders queries succeeded
-              const validFolderIds = new Set(foldersResult.data.map(f => f.id));
-
-              // Count entities that are either:
-              // 1. Ungrouped (no folder_id)
-              // 2. In a valid entity folder
-              displayableEntityCount = entities.filter(entity => {
-                if (!entity.id || !entity.name || !entity.world_id) return false;
-                return !entity.folder_id || validFolderIds.has(entity.folder_id);
-              }).length;
-            } else {
-              // Fallback: folders query failed, count all valid entities
-              console.warn('Folders query failed, counting all valid entities:', foldersResult.error);
-              displayableEntityCount = entities.filter(entity => {
-                return entity.id && entity.name && entity.world_id;
-              }).length;
-            }
-          } else if (entitiesResult.error) {
-            // Entities query failed, log error but continue with 0 count
-            console.warn('Entities query failed for world', world.id, ':', entitiesResult.error);
-            displayableEntityCount = 0;
-          }
-
+        worldsWithRoles.map(async (world: any) => {
+          const entityCount = await this.getWorldEntityCount(supabase, world.id);
           return {
             ...world,
-            entities: [{ count: displayableEntityCount }]
+            entities: [{ count: entityCount }]
           };
         })
       );
 
-      return worldsWithEntityCounts.map(world => adaptWorldFromDatabase(world));
+      return worldsWithEntityCounts.map((world: any) => adaptWorldFromDatabase(world));
     } catch (error) {
       logError('Error fetching user worlds', error as Error, { action: 'getUserWorlds', userId });
       throw new Error('Failed to fetch worlds');
+    }
+  }
+
+  /**
+   * Helper function to get entity count for a world
+   */
+  private async getWorldEntityCount(supabase: any, worldId: string): Promise<number> {
+    try {
+      // Get entities and folders for this world
+      const [entitiesResult, foldersResult] = await Promise.all([
+        supabase
+          .from('entities')
+          .select('id, name, world_id, folder_id')
+          .eq('world_id', worldId)
+          .not('name', 'is', null)
+          .not('id', 'is', null),
+        supabase
+          .from('folders')
+          .select('id, world_id, kind')
+          .eq('world_id', worldId)
+          .eq('kind', 'entities') // Only entity folders count
+      ]);
+
+      if (!entitiesResult.error && entitiesResult.data) {
+        const entities = entitiesResult.data;
+
+        if (!foldersResult.error && foldersResult.data) {
+          // Normal case: both entities and folders queries succeeded
+          const validFolderIds = new Set(foldersResult.data.map((f: any) => f.id));
+
+          // Count entities that are either ungrouped or in a valid entity folder
+          return entities.filter((entity: any) => {
+            if (!entity.id || !entity.name || !entity.world_id) return false;
+            return !entity.folder_id || validFolderIds.has(entity.folder_id);
+          }).length;
+        } else {
+          // Fallback: folders query failed, count all valid entities
+          console.warn('Folders query failed, counting all valid entities:', foldersResult.error);
+          return entities.filter((entity: any) => {
+            return entity.id && entity.name && entity.world_id;
+          }).length;
+        }
+      } else if (entitiesResult.error) {
+        // Entities query failed, log error but continue with 0 count
+        console.warn('Entities query failed for world', worldId, ':', entitiesResult.error);
+        return 0;
+      }
+
+      return 0;
+    } catch (error) {
+      console.warn('Error calculating entity count for world', worldId, ':', error);
+      return 0;
     }
   }
 

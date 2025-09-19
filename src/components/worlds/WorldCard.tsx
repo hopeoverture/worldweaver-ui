@@ -17,19 +17,25 @@ import {
  */
 export interface WorldCardProps {
   /** Unique identifier for the world */
-  id: string; 
+  id: string;
   /** Display name of the world */
-  name: string; 
+  name: string;
   /** Optional brief description of the world */
-  summary?: string; 
+  summary?: string;
   /** Number of entities in the world */
-  entityCount: number; 
+  entityCount: number;
   /** Last updated timestamp */
   updatedAt: string | Date;
   /** Whether the world is archived */
   isArchived?: boolean;
+  /** Current user's role in this world */
+  userRole?: 'owner' | 'admin' | 'editor' | 'viewer';
+  /** Whether this is a shared world (user is not the owner) */
+  isShared?: boolean;
+  /** Name of the world owner (for shared worlds) */
+  ownerName?: string;
   /** Handler for entering the world */
-  onEnter: (id: string) => void; 
+  onEnter: (id: string) => void;
   /** Handler for editing the world */
   onEdit: (id: string) => void;
   /** Optional handler for archiving the world */
@@ -38,7 +44,7 @@ export interface WorldCardProps {
   onDelete?: (id: string) => void;
 }
 
-function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchived = false, onEnter, onEdit, onArchive, onDelete }: WorldCardProps) {
+function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchived = false, userRole = 'owner', isShared = false, ownerName, onEnter, onEdit, onArchive, onDelete }: WorldCardProps) {
   const date = typeof updatedAt === 'string' ? new Date(updatedAt) : (updatedAt as Date);
   const [showMenu, setShowMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -102,6 +108,14 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
               <h3 className={`text-lg font-bold ${textColorTransition('text-gray-900 dark:text-gray-100', 'group-hover:text-brand-700 dark:group-hover:text-brand-400')}`}>
                 {name}
               </h3>
+              {isShared && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                  Shared
+                </span>
+              )}
               {isArchived && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
                   Archived
@@ -112,7 +126,17 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-brand-100 text-brand-800 dark:bg-brand-900/50 dark:text-brand-200 group-hover:bg-brand-200 dark:group-hover:bg-brand-800/70 group-hover:scale-105 transition-all duration-300">
                 {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
               </span>
+              {isShared && userRole && userRole !== 'owner' && (
+                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                  {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+                </span>
+              )}
             </div>
+            {isShared && ownerName && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                by {ownerName}
+              </p>
+            )}
           </div>
           
           <div className="relative" ref={menuRef}>
@@ -132,21 +156,25 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
             {showMenu && (
               <div className="absolute right-0 top-8 w-48 bg-white dark:bg-neutral-800 rounded-md shadow-lg border border-gray-200 dark:border-neutral-700 z-10">
                 <div className="py-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowMenu(false);
-                      onEdit(id);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit World
-                  </button>
-                  
-                  {onArchive && (
+                  {/* Only show edit option for owners and admins */}
+                  {(userRole === 'owner' || userRole === 'admin') && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMenu(false);
+                        onEdit(id);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit World
+                    </button>
+                  )}
+
+                  {/* Only show archive/unarchive for owners */}
+                  {userRole === 'owner' && onArchive && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -172,10 +200,14 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
                       )}
                     </button>
                   )}
-                  
-                  <hr className="my-1 border-gray-200 dark:border-neutral-700" />
-                  
-                  {onDelete && (
+
+                  {/* Show separator only if there are management options above and delete below */}
+                  {userRole === 'owner' && onDelete && (
+                    <hr className="my-1 border-gray-200 dark:border-neutral-700" />
+                  )}
+
+                  {/* Only show delete for owners */}
+                  {userRole === 'owner' && onDelete && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -189,6 +221,13 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
                       </svg>
                       Delete World
                     </button>
+                  )}
+
+                  {/* If no actions are available, show a message */}
+                  {userRole === 'viewer' && (
+                    <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      No actions available
+                    </div>
                   )}
                 </div>
               </div>
@@ -216,17 +255,20 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
           <div className='flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-1 transform'>
             {!isArchived && (
               <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(id);
-                  }}
-                  className={buttonHover()}
-                >
-                  Edit
-                </Button>
+                {/* Only show Edit button for owners and admins */}
+                {(userRole === 'owner' || userRole === 'admin') && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(id);
+                    }}
+                    className={buttonHover()}
+                  >
+                    Edit
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={(e) => {
@@ -239,7 +281,8 @@ function WorldCardComponent({ id, name, summary, entityCount, updatedAt, isArchi
                 </Button>
               </>
             )}
-            {isArchived && (
+            {/* Only show Unarchive button for owners */}
+            {isArchived && userRole === 'owner' && (
               <Button
                 size="sm"
                 variant="outline"

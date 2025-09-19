@@ -24,6 +24,8 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
   const [toEntityId, setToEntityId] = useState('');
   const [label, setLabel] = useState('');
   const [notes, setNotes] = useState('');
+  const [strength, setStrength] = useState(5);
+  const [isBidirectional, setIsBidirectional] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const worldEntities = entities;
@@ -43,8 +45,10 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
         await createRelationshipMutation.mutateAsync({
           fromEntityId,
           toEntityId,
-          label: label.trim(),
+          relationshipType: label.trim(),
           description: notes.trim() || null,
+          strength,
+          isBidirectional,
         });
 
         // Show success toast
@@ -61,6 +65,8 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
         setToEntityId('');
         setLabel('');
         setNotes('');
+        setStrength(5);
+        setIsBidirectional(false);
         setErrors({});
         onClose();
       } catch (error) {
@@ -76,6 +82,8 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
     setToEntityId('');
     setLabel('');
     setNotes('');
+    setStrength(5);
+    setIsBidirectional(false);
     setErrors({});
     onClose();
   };
@@ -162,6 +170,50 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Relationship Strength: {strength}/10
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="10"
+            value={strength}
+            onChange={(e) => setStrength(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-neutral-700"
+          />
+          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <span>Very Weak</span>
+            <span>Weak</span>
+            <span>Medium</span>
+            <span>Strong</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            How strong or significant is this relationship? (1 = very weak, 10 = very strong)
+          </p>
+        </div>
+
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="bidirectional"
+            checked={isBidirectional}
+            onChange={(e) => setIsBidirectional(e.target.checked)}
+            className="h-4 w-4 text-brand-600 focus:ring-brand-500 border-gray-300 rounded"
+          />
+          <label htmlFor="bidirectional" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+            Bidirectional relationship
+          </label>
+          <div className="ml-2">
+            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Check this if the relationship works both ways (e.g., "friends with" vs "parent of")
+        </p>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Notes
           </label>
           <textarea
@@ -185,23 +237,44 @@ export function CreateRelationshipModal({ isOpen, onClose, worldId }: CreateRela
               <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
                 Relationship Preview
               </h4>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
+              <div className="text-xs text-blue-700 dark:text-blue-300">
                 {fromEntityId && toEntityId && label ? (
-                  <>
-                    <span className="font-medium">
-                      {worldEntities.find((e: Entity) => e.id === fromEntityId)?.name || 'Entity'}
-                    </span>
-                    {' '}
-                    <span className="italic">{label}</span>
-                    {' '}
-                    <span className="font-medium">
-                      {worldEntities.find((e: Entity) => e.id === toEntityId)?.name || 'Entity'}
-                    </span>
-                  </>
+                  <div className="space-y-2">
+                    <p>
+                      <span className="font-medium">
+                        {worldEntities.find((e: Entity) => e.id === fromEntityId)?.name || 'Entity'}
+                      </span>
+                      {' '}
+                      <span className="italic">{label}</span>
+                      {' '}
+                      <span className="font-medium">
+                        {worldEntities.find((e: Entity) => e.id === toEntityId)?.name || 'Entity'}
+                      </span>
+                      {isBidirectional && (
+                        <span className="ml-2 inline-flex items-center gap-1">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                          </svg>
+                          Both ways
+                        </span>
+                      )}
+                    </p>
+                    <p>
+                      <span className="font-medium">Strength:</span> {strength}/10 ({
+                        strength >= 8 ? 'Very Strong' :
+                        strength >= 6 ? 'Strong' :
+                        strength >= 4 ? 'Medium' :
+                        'Weak'
+                      })
+                    </p>
+                    {notes.trim() && (
+                      <p><span className="font-medium">Notes:</span> {notes.trim()}</p>
+                    )}
+                  </div>
                 ) : (
                   'Select entities and enter a relationship type to see preview'
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </div>

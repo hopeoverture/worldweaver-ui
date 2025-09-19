@@ -26,6 +26,7 @@ export interface LogContext {
   folderName?: string; // For folder operations
   role?: string; // For member role operations
   operationType?: string; // For AI usage operations
+  mapId?: string; // For map operations
 }
 
 export interface LogEntry {

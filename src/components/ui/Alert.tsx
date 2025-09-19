@@ -66,3 +66,17 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 );
 
 Alert.displayName = 'Alert';
+
+export interface AlertDescriptionProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+export const AlertDescription = React.forwardRef<HTMLDivElement, AlertDescriptionProps>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  )
+);
+
+AlertDescription.displayName = 'AlertDescription';

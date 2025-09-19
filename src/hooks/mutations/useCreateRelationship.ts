@@ -5,9 +5,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 type CreateRelationshipBody = {
   fromEntityId: string;
   toEntityId: string;
-  label: string;
+  relationshipType: string;
   description?: string | null;
   metadata?: Record<string, unknown> | null;
+  strength?: number;
+  isBidirectional?: boolean;
 };
 
 export function useCreateRelationship(worldId: string) {
