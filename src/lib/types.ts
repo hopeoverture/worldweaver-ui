@@ -217,6 +217,172 @@ export interface AIWorldFieldsGenerationResponse {
   fields: Record<string, unknown>;
 }
 
+// ==============================================
+// MAP GENERATION TYPES
+// ==============================================
+
+// Map generation enums matching database enums
+export type MapPurpose =
+  | 'campaign_overview'        // Campaign overview / world atlas
+  | 'regional_adventuring'     // Regional adventuring (quests & travel)
+  | 'local_exploration'        // Local exploration (hex crawl)
+  | 'political_boundaries'     // Political boundaries & factions
+  | 'trade_logistics'          // Trade & logistics
+  | 'war_operations';          // War & military operations
+
+export type MapScale =
+  | 'world_continent'          // World / continent
+  | 'large_region'             // Large region (500–1500 km)
+  | 'province_kingdom'         // Province / kingdom (150–500 km)
+  | 'local_area'               // Local area (25–150 km)
+  | 'town_surroundings';       // Town + surroundings (1–25 km)
+
+export type SettlementDensity =
+  | 'sparse_nomadic'           // Sparse nomadic / pre-agrarian
+  | 'rural_agrarian'           // Rural agrarian with few towns
+  | 'feudal_kingdoms'          // Feudal kingdoms with walled cities
+  | 'late_medieval'            // Late-medieval / early gunpowder
+  | 'early_industrial';        // Early industrial / steampunk
+
+export type PoliticalComplexity =
+  | 'minimal'                  // Minimal (1–2 realms)
+  | 'moderate'                 // Moderate (3–6 realms)
+  | 'high';                    // High (7+ realms, enclaves, vassals)
+
+export type MapVisualStyle =
+  | 'inked_atlas'              // Inked atlas (lines & hatching)
+  | 'painterly'                // Painterly/illustrated
+  | 'hex_map'                  // Hex map (grid & symbols)
+  | 'minimal_modern'           // Minimal modern
+  | 'nautical_chart';          // Nautical chart
+
+// Genre options for maps
+export type GenreTag =
+  | 'high_fantasy'
+  | 'low_grim_fantasy'
+  | 'post_apocalyptic'
+  | 'sword_sorcery'
+  | 'historical_alt_history'
+  | 'science_fantasy';
+
+// Terrain emphasis options
+export type TerrainEmphasis =
+  | 'mountains'                // Mountain chains & highlands
+  | 'rivers'                   // River systems & wetlands
+  | 'forests'                  // Forests & jungles
+  | 'deserts'                  // Deserts & badlands
+  | 'coasts'                   // Coasts & archipelagos
+  | 'grasslands';              // Grasslands & steppes
+
+// Climate zone options
+export type ClimateZone =
+  | 'tropical'                 // Tropical/humid
+  | 'subtropical'              // Subtropical/savanna
+  | 'temperate'                // Temperate (four seasons)
+  | 'arid'                     // Arid/desert
+  | 'boreal'                   // Boreal/taiga
+  | 'polar';                   // Polar/tundra
+
+// Travel focus options
+export type TravelFocus =
+  | 'overland_roads'           // Overland roads & caravans
+  | 'river_travel'             // River travel & ferries
+  | 'coastal_shipping'         // Coastal shipping/sea lanes
+  | 'wilderness_treks'         // Wilderness treks/off-road
+  | 'air_arcane';              // Air/arcane travel corridors
+
+// Signature feature options
+export type SignatureFeature =
+  | 'great_wall'               // Great wall/pass choke point
+  | 'world_scar'               // World-scar canyon/fault
+  | 'volcano_chain'            // Active volcano chain
+  | 'inland_sea'               // Giant inland sea/delta
+  | 'floating_isles'           // Floating/levitating isles
+  | 'megadungeon';             // Megadungeon/ancient ruin zone
+
+// Map generation request interface
+export interface AIMapGenerationRequest {
+  worldId: string;
+  name: string;
+  description?: string;
+
+  // Core generation parameters
+  mapPurpose: MapPurpose;
+  mapScale: MapScale;
+  genreTags: GenreTag[];
+  terrainEmphasis: TerrainEmphasis[];
+  climateZones: ClimateZone[];
+  settlementDensity: SettlementDensity;
+  politicalComplexity: PoliticalComplexity;
+  travelFocus: TravelFocus[];
+  signatureFeatures: SignatureFeature[];
+  visualStyle: MapVisualStyle;
+
+  // Optional context
+  contextEntityIds?: string[];
+  customPrompt?: string;
+}
+
+export interface AIMapGenerationResponse {
+  mapId: string;
+  imageUrl: string;
+  revisedPrompt?: string;
+  generationSettings: {
+    mapPurpose: MapPurpose;
+    mapScale: MapScale;
+    genreTags: GenreTag[];
+    terrainEmphasis: TerrainEmphasis[];
+    climateZones: ClimateZone[];
+    settlementDensity: SettlementDensity;
+    politicalComplexity: PoliticalComplexity;
+    travelFocus: TravelFocus[];
+    signatureFeatures: SignatureFeature[];
+    visualStyle: MapVisualStyle;
+  };
+}
+
+// Map generation form validation types
+export interface MapGenerationFormData {
+  // Basic fields
+  name: string;
+  description?: string;
+  mode: 'upload' | 'ai';
+
+  // Upload mode fields
+  imageFile?: File;
+  scale?: {
+    value: number;
+    unit: 'km' | 'miles' | 'meters' | 'feet';
+  };
+
+  // AI generation fields
+  mapPurpose?: MapPurpose;
+  mapScale?: MapScale;
+  genreTags?: GenreTag[];
+  terrainEmphasis?: TerrainEmphasis[];
+  climateZones?: ClimateZone[];
+  settlementDensity?: SettlementDensity;
+  politicalComplexity?: PoliticalComplexity;
+  travelFocus?: TravelFocus[];
+  signatureFeatures?: SignatureFeature[];
+  visualStyle?: MapVisualStyle;
+
+  // Context fields
+  contextEntityIds?: string[];
+  customPrompt?: string;
+
+  // Layer options
+  createDefaultLayers?: boolean;
+  createTerrainLayer?: boolean;
+  createPoliticalLayer?: boolean;
+  createMarkersLayer?: boolean;
+
+  // Output options
+  exportFormat?: 'png' | 'json' | 'both';
+  gridType?: 'none' | 'square' | 'hex';
+  gridSize?: number;
+}
+
 // Folder Data Structure - stored in folders.data JSONB column
 // Note: For type safety, cast values appropriately when reading from database
 export type FolderData = Record<string, Json>
@@ -419,6 +585,8 @@ export type RelationshipRow = {
   relationshipType: string; // Maps to relationship_type in database
   description?: string; // From database schema
   metadata?: RelationshipMetadata; // Typed JSONB field
+  strength?: number; // 1-10 scale, default 5
+  isBidirectional?: boolean; // Maps to is_bidirectional in database
   createdAt?: string; // From database schema
   updatedAt?: string; // From database schema
 };

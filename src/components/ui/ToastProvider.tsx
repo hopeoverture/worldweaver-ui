@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { v4 as uuidv4 } from 'uuid';
 
-type ToastVariant = "default" | "success" | "error" | "warning";
+type ToastVariant = "default" | "success" | "error" | "warning" | "destructive";
 type Toast = { id: string; title?: string; description?: string; variant?: ToastVariant; };
 
 type ToastContextType = {
@@ -51,6 +51,7 @@ function variantStyles(variant?: ToastVariant) {
     case "success":
       return "border-green-200 bg-green-50 text-green-900 dark:border-green-900/40 dark:bg-green-900/20 dark:text-green-200";
     case "error":
+    case "destructive":
       return "border-red-200 bg-red-50 text-red-900 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200";
     case "warning":
       return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200";

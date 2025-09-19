@@ -9,13 +9,14 @@ import { TemplateGridSkeleton } from '../templates/TemplateCardSkeleton';
 import { FolderGridSkeleton } from '../folders/FolderCardSkeleton';
 import { SkeletonCard, SkeletonText, Skeleton } from '../ui/Skeleton';
 
-export type SkeletonType = 
-  | 'entities' 
-  | 'worlds' 
-  | 'templates' 
+export type SkeletonType =
+  | 'entities'
+  | 'worlds'
+  | 'templates'
   | 'folders'
   | 'membership'
   | 'relationships'
+  | 'maps'
   | 'generic';
 
 interface SkeletonLoaderProps {
@@ -84,7 +85,10 @@ export function SkeletonLoader({
       
       case 'relationships':
         return <RelationshipsSkeleton shimmer={shimmer} />;
-      
+
+      case 'maps':
+        return <MapsSkeleton shimmer={shimmer} />;
+
       default:
         return <GenericSkeleton count={count || 6} shimmer={shimmer} />;
     }
@@ -170,6 +174,44 @@ function RelationshipsSkeleton({ shimmer = false }: { shimmer?: boolean }) {
               <Skeleton height="1rem" width="60px" animate={!shimmer} />
             </div>
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Maps skeleton
+ */
+function MapsSkeleton({ shimmer = false }: { shimmer?: boolean }) {
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <Skeleton height="2rem" width="120px" animate={!shimmer} className="mb-2" />
+          <Skeleton height="1rem" width="250px" animate={!shimmer} />
+        </div>
+        <Skeleton height="2.5rem" width="140px" animate={!shimmer} />
+      </div>
+
+      {/* Maps grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 3 }, (_, i) => (
+          <SkeletonCard key={i} className="overflow-hidden">
+            {/* Map image */}
+            <div className="aspect-video bg-gray-200 dark:bg-neutral-700 animate-pulse" />
+
+            {/* Map info */}
+            <div className="p-4 space-y-2">
+              <Skeleton height="1.25rem" width="80%" animate={!shimmer} />
+              <Skeleton height="0.875rem" width="60%" animate={!shimmer} />
+              <div className="flex justify-between items-center pt-2">
+                <Skeleton height="0.75rem" width="60px" animate={!shimmer} />
+                <Skeleton height="0.75rem" width="40px" animate={!shimmer} />
+              </div>
+            </div>
+          </SkeletonCard>
         ))}
       </div>
     </div>
