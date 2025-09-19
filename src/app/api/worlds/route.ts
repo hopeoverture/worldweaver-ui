@@ -39,18 +39,34 @@ export const GET = withApiErrorHandling(async (request: NextRequest): Promise<Ne
   const includeArchived = searchParams.get('includeArchived') === 'true';
 
   console.log('GET /api/worlds - Calling getUserWorlds with userId:', user.id);
-  const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService');
-  const worlds = await supabaseWorldService.getUserWorlds(user.id);
-  
-  console.log('GET /api/worlds - Response:', {
-    requestId,
-    userId: user.id,
-    worldCount: worlds.length,
-    worldIds: worlds.map(w => w.id),
-    timestamp: new Date().toISOString()
-  });
-  
-  return apiSuccess({ worlds }, { 'X-Request-ID': requestId });
+
+  try {
+    const { simplifiedUnifiedService } = await import('@/lib/services/unified-service');
+    const worlds = await simplifiedUnifiedService.worlds.getUserWorlds(user.id);
+
+    console.log('GET /api/worlds - Response:', {
+      requestId,
+      userId: user.id,
+      worldCount: worlds.length,
+      worldIds: worlds.map(w => w.id),
+      timestamp: new Date().toISOString()
+    });
+
+    return apiSuccess({ worlds }, { 'X-Request-ID': requestId });
+  } catch (serviceError) {
+    console.error('GET /api/worlds - Service error:', {
+      requestId,
+      userId: user.id,
+      error: serviceError,
+      errorMessage: (serviceError as Error)?.message,
+      errorStack: (serviceError as Error)?.stack,
+      timestamp: new Date().toISOString()
+    });
+
+    // Return empty worlds array instead of crashing
+    console.log('GET /api/worlds - Returning empty worlds due to service error');
+    return apiSuccess({ worlds: [] }, { 'X-Request-ID': requestId });
+  }
 });
 
 const createWorldSchema = z.object({
