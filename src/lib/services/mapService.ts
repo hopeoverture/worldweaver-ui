@@ -89,7 +89,14 @@ export interface CreateMapLayerData {
 }
 
 class MapService {
-  private supabase = createServerClient()
+  private _supabase: ReturnType<typeof createServerClient> | null = null
+
+  private get supabase() {
+    if (!this._supabase) {
+      this._supabase = createServerClient()
+    }
+    return this._supabase
+  }
 
   async getWorldMaps(worldId: string, userId: string): Promise<Map[]> {
     const { data, error } = await this.supabase
@@ -347,9 +354,7 @@ class MapService {
    * Get world data for AI context
    */
   async getWorldForContext(worldId: string) {
-    const supabase = createServerClient()
-
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('worlds')
       .select('name, description, genre_blend, overall_tone, key_themes')
       .eq('id', worldId)
@@ -378,9 +383,7 @@ class MapService {
   async getEntitiesForContext(entityIds: string[]) {
     if (!entityIds.length) return []
 
-    const supabase = createServerClient()
-
-    const { data, error } = await supabase
+    const { data, error } = await this.supabase
       .from('entities')
       .select('id, name')
       .in('id', entityIds)
