@@ -41,8 +41,8 @@ export const GET = withApiErrorHandling(async (request: NextRequest): Promise<Ne
   console.log('GET /api/worlds - Calling getUserWorlds with userId:', user.id);
 
   try {
-    const { simplifiedUnifiedService } = await import('@/lib/services/unified-service');
-    const worlds = await simplifiedUnifiedService.worlds.getUserWorlds(user.id);
+    const { supabaseWorldService } = await import('@/lib/services/supabaseWorldService');
+    const worlds = await supabaseWorldService.getUserWorlds(user.id);
 
     console.log('GET /api/worlds - Response:', {
       requestId,

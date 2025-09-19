@@ -87,8 +87,7 @@ export class SupabaseWorldService {
       return worldsWithEntityCounts.map((world: any) => adaptWorldFromDatabase(world));
     } catch (error) {
       logError('Error fetching user worlds', error as Error, { action: 'getUserWorlds', userId });
-      console.warn('Returning empty worlds array due to service error');
-      return [];
+      throw new Error('Failed to fetch worlds');
     }
   }
 
